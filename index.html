@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JL Monitoring System</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    .nav {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .nav-brand { font-size: 1rem; font-weight: 700; letter-spacing: .5px; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab {
+      padding: 6px 16px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,.7);
+      cursor: pointer;
+      font-size: .875rem;
+      border-radius: 6px;
+      transition: background .2s, color .2s;
+    }
+    .nav-tab:hover { background: rgba(255,255,255,.1); color: #fff; }
+    .nav-tab.active { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+
+    /* ── VIEWS ── */
+    .view { display: none; padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+    .view.active { display: block; }
+
+    /* ── PAGE HEADER ── */
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; color: #1e3a5f; }
+    .page-header p  { font-size: .9rem; color: #64748b; margin-top: 4px; }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+      padding: 28px;
+    }
+
+    /* ── FORM ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: .8rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: .4px; }
+    input, select, textarea {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: .95rem;
+      color: #1a202c;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary   { background: #1e3a5f; color: #fff; }
+    .btn-success   { background: #16a34a; color: #fff; }
+    .btn-danger    { background: #dc2626; color: #fff; }
+    .btn-warning   { background: #d97706; color: #fff; }
+    .btn-outline   { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
+    .btn-sm        { padding: 5px 12px; font-size: .8rem; }
+    .btn:hover     { opacity: .88; }
+
+    /* ── KEBAB MENU ── */
+    .action-cell { position: relative; text-align: center; }
+    .kebab-btn {
+      background: none; border: 1.5px solid #e2e8f0; border-radius: 6px;
+      cursor: pointer; padding: 4px 10px; font-size: 1.1rem; color: #64748b;
+      line-height: 1; transition: background .15s, border-color .15s;
+    }
+    .kebab-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    .kebab-menu {
+      display: none; position: fixed;
+      background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 160px; z-index: 9999;
+      overflow: hidden;
+    }
+    .kebab-menu.open { display: block; }
+    .kebab-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 14px; font-size: .85rem; cursor: pointer;
+      color: #374151; transition: background .15s;
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .kebab-item:hover { background: #f8fafc; }
+    .kebab-item.danger { color: #dc2626; }
+    .kebab-item.danger:hover { background: #fff5f5; }
+    .kebab-item.success { color: #16a34a; }
+    .kebab-item.success:hover { background: #f0fdf4; }
+    .kebab-divider { height: 1px; background: #f1f5f9; margin: 2px 0; }
+
+    .form-actions { margin-top: 28px; display: flex; justify-content: flex-end; gap: 12px; }
+
+    /* ── STATUS BADGE ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge-pending    { background: #fef9c3; color: #854d0e; }
+    .badge-reviewed   { background: #dbeafe; color: #1d4ed8; }
+    .badge-rejected   { background: #fee2e2; color: #991b1b; }
+    .badge-approved   { background: #dcfce7; color: #15803d; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; margin-top: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    thead th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background .15s; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 12px 14px; vertical-align: middle; white-space: nowrap; }
+    .serial-cell { font-family: monospace; font-weight: 700; color: #1e3a5f; font-size: .85rem; }
+    .serial-pending { color: #94a3b8; font-style: italic; font-size: .8rem; }
+
+    /* ── STICKY FIRST + LAST COLUMNS ── */
+    thead th:first-child, tbody td:first-child {
+      position: sticky; left: 0; z-index: 3;
+      background: #f8fafc;
+      box-shadow: 2px 0 5px rgba(0,0,0,.06);
+    }
+    tbody td:first-child { background: #fff; }
+    tbody tr:hover td:first-child { background: #f8fafc; }
+
+    thead th:last-child, tbody td:last-child {
+      position: sticky; right: 0; z-index: 3;
+      background: #f8fafc;
+      box-shadow: -2px 0 5px rgba(0,0,0,.06);
+    }
+    tbody td:last-child { background: #fff; }
+    tbody tr:hover td:last-child { background: #f8fafc; }
+
+    /* ── STATS ROW ── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      border-left: 4px solid transparent;
+    }
+    .stat-card.total   { border-color: #1e3a5f; }
+    .stat-card.pending { border-color: #d97706; }
+    .stat-card.review  { border-color: #2563eb; }
+    .stat-card.done    { border-color: #16a34a; }
+    .stat-num  { font-size: 2rem; font-weight: 800; color: #1a202c; }
+    .stat-label{ font-size: .78rem; color: #64748b; margin-top: 2px; }
+
+    /* ── FILTER ROW ── */
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-row select, .filter-row input {
+      padding: 7px 12px;
+      font-size: .875rem;
+      border-radius: 8px;
+      border: 1.5px solid #e2e8f0;
+    }
+    .filter-row input { flex: 1; min-width: 160px; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 32px;
+      width: 540px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      position: relative;
+    }
+    .modal h2 { font-size: 1.2rem; color: #1e3a5f; margin-bottom: 20px; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+    .detail-item label { display: block; font-size: .75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
+    .detail-item span  { font-size: .95rem; color: #1a202c; font-weight: 500; }
+    .detail-item.full  { grid-column: 1 / -1; }
+    .modal-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: #f1f5f9; border: none; border-radius: 6px;
+      padding: 4px 10px; cursor: pointer; font-size: 1rem; color: #64748b;
+    }
+    .modal-close:hover { background: #e2e8f0; }
+
+    /* ── REJECT REASON ── */
+    .reject-box { margin-top: 14px; display: none; }
+    .reject-box.open { display: block; }
+    .reject-box textarea { width: 100%; }
+
+    /* ── SUCCESS TOAST ── */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: #1e3a5f; color: #fff;
+      padding: 14px 22px; border-radius: 10px;
+      font-size: .9rem; font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      transform: translateY(80px); opacity: 0;
+      transition: transform .35s, opacity .35s;
+      z-index: 200;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── WORKFLOW STEPS ── */
+    .workflow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 28px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .wf-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      position: relative;
+    }
+    .wf-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 18px;
+      left: 60%;
+      width: 80%;
+      height: 2px;
+      background: #e2e8f0;
+    }
+    .wf-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      border: 2px solid #e2e8f0;
+      background: #f8fafc;
+      color: #94a3b8;
+      position: relative;
+      z-index: 1;
+    }
+    .wf-icon.done   { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
+    .wf-icon.active { background: #dbeafe; border-color: #2563eb; color: #2563eb; }
+    .wf-label { font-size: .72rem; color: #64748b; font-weight: 600; text-align: center; }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav">
+  <div class="nav-brand">JL Monitoring System</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchView('form-view', this)">Submit Form</button>
+    <button class="nav-tab" onclick="switchView('reviewer-view', this)">Reviewer Dashboard</button>
+    <button class="nav-tab" onclick="switchView('vp-view', this)">VP Approver</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     VIEW 1 — PUBLIC SUBMISSION FORM
+═══════════════════════════════════════ -->
+<div id="form-view" class="view active">
+  <div class="page-header">
+    <h1>JL Monitoring Form</h1>
+    <p>Fill in all required fields and submit for review.</p>
+  </div>
+
+  <div class="card">
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>JL Title *</label>
+        <input type="text" id="f-title" placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026" />
+      </div>
+
+      <div class="form-group">
+        <label>Date Prepared *</label>
+        <input type="date" id="f-date" />
+      </div>
+
+      <div class="form-group">
+        <label>Company / Farm *</label>
+        <select id="f-company">
+          <option value="">— Select company —</option>
+          <option>BFC</option>
+          <option>BDL</option>
+          <option>PFC</option>
+          <option>RH</option>
+          <option>Feedmill</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Farm Manager / Supervisor *</label>
+        <input type="text" id="f-manager" placeholder="Full name" />
+      </div>
+
+      <div class="form-group">
+        <label>Department *</label>
+        <select id="f-dept">
+          <option value="">— Select department —</option>
+          <option>Operations</option>
+          <option>Finance</option>
+          <option>Human Resources</option>
+          <option>Maintenance</option>
+          <option>Logistics</option>
+          <option>Harvesting</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Estimated Amount (JL) *</label>
+        <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" />
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Clear</button>
+      <button class="btn btn-primary" onclick="submitForm()"><i class="fa-solid fa-paper-plane"></i> Submit Form</button>
+    </div>
+  </div>
+
+  <!-- Submission confirmation -->
+  <div id="submit-confirm" style="display:none; margin-top:20px;">
+    <div class="card" style="border-left: 4px solid #16a34a; background:#f0fdf4;">
+      <p style="color:#15803d; font-weight:600; font-size:1rem;"><i class="fa-solid fa-circle-check"></i> Form submitted successfully!</p>
+      <p style="color:#166534; font-size:.875rem; margin-top:6px;">Your submission is now pending review. A serial number will be assigned after VP approval.</p>
+      <p style="color:#166534; font-size:.875rem; margin-top:4px;">Reference: <strong id="submit-ref"></strong></p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 2 — REVIEWER DASHBOARD
+     (Manager / Supervisor — first user)
+═══════════════════════════════════════ -->
+<div id="reviewer-view" class="view">
+  <div class="page-header">
+    <h1>Reviewer Dashboard</h1>
+    <p>Review submitted JL forms, mark as checked or reject before forwarding to VP Approver.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card total">
+      <div class="stat-num" id="stat-total">5</div>
+      <div class="stat-label">Total Submissions</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-num" id="stat-pending">2</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card review">
+      <div class="stat-num" id="stat-checked">2</div>
+      <div class="stat-label">Checked / Forwarded</div>
+    </div>
+    <div class="stat-card done">
+      <div class="stat-num" id="stat-approved">1</div>
+      <div class="stat-label">VP Approved</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-row">
+    <input type="text" placeholder="Search by title, company, manager…" oninput="filterTable('rev-table', this.value, 'rev-status-filter')" id="rev-search" />
+    <select id="rev-status-filter" onchange="filterTable('rev-table', document.getElementById('rev-search').value, this.value)">
+      <option value="">All Statuses</option>
+      <option value="Pending">Pending</option>
+      <option value="Checked">Checked</option>
+      <option value="Rejected">Rejected</option>
+      <option value="Approved">Approved</option>
+    </select>
+  </div>
+
+  <div class="card" style="padding:0; overflow:clip;">
+    <div class="table-wrap">
+      <table id="rev-table">
+        <thead>
+          <tr>
+            <th>Serial No.</th>
+            <th>JL Title</th>
+            <th>Date Prepared</th>
+            <th>Company / Farm</th>
+            <th>Manager / Supervisor</th>
+            <th>Department</th>
+            <th>Est. Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="rev-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 3 — VP APPROVER DASHBOARD
+═══════════════════════════════════════ -->
+<div id="vp-view" class="view">
+  <div class="page-header">
+    <h1>VP Approver Dashboard</h1>
+    <p>Review checked forms and approve or reject. Approved entries receive a serial number.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card total">
+      <div class="stat-num" id="vp-stat-total">2</div>
+      <div class="stat-label">Forwarded to VP</div>
+    </div>
+    <div class="stat-card pending">
+      <div class="stat-num" id="vp-stat-pending">1</div>
+      <div class="stat-label">Awaiting Approval</div>
+    </div>
+    <div class="stat-card done">
+      <div class="stat-num" id="vp-stat-approved">1</div>
+      <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card review" style="border-color:#dc2626;">
+      <div class="stat-num" id="vp-stat-rejected">0</div>
+      <div class="stat-label">Rejected by VP</div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <input type="text" placeholder="Search…" oninput="filterTable('vp-table', this.value, 'vp-status-filter')" id="vp-search" />
+    <select id="vp-status-filter" onchange="filterTable('vp-table', document.getElementById('vp-search').value, this.value)">
+      <option value="">All Statuses</option>
+      <option value="Checked">Checked (Pending VP)</option>
+      <option value="Approved">Approved</option>
+      <option value="VP Rejected">VP Rejected</option>
+    </select>
+  </div>
+
+  <div class="card" style="padding:0; overflow:clip;">
+    <div class="table-wrap">
+      <table id="vp-table">
+        <thead>
+          <tr>
+            <th>Serial No.</th>
+            <th>JL Title</th>
+            <th>Date Prepared</th>
+            <th>Company / Farm</th>
+            <th>Manager / Supervisor</th>
+            <th>Department</th>
+            <th>Est. Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="vp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     DETAIL / ACTION MODAL
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    <h2 id="modal-title">Form Details</h2>
+
+    <!-- Workflow indicator inside modal -->
+    <div class="workflow" id="modal-workflow">
+      <div class="wf-step">
+        <div class="wf-icon done" id="wf-submitted"><i class="fa-solid fa-check"></i></div>
+        <span class="wf-label">Submitted</span>
+      </div>
+      <div class="wf-step">
+        <div class="wf-icon" id="wf-reviewed"><i class="fa-solid fa-eye"></i></div>
+        <span class="wf-label">Reviewed</span>
+      </div>
+      <div class="wf-step">
+        <div class="wf-icon" id="wf-approved"><i class="fa-solid fa-star"></i></div>
+        <span class="wf-label">VP Approved</span>
+      </div>
+    </div>
+
+    <div class="detail-grid" id="modal-details"></div>
+
+    <!-- Reject reason box (reviewer) -->
+    <div class="reject-box" id="reject-box">
+      <label style="font-size:.8rem; font-weight:600; color:#475569; text-transform:uppercase;">Reason for Rejection</label>
+      <textarea id="reject-reason" rows="3" placeholder="Provide a reason…" style="width:100%; margin-top:6px;"></textarea>
+    </div>
+
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Shared kebab menu — lives in body to escape all stacking contexts -->
+<div class="kebab-menu" id="shared-kebab"></div>
+
+
+<!-- ═══════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════ -->
+<script>
+/* ── DATA STORE ── */
+let entries = [
+  { id:'JL-001-2026', title:'Farm Labor Cost Q1 2026', date:'2026-01-15', company:'BFC Farm Davao', manager:'Roberto Dela Cruz', dept:'Operations', amount:125000, status:'Approved', serial:'BFC-JL-001-2026', submittedAt:'2026-01-15', reviewedAt:'2026-01-17', approvedAt:'2026-01-20' },
+  { id:'JL-002-2026', title:'Harvesting Equipment Maintenance', date:'2026-02-10', company:'BFC Farm Bukidnon', manager:'Maria Santos', dept:'Maintenance', amount:87500, status:'Checked', serial:null, submittedAt:'2026-02-10', reviewedAt:'2026-02-12', approvedAt:null },
+  { id:'JL-003-2026', title:'Logistics Labor — March Run', date:'2026-03-05', company:'BFC Farm Cotabato', manager:'Juan Ramos', dept:'Logistics', amount:43000, status:'Rejected', serial:null, submittedAt:'2026-03-05', reviewedAt:'2026-03-06', approvedAt:null, rejectReason:'Missing supporting documents for overtime hours.' },
+  { id:'JL-004-2026', title:'HR Onboarding Cost April', date:'2026-04-20', company:'BFC Group HQ', manager:'Ana Mendoza', dept:'Human Resources', amount:31000, status:'Pending', serial:null, submittedAt:'2026-04-20', reviewedAt:null, approvedAt:null },
+  { id:'JL-005-2026', title:'Q2 Finance Audit Labor', date:'2026-05-01', company:'BFC Farm Mindanao', manager:'Carlos Villanueva', dept:'Finance', amount:56800, status:'Pending', serial:null, submittedAt:'2026-05-01', reviewedAt:null, approvedAt:null },
+];
+
+let idCounter = 6;
+let currentModalId = null;
+let currentModalCtx = null; // 'reviewer' | 'vp'
+
+/* ── NAVIGATION ── */
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  renderTables();
+}
+
+/* ── FORM SUBMISSION ── */
+function submitForm() {
+  const title   = document.getElementById('f-title').value.trim();
+  const date    = document.getElementById('f-date').value;
+  const company = document.getElementById('f-company').value.trim();
+  const manager = document.getElementById('f-manager').value.trim();
+  const dept    = document.getElementById('f-dept').value;
+  const amount  = parseFloat(document.getElementById('f-amount').value);
+
+  if (!title || !date || !company || !manager || !dept || isNaN(amount)) {
+    showToast('Please fill in all required fields.', '#dc2626');
+    return;
+  }
+
+  const newId = 'JL-' + String(idCounter).padStart(3,'0') + '-2026';
+  idCounter++;
+  const entry = { id:newId, title, date, company, manager, dept, amount, status:'Pending', serial:null, submittedAt:date, reviewedAt:null, approvedAt:null };
+  entries.unshift(entry);
+
+  document.getElementById('submit-ref').textContent = newId;
+  document.getElementById('submit-confirm').style.display = 'block';
+  resetForm();
+  showToast('Form submitted!', '#16a34a');
+}
+
+function resetForm() {
+  ['f-title','f-date','f-company','f-manager','f-amount'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-dept').value = '';
+  document.getElementById('submit-confirm').style.display = 'none';
+}
+
+/* ── RENDER TABLES ── */
+function statusBadge(status) {
+  const map = { 'Pending':'badge-pending', 'Checked':'badge-reviewed', 'Rejected':'badge-rejected', 'Approved':'badge-approved', 'VP Rejected':'badge-rejected' };
+  return `<span class="badge ${map[status]||''}">${status}</span>`;
+}
+
+function fmtAmount(n) {
+  return '₱ ' + n.toLocaleString('en-PH', {minimumFractionDigits:2});
+}
+
+function renderTables() {
+  renderReviewerTable(entries);
+  renderVpTable(entries.filter(e => ['Checked','Approved','VP Rejected'].includes(e.status)));
+  updateStats();
+}
+
+function renderReviewerTable(data) {
+  const tbody = document.getElementById('rev-tbody');
+  tbody.innerHTML = data.map(e => `
+    <tr data-status="${e.status}" data-text="${(e.title+e.company+e.manager).toLowerCase()}">
+      <td>${e.status === 'Approved' ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">Pending approval</span>`}</td>
+      <td><strong>${e.title}</strong></td>
+      <td>${e.date}</td>
+      <td>${e.company}</td>
+      <td>${e.manager}</td>
+      <td>${e.dept}</td>
+      <td>${fmtAmount(e.amount)}</td>
+      <td>${statusBadge(e.status)}</td>
+      <td class="action-cell">
+        <button class="kebab-btn" data-id="${e.id}" data-ctx="reviewer" onclick="toggleKebab(event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderVpTable(data) {
+  const tbody = document.getElementById('vp-tbody');
+  tbody.innerHTML = data.map(e => `
+    <tr data-status="${e.status}" data-text="${(e.title+e.company+e.manager).toLowerCase()}">
+      <td>${e.serial ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">—</span>`}</td>
+      <td><strong>${e.title}</strong></td>
+      <td>${e.date}</td>
+      <td>${e.company}</td>
+      <td>${e.manager}</td>
+      <td>${e.dept}</td>
+      <td>${fmtAmount(e.amount)}</td>
+      <td>${statusBadge(e.status)}</td>
+      <td class="action-cell">
+        <button class="kebab-btn" data-id="${e.id}" data-ctx="vp" onclick="toggleKebab(event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function updateStats() {
+  const total    = entries.length;
+  const pending  = entries.filter(e => e.status === 'Pending').length;
+  const checked  = entries.filter(e => e.status === 'Checked').length;
+  const approved = entries.filter(e => e.status === 'Approved').length;
+  const rejected = entries.filter(e => e.status === 'Rejected').length;
+
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-pending').textContent  = pending;
+  document.getElementById('stat-checked').textContent  = checked;
+  document.getElementById('stat-approved').textContent = approved;
+
+  const vpEntries  = entries.filter(e => ['Checked','Approved','VP Rejected'].includes(e.status));
+  const vpApproved = entries.filter(e => e.status === 'Approved').length;
+  const vpPending  = entries.filter(e => e.status === 'Checked').length;
+  const vpRejected = entries.filter(e => e.status === 'VP Rejected').length;
+
+  document.getElementById('vp-stat-total').textContent    = vpEntries.length;
+  document.getElementById('vp-stat-pending').textContent  = vpPending;
+  document.getElementById('vp-stat-approved').textContent = vpApproved;
+  document.getElementById('vp-stat-rejected').textContent = vpRejected;
+}
+
+/* ── QUICK ACTIONS ── */
+function quickAction(id, action) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+
+  if (action === 'Checked') {
+    e.status = 'Checked';
+    e.reviewedAt = new Date().toISOString().slice(0,10);
+    showToast(`Marked as Checked — forwarded to VP Approver.`, '#2563eb');
+  } else if (action === 'Approved') {
+    e.status = 'Approved';
+    e.approvedAt = new Date().toISOString().slice(0,10);
+    e.serial = generateSerial(e);
+    showToast(`Approved! Serial No. ${e.serial} assigned.`, '#16a34a');
+  }
+  renderTables();
+}
+
+function openRejectModal(id, ctx) {
+  openModal(id, ctx);
+  document.getElementById('reject-box').classList.add('open');
+}
+
+function generateSerial(e) {
+  const yr = new Date().getFullYear();
+  const num = String(entries.filter(x => x.serial).length).padStart(3,'0');
+  return `BFC-JL-${num}-${yr}`;
+}
+
+/* ── MODAL ── */
+function openModal(id, ctx) {
+  const e = entries.find(x => x.id === id);
+  if (!e) return;
+  currentModalId  = id;
+  currentModalCtx = ctx;
+
+  document.getElementById('modal-title').textContent = 'JL Form — ' + e.id;
+  document.getElementById('reject-box').classList.remove('open');
+  document.getElementById('reject-reason').value = '';
+
+  // Workflow indicator
+  const wfR = document.getElementById('wf-reviewed');
+  const wfA = document.getElementById('wf-approved');
+  wfR.className = 'wf-icon';
+  wfA.className = 'wf-icon';
+  if (['Checked','Approved','Rejected','VP Rejected'].includes(e.status)) wfR.classList.add('done');
+  if (e.status === 'Pending' || e.status === 'Rejected') wfR.classList.add('active');
+  if (e.status === 'Checked') { wfR.classList.add('done'); wfA.classList.add('active'); }
+  if (e.status === 'Approved') { wfR.classList.add('done'); wfA.classList.add('done'); }
+
+  // Detail grid
+  document.getElementById('modal-details').innerHTML = `
+    <div class="detail-item full"><label>JL Title</label><span>${e.title}</span></div>
+    <div class="detail-item"><label>Date Prepared</label><span>${e.date}</span></div>
+    <div class="detail-item"><label>Status</label><span>${statusBadge(e.status)}</span></div>
+    <div class="detail-item"><label>Company / Farm</label><span>${e.company}</span></div>
+    <div class="detail-item"><label>Farm Manager / Supervisor</label><span>${e.manager}</span></div>
+    <div class="detail-item"><label>Department</label><span>${e.dept}</span></div>
+    <div class="detail-item"><label>Estimated Amount</label><span>${fmtAmount(e.amount)}</span></div>
+    <div class="detail-item"><label>Submitted On</label><span>${e.submittedAt || '—'}</span></div>
+    <div class="detail-item"><label>Reviewed On</label><span>${e.reviewedAt || '—'}</span></div>
+    <div class="detail-item"><label>Approved On</label><span>${e.approvedAt || '—'}</span></div>
+    <div class="detail-item"><label>Serial Number</label><span>${e.serial ? `<strong style="color:#1e3a5f;">${e.serial}</strong>` : '<em style="color:#94a3b8;">Not yet assigned</em>'}</span></div>
+    ${e.rejectReason ? `<div class="detail-item full"><label>Rejection Reason</label><span style="color:#dc2626;">${e.rejectReason}</span></div>` : ''}
+  `;
+
+  // Action buttons
+  let actions = `<button class="btn btn-outline" onclick="closeModal()">Close</button>`;
+  if (ctx === 'reviewer' && e.status === 'Pending') {
+    actions += `
+      <button class="btn btn-danger" onclick="confirmReject('reviewer')"><i class="fa-solid fa-xmark"></i> Reject</button>
+      <button class="btn btn-success" onclick="quickAction('${e.id}','Checked'); closeModal();"><i class="fa-solid fa-check"></i> Mark as Checked</button>`;
+  }
+  if (ctx === 'vp' && e.status === 'Checked') {
+    actions += `
+      <button class="btn btn-danger" onclick="confirmReject('vp')"><i class="fa-solid fa-xmark"></i> Reject</button>
+      <button class="btn btn-success" onclick="quickAction('${e.id}','Approved'); closeModal();"><i class="fa-solid fa-circle-check"></i> Approve</button>`;
+  }
+  document.getElementById('modal-actions').innerHTML = actions;
+
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function confirmReject(ctx) {
+  document.getElementById('reject-box').classList.add('open');
+  const e = entries.find(x => x.id === currentModalId);
+  // Swap buttons
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" onclick="doReject('${ctx}')"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection</button>`;
+}
+
+function doReject(ctx) {
+  const e = entries.find(x => x.id === currentModalId);
+  if (!e) return;
+  const reason = document.getElementById('reject-reason').value.trim();
+  e.status = ctx === 'vp' ? 'VP Rejected' : 'Rejected';
+  e.reviewedAt = e.reviewedAt || new Date().toISOString().slice(0,10);
+  e.rejectReason = reason || 'No reason provided.';
+  closeModal();
+  renderTables();
+  showToast('Form rejected.', '#dc2626');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  currentModalId = null;
+}
+
+/* ── FILTER ── */
+function filterTable(tableId, text, statusFilterId) {
+  const statusVal = typeof statusFilterId === 'string'
+    ? document.getElementById(statusFilterId).value
+    : statusFilterId.value || '';
+  const q = (text || '').toLowerCase();
+  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+    const matchText   = !q || tr.dataset.text.includes(q);
+    const matchStatus = !statusVal || tr.dataset.status === statusVal;
+    tr.style.display  = matchText && matchStatus ? '' : 'none';
+  });
+}
+
+/* ── TOAST ── */
+function showToast(msg, bg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = bg || '#1e3a5f';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── KEBAB MENU ── */
+function toggleKebab(ev) {
+  ev.stopPropagation();
+  const btn   = ev.currentTarget;
+  const id    = btn.dataset.id;
+  const ctx   = btn.dataset.ctx;
+  const menu  = document.getElementById('shared-kebab');
+  const alreadyThisBtn = menu.classList.contains('open') && menu.dataset.activeId === id + ctx;
+
+  closeKebabs();
+  if (alreadyThisBtn) return;
+
+  const entry = entries.find(x => x.id === id);
+  let html = `<button class="kebab-item" onclick="openModal('${id}','${ctx}'); closeKebabs()"><i class="fa-solid fa-eye"></i> View Details</button>`;
+
+  if (ctx === 'reviewer' && entry.status === 'Pending') {
+    html += `<div class="kebab-divider"></div>
+      <button class="kebab-item success" onclick="quickAction('${id}','Checked'); closeKebabs()"><i class="fa-solid fa-check"></i> Mark as Checked</button>
+      <button class="kebab-item danger" onclick="openRejectModal('${id}','reviewer'); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+  }
+  if (ctx === 'vp' && entry.status === 'Checked') {
+    html += `<div class="kebab-divider"></div>
+      <button class="kebab-item success" onclick="quickAction('${id}','Approved'); closeKebabs()"><i class="fa-solid fa-circle-check"></i> Approve</button>
+      <button class="kebab-item danger" onclick="openRejectModal('${id}','vp'); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+  }
+
+  menu.innerHTML = html;
+  menu.dataset.activeId = id + ctx;
+
+  const rect = btn.getBoundingClientRect();
+  menu.style.top   = (rect.bottom + 6) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left  = 'auto';
+  menu.classList.add('open');
+}
+
+function closeKebabs() {
+  const menu = document.getElementById('shared-kebab');
+  menu.classList.remove('open');
+  menu.dataset.activeId = '';
+}
+
+document.addEventListener('click', closeKebabs);
+document.addEventListener('scroll', closeKebabs, true);
+
+/* ── INIT ── */
+document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+renderTables();
+</script>
+</body>
+</html>
