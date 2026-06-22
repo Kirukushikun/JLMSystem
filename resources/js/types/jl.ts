@@ -1,7 +1,8 @@
 export type JlStatus = 'Pending' | 'Checked' | 'Rejected' | 'Approved' | 'VP Rejected';
 
 export interface JlEntry {
-    id: string;
+    id: number;
+    reference: string;       // 'JL-001-2026' — computed by model accessor
     title: string;
     date: string;
     company: string;
@@ -10,8 +11,8 @@ export interface JlEntry {
     amount: number;
     status: JlStatus;
     serial: string | null;
-    submittedAt: string;
-    reviewedAt: string | null;
-    approvedAt: string | null;
-    rejectReason?: string | null;
+    submitted_at: string;
+    reviewed_at: string | null;
+    approved_at: string | null;
+    reject_reason?: string | null;
 }

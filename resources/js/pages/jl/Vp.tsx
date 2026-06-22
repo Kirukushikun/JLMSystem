@@ -1,22 +1,12 @@
 import AppLayout from '@/layouts/AppLayout';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
     entries: JlEntry[];
-}
-
-function today() {
-    return new Date().toISOString().slice(0, 10);
-}
-
-let _serialSeed = 1;
-function generateSerial() {
-    _serialSeed++;
-    return `BFC-JL-${String(_serialSeed).padStart(3, '0')}-${new Date().getFullYear()}`;
 }
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
@@ -28,28 +18,28 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     );
 }
 
-export default function Vp({ entries: initial }: Props) {
-    const [entries, setEntries] = useState(initial);
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const [modal, setModal] = useState<JlEntry | null>(null);
+export default function Vp({ entries }: Props) {
+    const [search, setSearch]               = useState('');
+    const [statusFilter, setStatusFilter]   = useState('');
+    const [modal, setModal]                 = useState<JlEntry | null>(null);
     const [showRejectBox, setShowRejectBox] = useState(false);
-    const [rejectReason, setRejectReason] = useState('');
-    const [toast, setToast] = useState('');
+    const [rejectReason, setRejectReason]   = useState('');
+    const [toast, setToast]                 = useState('');
 
     function showToast(msg: string) {
         setToast(msg);
         setTimeout(() => setToast(''), 3000);
     }
 
-    function handleApprove(id: string) {
-        const serial = generateSerial();
-        setEntries((prev) =>
-            prev.map((e) =>
-                e.id === id ? { ...e, status: 'Approved', approvedAt: today(), serial } : e,
-            ),
-        );
-        showToast(`Approved! Serial No. ${serial} assigned.`);
+    function closeModal() {
+        setModal(null); setShowRejectBox(false); setRejectReason('');
+    }
+
+    function handleApprove(id: number) {
+        router.patch(`/jl/${id}/approve`, {}, {
+            preserveScroll: true,
+            onSuccess: () => showToast('Entry approved and serial number assigned.'),
+        });
     }
 
     function handleReject(entry: JlEntry) {
@@ -59,32 +49,24 @@ export default function Vp({ entries: initial }: Props) {
 
     function handleConfirmReject() {
         if (!modal) return;
-        setEntries((prev) =>
-            prev.map((e) =>
-                e.id === modal.id
-                    ? { ...e, status: 'VP Rejected', rejectReason: rejectReason || 'No reason provided.' }
-                    : e,
-            ),
-        );
-        setModal(null); setShowRejectBox(false); setRejectReason('');
-        showToast('Form rejected by VP.');
-    }
-
-    function closeModal() {
-        setModal(null); setShowRejectBox(false); setRejectReason('');
+        router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); showToast('Form rejected by VP.'); },
+        });
     }
 
     const filtered = entries.filter((e) => {
         const q = search.toLowerCase();
-        const matchText = !q || `${e.title} ${e.company} ${e.manager}`.toLowerCase().includes(q);
-        const matchStatus = !statusFilter || e.status === statusFilter;
-        return matchText && matchStatus;
+        return (
+            (!q || `${e.title} ${e.company} ${e.manager}`.toLowerCase().includes(q)) &&
+            (!statusFilter || e.status === statusFilter)
+        );
     });
 
     const forwarded = entries.length;
-    const pending = entries.filter((e) => e.status === 'Checked').length;
-    const approved = entries.filter((e) => e.status === 'Approved').length;
-    const rejected = entries.filter((e) => e.status === 'VP Rejected').length;
+    const pending   = entries.filter((e) => e.status === 'Checked').length;
+    const approved  = entries.filter((e) => e.status === 'Approved').length;
+    const rejected  = entries.filter((e) => e.status === 'VP Rejected').length;
 
     return (
         <AppLayout>
@@ -98,10 +80,10 @@ export default function Vp({ entries: initial }: Props) {
             </div>
 
             <div className="mb-7 grid grid-cols-4 gap-4">
-                <StatCard label="Forwarded to VP" value={forwarded} color="#1e3a5f" />
-                <StatCard label="Awaiting Approval" value={pending} color="#d97706" />
-                <StatCard label="Approved" value={approved} color="#16a34a" />
-                <StatCard label="Rejected by VP" value={rejected} color="#dc2626" />
+                <StatCard label="Forwarded to VP"  value={forwarded} color="#1e3a5f" />
+                <StatCard label="Awaiting Approval" value={pending}   color="#d97706" />
+                <StatCard label="Approved"          value={approved}  color="#16a34a" />
+                <StatCard label="Rejected by VP"    value={rejected}  color="#dc2626" />
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">

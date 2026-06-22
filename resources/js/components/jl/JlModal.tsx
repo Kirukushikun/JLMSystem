@@ -6,8 +6,8 @@ interface Props {
     entry: JlEntry | null;
     context: 'reviewer' | 'vp';
     onClose: () => void;
-    onCheck?: (id: string) => void;
-    onApprove?: (id: string) => void;
+    onCheck?: (id: number) => void;
+    onApprove?: (id: number) => void;
     onRejectClick?: () => void;
     showRejectBox?: boolean;
     rejectReason?: string;
@@ -74,9 +74,9 @@ export default function JlModal({
     const reviewedState: WfState = ['Checked', 'Approved', 'Rejected', 'VP Rejected'].includes(s) ? 'done' : 'active';
     const approvedState: WfState = s === 'Approved' ? 'done' : s === 'Checked' ? 'active' : 'idle';
 
-    const canCheck = context === 'reviewer' && s === 'Pending';
+    const canCheck  = context === 'reviewer' && s === 'Pending';
     const canApprove = context === 'vp' && s === 'Checked';
-    const canReject = canCheck || canApprove;
+    const canReject  = canCheck || canApprove;
 
     return (
         <div
@@ -95,7 +95,7 @@ export default function JlModal({
                 </button>
 
                 <h2 className="mb-5 text-lg font-bold" style={{ color: '#1e3a5f' }}>
-                    JL Form — {entry.id}
+                    JL Form — {entry.reference}
                 </h2>
 
                 {/* Workflow indicator */}
@@ -116,9 +116,9 @@ export default function JlModal({
                     <DetailItem label="Manager / Supervisor" value={entry.manager} />
                     <DetailItem label="Department" value={entry.dept} />
                     <DetailItem label="Estimated Amount" value={fmtAmt(entry.amount)} />
-                    <DetailItem label="Submitted On" value={entry.submittedAt || '—'} />
-                    <DetailItem label="Reviewed On" value={entry.reviewedAt || '—'} />
-                    <DetailItem label="Approved On" value={entry.approvedAt || '—'} />
+                    <DetailItem label="Submitted On" value={entry.submitted_at || '—'} />
+                    <DetailItem label="Reviewed On" value={entry.reviewed_at || '—'} />
+                    <DetailItem label="Approved On" value={entry.approved_at || '—'} />
                     <DetailItem
                         label="Serial Number"
                         value={
@@ -127,10 +127,10 @@ export default function JlModal({
                                 : <em className="text-gray-400">Not yet assigned</em>
                         }
                     />
-                    {entry.rejectReason && (
+                    {entry.reject_reason && (
                         <DetailItem
                             label="Rejection Reason"
-                            value={<span className="text-red-600">{entry.rejectReason}</span>}
+                            value={<span className="text-red-600">{entry.reject_reason}</span>}
                             full
                         />
                     )}

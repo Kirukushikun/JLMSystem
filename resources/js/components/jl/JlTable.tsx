@@ -12,8 +12,8 @@ interface Props {
     entries: JlEntry[];
     context: 'reviewer' | 'vp';
     onView: (entry: JlEntry) => void;
-    onCheck: (id: string) => void;
-    onApprove: (id: string) => void;
+    onCheck: (id: number) => void;
+    onApprove: (id: number) => void;
     onReject: (entry: JlEntry) => void;
 }
 

@@ -2,11 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreJlRequest;
+use App\Models\JlEntry;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class JlController extends Controller
 {
+    private const SERIAL_PREFIX = [
+        'BFC'      => 'BFC',
+        'BDL'      => 'BDL',
+        'PFC'      => 'PFC',
+        'RH'       => 'RH',
+        'Feedmill' => 'FML',
+    ];
+
     public function submit(): Response
     {
         return Inertia::render('jl/Submit');
@@ -15,103 +27,78 @@ class JlController extends Controller
     public function reviewer(): Response
     {
         return Inertia::render('jl/Reviewer', [
-            'entries' => $this->mockEntries(),
+            'entries' => JlEntry::latest()->get(),
         ]);
     }
 
     public function vp(): Response
     {
-        $vpStatuses = ['Checked', 'Approved', 'VP Rejected'];
-
         return Inertia::render('jl/Vp', [
-            'entries' => array_values(
-                array_filter(
-                    $this->mockEntries(),
-                    fn ($e) => in_array($e['status'], $vpStatuses)
-                )
-            ),
+            'entries' => JlEntry::whereIn('status', ['Checked', 'Approved', 'VP Rejected'])
+                ->latest()
+                ->get(),
         ]);
     }
 
-    /** @return array<int, array<string, mixed>> */
-    private function mockEntries(): array
+    public function store(StoreJlRequest $request): RedirectResponse
     {
-        return [
-            [
-                'id' => 'JL-001-2026',
-                'title' => 'Farm Labor Cost Q1 2026',
-                'date' => '2026-01-15',
-                'company' => 'BFC Farm Davao',
-                'manager' => 'Roberto Dela Cruz',
-                'dept' => 'Operations',
-                'amount' => 125000,
-                'status' => 'Approved',
-                'serial' => 'BFC-JL-001-2026',
-                'submittedAt' => '2026-01-15',
-                'reviewedAt' => '2026-01-17',
-                'approvedAt' => '2026-01-20',
-                'rejectReason' => null,
-            ],
-            [
-                'id' => 'JL-002-2026',
-                'title' => 'Harvesting Equipment Maintenance',
-                'date' => '2026-02-10',
-                'company' => 'BFC Farm Bukidnon',
-                'manager' => 'Maria Santos',
-                'dept' => 'Maintenance',
-                'amount' => 87500,
-                'status' => 'Checked',
-                'serial' => null,
-                'submittedAt' => '2026-02-10',
-                'reviewedAt' => '2026-02-12',
-                'approvedAt' => null,
-                'rejectReason' => null,
-            ],
-            [
-                'id' => 'JL-003-2026',
-                'title' => 'Logistics Labor — March Run',
-                'date' => '2026-03-05',
-                'company' => 'BFC Farm Cotabato',
-                'manager' => 'Juan Ramos',
-                'dept' => 'Logistics',
-                'amount' => 43000,
-                'status' => 'Rejected',
-                'serial' => null,
-                'submittedAt' => '2026-03-05',
-                'reviewedAt' => '2026-03-06',
-                'approvedAt' => null,
-                'rejectReason' => 'Missing supporting documents for overtime hours.',
-            ],
-            [
-                'id' => 'JL-004-2026',
-                'title' => 'HR Onboarding Cost April',
-                'date' => '2026-04-20',
-                'company' => 'BFC Group HQ',
-                'manager' => 'Ana Mendoza',
-                'dept' => 'Human Resources',
-                'amount' => 31000,
-                'status' => 'Pending',
-                'serial' => null,
-                'submittedAt' => '2026-04-20',
-                'reviewedAt' => null,
-                'approvedAt' => null,
-                'rejectReason' => null,
-            ],
-            [
-                'id' => 'JL-005-2026',
-                'title' => 'Q2 Finance Audit Labor',
-                'date' => '2026-05-01',
-                'company' => 'BFC Farm Mindanao',
-                'manager' => 'Carlos Villanueva',
-                'dept' => 'Finance',
-                'amount' => 56800,
-                'status' => 'Pending',
-                'serial' => null,
-                'submittedAt' => '2026-05-01',
-                'reviewedAt' => null,
-                'approvedAt' => null,
-                'rejectReason' => null,
-            ],
-        ];
+        $entry = JlEntry::create([
+            ...$request->validated(),
+            'status'       => 'Pending',
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        return back()->with('success', "Form submitted! Reference: {$entry->reference}");
+    }
+
+    public function check(JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->status !== 'Pending', 422, 'Entry is not pending.');
+
+        $entry->update([
+            'status'      => 'Checked',
+            'reviewed_at' => now()->toDateString(),
+        ]);
+
+        return back();
+    }
+
+    public function approve(JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->status !== 'Checked', 422, 'Entry is not checked.');
+
+        $entry->update([
+            'status'      => 'Approved',
+            'approved_at' => now()->toDateString(),
+            'serial'      => $this->generateSerial($entry),
+        ]);
+
+        return back();
+    }
+
+    public function reject(Request $request, JlEntry $entry): RedirectResponse
+    {
+        abort_if(! in_array($entry->status, ['Pending', 'Checked']), 422, 'Entry cannot be rejected.');
+
+        $entry->update([
+            'status'        => $entry->status === 'Checked' ? 'VP Rejected' : 'Rejected',
+            'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
+            'reject_reason' => $request->input('reject_reason') ?: 'No reason provided.',
+        ]);
+
+        return back();
+    }
+
+    private function generateSerial(JlEntry $entry): string
+    {
+        $year   = now()->year;
+        $prefix = self::SERIAL_PREFIX[$entry->company] ?? strtoupper(substr($entry->company, 0, 3));
+
+        $count = JlEntry::where('company', $entry->company)
+            ->whereYear('approved_at', $year)
+            ->whereNotNull('serial')
+            ->count();
+
+        return $prefix . '-JL-' . str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT) . '-' . $year;
     }
 }
