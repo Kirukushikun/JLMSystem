@@ -1,15 +1,29 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import type { User } from '@/types/auth';
 
 const NAV_ITEMS = [
-    { label: 'Submit Form', href: '/' },
-    { label: 'Reviewer Dashboard', href: '/reviewer' },
-    { label: 'VP Approver', href: '/vp' },
+    { label: 'Submit Form',        href: '/',            roles: ['reviewer', 'vp', 'admin'] },
+    { label: 'Reviewer Dashboard', href: '/reviewer',    roles: ['reviewer', 'admin'] },
+    { label: 'VP Approver',        href: '/vp',          roles: ['vp', 'admin'] },
+    { label: 'User Management',    href: '/admin/users', roles: ['admin'] },
 ] as const;
 
+type PageProps = { auth: { user: User | null }; [key: string]: unknown };
+
 export default function AppLayout({ children }: { children: ReactNode }) {
-    const { url } = usePage();
+    const { url, props } = usePage<PageProps>();
     const pathname = url.split('?')[0];
+    const user = props.auth?.user ?? null;
+    const role = user?.role ?? '';
+
+    const visibleItems = NAV_ITEMS.filter((item) =>
+        (item.roles as readonly string[]).includes(role),
+    );
+
+    function handleLogout() {
+        router.post('/logout');
+    }
 
     return (
         <div className="min-h-screen bg-[#f0f4f8]">
@@ -20,8 +34,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <span className="text-sm font-bold tracking-wide text-white">
                     JL Monitoring System
                 </span>
-                <div className="flex gap-1">
-                    {NAV_ITEMS.map((item) => (
+
+                <div className="flex items-center gap-1">
+                    {visibleItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
@@ -35,6 +50,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                             {item.label}
                         </Link>
                     ))}
+
+                    {user && (
+                        <>
+                            <div className="mx-2 h-5 w-px bg-white/20" />
+                            <span className="mr-1 text-xs text-white/60">{user.name}</span>
+                            <button
+                                onClick={handleLogout}
+                                className="rounded-md px-3 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                            >
+                                Logout
+                            </button>
+                        </>
+                    )}
                 </div>
             </nav>
             <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>

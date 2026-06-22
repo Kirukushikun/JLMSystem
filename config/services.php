@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'auth_api' => [
+        'base_uri'          => env('AUTH_API_BASE_URI', ''),
+        'api_key'           => env('AUTH_API_KEY', ''),
+        'auth_user_api_key' => env('AUTH_USER_API_KEY', ''),
+    ],
+
+    'user_api' => [
+        'endpoint' => env('USER_API_ENDPOINT', ''),
+        'key'      => env('USER_API_KEY', ''),
+    ],
+
 ];

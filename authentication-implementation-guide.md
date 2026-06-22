@@ -1,6 +1,6 @@
 # Authentication Implementation Guide
 
-This document is a step-by-step reference for replicating the login authentication system used in PandaSystem. The system is built on **Laravel** and authenticates users against an **external API**, with brute-force protection, access logging, and module-level authorization.
+This document is a step-by-step reference for replicating the login authentication system used in PandaSystem. The system is built on **Laravel** and authenticates users against an **external API**, with brute-force protection, access logging, and module-level authorization. It also covers the **User Access Management** panel — a Livewire component that lets an admin grant or revoke per-module access for any user registered in the external user directory.
 
 ---
 
@@ -20,7 +20,15 @@ This document is a step-by-step reference for replicating the login authenticati
 12. [Step 10 — Register Middleware in Kernel](#12-step-10--register-middleware-in-kernel)
 13. [Step 11 — Config: External Auth API](#13-step-11--config-external-auth-api)
 14. [Security Behaviors Summary](#14-security-behaviors-summary)
-15. [Checklist for New System](#15-checklist-for-new-system)
+15. [Part 2 — User Access Management](#15-part-2--user-access-management)
+    - [Overview](#overview)
+    - [Dual Data Source Pattern](#dual-data-source-pattern)
+    - [Step 12 — Livewire Component: UseraccessTable](#step-12--livewire-component-useraccesstable)
+    - [Step 13 — Livewire View: useraccess-table.blade.php](#step-13--livewire-view-useraccess-tablebladephp)
+    - [Step 14 — E-Signature Upload](#step-14--e-signature-upload)
+    - [Step 15 — Edit User Info Modal](#step-15--edit-user-info-modal)
+    - [Access Management Logic Summary](#access-management-logic-summary)
+16. [Checklist for New System](#16-checklist-for-new-system)
 
 ---
 
@@ -713,10 +721,543 @@ config('services.auth_api.auth_user_api_key')
 
 ---
 
-## 15. Checklist for New System
+---
+
+## 15. Part 2 — User Access Management
+
+### Overview
+
+The User Access Management panel is an admin-only screen that lets you grant or revoke per-module access for any user in the organization. It is powered by a **Livewire component** and works as follows:
+
+1. On load, fetch **all organization users** from the external API (name, email, encrypted ID).
+2. Separately, load **local DB users** (those who have ever been granted any access).
+3. Render a table merging both sources — one row per organization user, with module toggle buttons.
+4. Grant/Revoke actions write to the local `users` table (create, update, or delete the row depending on resulting access state).
+
+### Dual Data Source Pattern
+
+This is the most important concept in this panel:
+
+| Source | Variable | Contents | When populated |
+|---|---|---|---|
+| External API | `$users` | All org users (id, first_name, last_name, email) | `mount()` → `fetchUsers()` |
+| Local DB | `$dbUsers` | Only users with ≥1 access grant; keyed by ID | `mount()` → `User::all()->keyBy('id')` |
+
+The table loops over `$users` (external — everyone) and looks up `$dbUsers[$user['id']]` to read the current access state. If no local record exists, all module buttons show "Grant".
+
+> **Important:** User IDs from the external API are **Crypt-encrypted**. They must be decrypted with `Crypt::decryptString()` before being used to look up or write to the local DB.
+
+---
+
+### Step 12 — Livewire Component: UseraccessTable
+
+**Install Livewire** if not already present:
+
+```bash
+composer require livewire/livewire
+```
+
+**File:** `app/Http/Livewire/UseraccessTable.php`
+
+```php
+<?php
+
+namespace App\Http\Livewire;
+
+use Livewire\Component;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
+use Livewire\WithFileUploads;
+use App\Models\User;
+
+class UseraccessTable extends Component
+{
+    use WithFileUploads;
+
+    public $users = [];       // All users from external API
+    public $dbUsers = [];     // Local DB users, keyed by ID
+    public $esignUpload;      // Holds the selected file for e-sign
+    public $currentUserId;    // Tracks which user's e-sign is being uploaded
+
+    protected $listeners = ['accessUpdated' => '$refresh'];
+
+    public function mount()
+    {
+        // Step 1: Fetch all org users from external API
+        $this->fetchUsers();
+
+        // Step 2: Load local DB users keyed by ID
+        $this->dbUsers = User::all()->keyBy('id');
+    }
+
+    public function fetchUsers()
+    {
+        $response = Http::withHeaders([
+            'x-api-key' => config('services.user_api.key'), // move to config/env
+        ])
+        ->withOptions([
+            'verify' => storage_path('cacert.pem'), // SSL cert; use true in production if CA is valid
+        ])
+        ->post(config('services.user_api.endpoint')); // e.g. https://your-auth-server.com/api/v1/users
+
+        if ($response->successful()) {
+            $json = $response->json();
+            $users = $json['data'] ?? $json;
+
+            // Decrypt each user's ID (external API returns encrypted IDs)
+            $this->users = array_map(function ($user) {
+                try {
+                    $user['id'] = Crypt::decryptString($user['id']);
+                } catch (\Exception $e) {
+                    Log::error('Failed to decrypt user ID for: ' . $user['first_name'] . ' ' . $user['last_name']);
+                }
+                return $user;
+            }, $users);
+        } else {
+            $this->users = [];
+            session()->flash('error', 'Failed to fetch users. Status: ' . $response->status());
+        }
+    }
+
+    public function manageAccess($userId, $action, $role, $name = null)
+    {
+        // Maps display role name → JSON access key
+        $roleMap = [
+            'Requestor'      => 'RQ_Module',
+            'Division Head'  => 'DH_Module',
+            'HR Preparer'    => 'HRP_Module',
+            'HR Approver'    => 'HRA_Module',
+            'Final Approver' => 'FA_Module',
+        ];
+
+        if (!isset($roleMap[$role])) {
+            $this->noreloadNotif('error', 'Invalid Role', 'The selected role is not recognized.');
+            return;
+        }
+
+        $key = $roleMap[$role];
+
+        $defaultAccess = [
+            'RQ_Module'  => false,
+            'DH_Module'  => false,
+            'HRP_Module' => false,
+            'HRA_Module' => false,
+            'FA_Module'  => false,
+        ];
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            if ($action === 'grant') {
+                // Create local user record with this one module enabled
+                $defaultAccess[$key] = true;
+                $newUser = User::create([
+                    'id'     => $userId,
+                    'name'   => $name,
+                    'access' => $defaultAccess,
+                ]);
+                $this->dbUsers->put($userId, $newUser);
+                $this->noreloadNotif('success', 'User Created', "New user created with {$role} access granted.");
+            } else {
+                $this->noreloadNotif('error', 'User Not Found', 'Cannot revoke access from a user that does not exist.');
+            }
+            return;
+        }
+
+        // Toggle the requested module
+        $access = $user->access ?? $defaultAccess;
+        $access[$key] = $action === 'grant';
+
+        // If all modules become false, delete the local user record entirely
+        if (!in_array(true, $access, true)) {
+            if ($user->esign && \Storage::disk('public')->exists($user->esign)) {
+                \Storage::disk('public')->delete($user->esign);
+            }
+            $user->delete();
+            $this->dbUsers->forget($userId);
+            $this->noreloadNotif('success', 'User Removed', "User removed — no active module access remains.");
+            return;
+        }
+
+        // Save updated access
+        $user->access = $access;
+        $user->save();
+        $this->dbUsers->put($userId, $user);
+
+        $this->dispatch('$refresh');
+        $this->noreloadNotif('success', ucfirst($action) . ' Successful', "Access for {$role} has been {$action}ed.");
+    }
+
+    public function uploadEsign($userId)
+    {
+        $this->validate([
+            'esignUpload' => 'required|image|max:2048',
+        ]);
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            session()->flash('error', 'User not found.');
+            return;
+        }
+
+        // Delete old e-sign file if it exists
+        if ($user->esign && \Storage::disk('public')->exists($user->esign)) {
+            \Storage::disk('public')->delete($user->esign);
+        }
+
+        $path = $this->esignUpload->store('esignatures', 'public');
+        $user->esign = $path;
+        $user->save();
+
+        $this->dbUsers->put($userId, $user);
+        $this->reset('esignUpload', 'currentUserId');
+
+        $this->dispatch('notif', type: 'success', header: 'E-sign Updated', message: 'Signature uploaded successfully.');
+    }
+
+    public function updatedEsignUpload()
+    {
+        if ($this->currentUserId) {
+            $this->uploadEsign($this->currentUserId);
+        }
+    }
+
+    public function updateUser($data)
+    {
+        try {
+            $user = User::find($data['id']);
+
+            if (!$user) {
+                $this->noreloadNotif('failed', 'User Not Found', 'This user does not exist in the system.');
+                return;
+            }
+
+            if ($user->hasPending) {
+                $this->noreloadNotif('failed', 'Action Blocked', "Changes to {$user->name} are blocked — they have an ongoing PAN process.");
+                return;
+            }
+
+            $user->farm     = $data['farm'] ?? null;
+            $user->position = $data['position'] ?? null;
+            $user->role     = $data['role'] ?? null;
+            $user->save();
+
+            $this->dbUsers->put($user->id, $user);
+            $this->noreloadNotif('success', 'User Updated', 'Farm, position, and role updated.');
+        } catch (\Exception $e) {
+            Log::error('Failed to update user: ' . $e->getMessage());
+            $this->noreloadNotif('failed', 'Update Failed', 'Something went wrong while updating the user.');
+        }
+    }
+
+    public function render()
+    {
+        return view('livewire.useraccess-table');
+    }
+
+    private function noreloadNotif($type, $header, $message): void
+    {
+        $this->dispatch('notif', type: $type, header: $header, message: $message);
+    }
+}
+```
+
+**ENV / config additions** for the user listing API:
+
+`.env`:
+```env
+USER_API_ENDPOINT=https://your-auth-server.com/api/v1/users
+USER_API_KEY=your_user_listing_api_key
+```
+
+`config/services.php`:
+```php
+'user_api' => [
+    'endpoint' => env('USER_API_ENDPOINT'),
+    'key'      => env('USER_API_KEY'),
+],
+```
+
+---
+
+### Step 13 — Livewire View: useraccess-table.blade.php
+
+**File:** `resources/views/livewire/useraccess-table.blade.php`
+
+The view has two responsibilities:
+1. **Render the table** — merges API users with local DB access state.
+2. **Drive two modals** — a confirm modal (grant/revoke) and an edit modal (farm, position, role).
+
+All modal state is managed in Alpine.js (`x-data`) on the wrapping `div`, keeping it client-side only until the user hits Confirm/Save, which then calls the Livewire method.
+
+```blade
+<div class="flex flex-col gap-5 h-full">
+    <div class="table-header flex w-full gap-3 items-center">
+        <h1 class="text-[22px] flex-none">User Access</h1>
+    </div>
+
+    <div class="table-container"
+        x-data="{
+            modalOpen: false,
+            modalType: 'confirm', // 'confirm' | 'edit'
+            modalData: {},
+
+            openConfirm(id, action, role, name = null) {
+                this.modalType = 'confirm';
+                this.modalData = {
+                    id, action, role, name,
+                    header: action === 'grant' ? 'Grant Access' : 'Revoke Access',
+                    message: `Are you sure you want to ${action} this user's access to ${role} Module?`
+                };
+                this.modalOpen = true;
+            },
+
+            openEdit(user) {
+                this.modalType = 'edit';
+                this.modalData = {
+                    id:       user.id,
+                    farm:     user.farm ?? '',
+                    position: user.position ?? '',
+                    role:     user.role ?? ''
+                };
+                this.modalOpen = true;
+            }
+        }"
+    >
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>User Name</th>
+                    <th>User Email</th>
+                    <th>Farm</th>
+                    <th>Position</th>
+                    <th>RQ Module</th>
+                    <th>DH Module</th>
+                    <th>HRP Module</th>
+                    <th>HRA Module</th>
+                    <th>FA Module</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($users as $user)
+                    @php
+                        $dbUser  = $dbUsers[$user['id']] ?? null;
+                        $access  = $dbUser->access ?? [
+                            'RQ_Module' => false, 'DH_Module' => false,
+                            'HRP_Module' => false, 'HRA_Module' => false, 'FA_Module' => false
+                        ];
+                        $fullname = $user['first_name'] . ' ' . $user['last_name'];
+                    @endphp
+                    <tr>
+                        <td>{{ $user['id'] }}</td>
+                        <td>{{ $fullname }}</td>
+                        <td>{{ $user['email'] }}</td>
+                        <td>{{ $dbUser->farm ?? '--' }}</td>
+                        <td>{{ $dbUser->position ?? '--' }}</td>
+
+                        {{-- ── Module columns (repeat per module) ── --}}
+                        @foreach([
+                            'RQ_Module'  => 'Requestor',
+                            'DH_Module'  => 'Division Head',
+                            'HRP_Module' => 'HR Preparer',
+                            'HRA_Module' => 'HR Approver',
+                            'FA_Module'  => 'Final Approver',
+                        ] as $moduleKey => $moduleLabel)
+                        <td class="table-actions">
+                            @if($access[$moduleKey])
+                                <button @click="openConfirm({{ $user['id'] }}, 'revoke', '{{ $moduleLabel }}')"
+                                    class="border-solid border-3 border-red-600 text-red-600 hover:bg-red-600 hover:text-white">
+                                    Revoke
+                                </button>
+                            @else
+                                <button @click="openConfirm({{ $user['id'] }}, 'grant', '{{ $moduleLabel }}', '{{ $fullname }}')"
+                                    class="border-solid border-3 border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
+                                    Grant
+                                </button>
+                            @endif
+                        </td>
+                        @endforeach
+
+                        {{-- ── Actions column: E-sign + Edit ── --}}
+                        <td class="table-actions">
+                            <div x-data>
+                                @if($dbUser)
+                                    <input type="file" x-ref="fileInput" accept="image/*" class="hidden"
+                                        wire:model="esignUpload"
+                                        @change="$wire.currentUserId = '{{ $user['id'] }}'; $wire.uploadEsign('{{ $user['id'] }}')">
+
+                                    <button type="button" @click="$refs.fileInput.click()"
+                                        class="border-3 border-blue-600 bg-blue-600 text-white px-3 py-1 rounded">
+                                        {{ $dbUser->esign ? 'Re-upload' : 'Upload' }}
+                                    </button>
+
+                                    @if($dbUser->esign)
+                                        <i class="fa-solid fa-eye text-gray-500"
+                                            onclick="window.open('{{ asset('storage/' . $dbUser->esign) }}', '_blank')"></i>
+                                    @endif
+
+                                    <i @click="openEdit({ id: {{ $user['id'] }}, farm: '{{ $dbUser->farm ?? '' }}', position: '{{ $dbUser->position ?? '' }}', role: '{{ $dbUser->role ?? '' }}' })"
+                                        class="fa-solid fa-pen-to-square text-gray-500 cursor-pointer"></i>
+                                @else
+                                    <button type="button" disabled
+                                        class="border-3 border-gray-500 bg-gray-500 text-white px-3 py-1 rounded opacity-50">
+                                        Upload
+                                    </button>
+                                    <i class="fa-solid fa-pen-to-square text-gray-300"></i>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <!-- Overlay -->
+        <div x-show="modalOpen" class="fixed inset-0 bg-black/50 z-40"></div>
+
+        <!-- Modal Container -->
+        <div x-show="modalOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-90"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-90"
+            class="fixed inset-0 flex items-center justify-center z-50">
+
+            <div class="bg-white p-6 rounded-lg shadow-lg w-md z-10">
+
+                <!-- Confirm Modal (Grant / Revoke) -->
+                <template x-if="modalType === 'confirm'">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4" x-text="modalData.header"></h2>
+                        <p class="mb-6" x-text="modalData.message"></p>
+                        <div class="flex justify-end gap-3">
+                            <button type="button" @click="modalOpen = false"
+                                class="px-4 py-2 border rounded-md hover:bg-gray-100 cursor-pointer">Cancel</button>
+                            <button type="button"
+                                @click="modalOpen = false; $wire.manageAccess(modalData.id, modalData.action, modalData.role, modalData.name)"
+                                class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-800 cursor-pointer">
+                                Confirm
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Edit Modal (Farm / Position / Role) -->
+                <template x-if="modalType === 'edit'">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-4">Edit User Info</h2>
+
+                        <div class="mb-4">
+                            <label class="block mb-1 font-medium">Farm</label>
+                            <select class="border w-full rounded-md px-2 py-1" x-model="modalData.farm">
+                                <option value="">Select Farm</option>
+                                <option value="BFC">BFC</option>
+                                <option value="BDL">BDL</option>
+                                <option value="PFC">PFC</option>
+                                <option value="RH">RH</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block mb-1 font-medium">Position</label>
+                            <input type="text" class="border w-full rounded-md px-2 py-1" x-model="modalData.position">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block mb-1 font-medium">Role</label>
+                            <select class="border w-full rounded-md px-2 py-1" x-model="modalData.role">
+                                <option value="">Unset</option>
+                                <option value="hrhead">HR Head</option>
+                                <option value="admin">ADMIN</option>
+                            </select>
+                        </div>
+
+                        <div class="flex justify-end gap-3">
+                            <button type="button" @click="modalOpen = false"
+                                class="px-4 py-2 border rounded-md hover:bg-gray-100 cursor-pointer">Cancel</button>
+                            <button type="button"
+                                @click="modalOpen = false; $wire.updateUser(modalData)"
+                                class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-800 cursor-pointer">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+---
+
+### Step 14 — E-Signature Upload
+
+E-signs are uploaded via **Livewire's `WithFileUploads` trait**. Each row's upload button triggers a hidden `<input type="file">` via Alpine's `$refs`. The change event sets `currentUserId` on the Livewire component and then calls `uploadEsign`.
+
+**Storage setup** — run once:
+```bash
+php artisan storage:link
+```
+
+This creates a `public/storage` symlink so files stored in `storage/app/public/esignatures/` are accessible via `asset('storage/...')`.
+
+**User model** — add `esign` to `$fillable`:
+```php
+protected $fillable = [
+    'id', 'name', 'farm', 'position', 'role', 'access', 'esign'
+];
+```
+
+**Users table** — add the column via migration:
+```php
+$table->string('esign')->nullable();
+```
+
+---
+
+### Step 15 — Edit User Info Modal
+
+The edit modal is opened by calling `openEdit(user)` from Alpine, passing the current user's `farm`, `position`, and `role`. On Save, `$wire.updateUser(modalData)` is called, which passes the entire `modalData` object to Livewire.
+
+Guard in `updateUser`: if `$user->hasPending === true`, the edit is blocked. This prevents modifying a user while they are mid-workflow in the PAN process.
+
+**Users table columns required:**
+
+| Column      | Type     | Notes                             |
+|-------------|----------|-----------------------------------|
+| `farm`      | string   | Nullable; values: BFC, BDL, PFC, RH |
+| `position`  | string   | Nullable; free text               |
+| `role`      | string   | Nullable; `hrhead` or `admin`     |
+| `hasPending`| boolean  | Blocks editing when `true`        |
+
+---
+
+### Access Management Logic Summary
+
+| Scenario | Result |
+|---|---|
+| Grant on user with no local record | Creates a new `users` row with that one module set to `true` |
+| Grant on existing user | Updates their `access` JSON, sets module to `true` |
+| Revoke on existing user, other modules still active | Updates `access` JSON, sets module to `false` |
+| Revoke on existing user, last active module revoked | Deletes the local `users` row + e-sign file |
+| Revoke on user with no local record | Shows error — nothing to revoke |
+| `$dbUsers` after any change | Always updated in-memory via `->put()` or `->forget()` to avoid a full page reload |
+
+---
+
+## 16. Checklist for New System
 
 Use this when applying this auth pattern to a new Laravel application:
 
+**Authentication:**
 - [ ] Copy `LoginController.php` → update route names and redirect targets
 - [ ] Copy `AuthenticationController.php` → update redirect target
 - [ ] Copy `CheckModuleAccess.php` middleware → define your own module codes
@@ -733,3 +1274,15 @@ Use this when applying this auth pattern to a new Laravel application:
 - [ ] Wrap protected routes in `Route::middleware('auth')->group(...)`
 - [ ] Set per-route `module.access` middleware where needed
 - [ ] Ensure `APP_KEY` is shared if using the app-to-app encrypted login
+
+**User Access Management panel:**
+- [ ] Install Livewire: `composer require livewire/livewire`
+- [ ] Copy `UseraccessTable.php` Livewire component → update module map and API endpoint
+- [ ] Copy `useraccess-table.blade.php` view → update Farm dropdown options and Role options
+- [ ] Add `user_api` block to `config/services.php`
+- [ ] Set `USER_API_ENDPOINT` and `USER_API_KEY` in `.env`
+- [ ] Add `esign`, `farm`, `position`, `role`, `hasPending` columns to the `users` table
+- [ ] Add those columns to `$fillable` in `User` model
+- [ ] Run `php artisan storage:link` for e-sign file serving
+- [ ] Add CA certificate (`cacert.pem`) to `storage/` if the external API uses a custom SSL cert
+- [ ] Restrict the admin route that renders this component to admin users only
