@@ -1,9 +1,6 @@
 import AppLayout from '@/layouts/AppLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 
-const COMPANIES = ['BFC', 'BDL', 'PFC', 'RH', 'Feedmill'];
-const DEPTS = ['Operations', 'Finance', 'Human Resources', 'Maintenance', 'Logistics', 'Harvesting', 'Other'];
-
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
 
@@ -17,11 +14,13 @@ function Label({ children }: { children: React.ReactNode }) {
 
 interface PageProps {
     flash: { success?: string };
+    companies: Array<{ id: number; name: string }>;
+    departments: Array<{ id: number; name: string }>;
     [key: string]: unknown;
 }
 
 export default function Submit() {
-    const { flash } = usePage<PageProps>().props;
+    const { flash, companies, departments } = usePage<PageProps>().props;
 
     const form = useForm({
         title:   '',
@@ -101,7 +100,9 @@ export default function Submit() {
                             disabled={form.processing}
                         >
                             <option value="">— Select company —</option>
-                            {COMPANIES.map((c) => <option key={c}>{c}</option>)}
+                            {companies.map((c) => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -125,7 +126,9 @@ export default function Submit() {
                             disabled={form.processing}
                         >
                             <option value="">— Select department —</option>
-                            {DEPTS.map((d) => <option key={d}>{d}</option>)}
+                            {departments.map((d) => (
+                                <option key={d.id} value={d.name}>{d.name}</option>
+                            ))}
                         </select>
                     </div>
 

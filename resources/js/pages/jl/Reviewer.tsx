@@ -81,11 +81,6 @@ export default function Reviewer({ entries }: Props) {
         });
     }
 
-    function handleReject(entry: JlEntry) {
-        setModal(entry);
-        setShowRejectBox(true);
-    }
-
     function handleConfirmReject() {
         if (!modal) return;
         router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
@@ -150,9 +145,6 @@ export default function Reviewer({ entries }: Props) {
                     entries={filtered}
                     context="reviewer"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
-                    onCheck={handleCheck}
-                    onApprove={() => {}}
-                    onReject={handleReject}
                 />
             </div>
 

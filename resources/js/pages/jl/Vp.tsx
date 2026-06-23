@@ -42,11 +42,6 @@ export default function Vp({ entries }: Props) {
         });
     }
 
-    function handleReject(entry: JlEntry) {
-        setModal(entry);
-        setShowRejectBox(true);
-    }
-
     function handleConfirmReject() {
         if (!modal) return;
         router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
@@ -110,9 +105,6 @@ export default function Vp({ entries }: Props) {
                     entries={filtered}
                     context="vp"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
-                    onCheck={() => {}}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
                 />
             </div>
 

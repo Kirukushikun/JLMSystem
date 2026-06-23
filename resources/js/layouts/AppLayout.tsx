@@ -3,10 +3,11 @@ import type { ReactNode } from 'react';
 import type { User } from '@/types/auth';
 
 const NAV_ITEMS = [
-    { label: 'Submit Form',        href: '/',            roles: ['reviewer', 'vp', 'admin'] },
-    { label: 'Reviewer Dashboard', href: '/reviewer',    roles: ['reviewer', 'admin'] },
-    { label: 'VP Approver',        href: '/vp',          roles: ['vp', 'admin'] },
-    { label: 'User Management',    href: '/admin/users', roles: ['admin'] },
+    { label: 'Submit Form',        href: '/',                    roles: ['reviewer', 'vp', 'admin'] },
+    { label: 'Reviewer Dashboard', href: '/reviewer',            roles: ['reviewer', 'admin'] },
+    { label: 'VP Approver',        href: '/vp',                  roles: ['vp', 'admin'] },
+    { label: 'User Management',    href: '/admin/users',         roles: ['admin'] },
+    { label: 'Maintenance',        href: '/admin/maintenance',   roles: ['admin'] },
 ] as const;
 
 type PageProps = { auth: { user: User | null }; [key: string]: unknown };

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\JlController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,4 +32,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/users', [UserManagementController::class, 'index'])->middleware('role:admin')->name('admin.users');
     Route::post('/admin/users/assign', [UserManagementController::class, 'assign'])->middleware('role:admin')->name('admin.users.assign');
     Route::delete('/admin/users/{id}', [UserManagementController::class, 'revoke'])->middleware('role:admin')->name('admin.users.revoke');
+
+    // Admin: maintenance
+    Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])->middleware('role:admin')->name('admin.maintenance');
+    Route::post('/admin/maintenance/companies', [MaintenanceController::class, 'storeCompany'])->middleware('role:admin')->name('admin.maintenance.companies.store');
+    Route::delete('/admin/maintenance/companies/{company}', [MaintenanceController::class, 'destroyCompany'])->middleware('role:admin')->name('admin.maintenance.companies.destroy');
+    Route::post('/admin/maintenance/departments', [MaintenanceController::class, 'storeDepartment'])->middleware('role:admin')->name('admin.maintenance.departments.store');
+    Route::delete('/admin/maintenance/departments/{department}', [MaintenanceController::class, 'destroyDepartment'])->middleware('role:admin')->name('admin.maintenance.departments.destroy');
 });

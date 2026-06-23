@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreJlRequest extends FormRequest
 {
@@ -11,15 +12,15 @@ class StoreJlRequest extends FormRequest
         return true;
     }
 
-    /** @return array<string, array<string>> */
+    /** @return array<string, array<mixed>> */
     public function rules(): array
     {
         return [
             'title'   => ['required', 'string', 'max:255'],
             'date'    => ['required', 'date'],
-            'company' => ['required', 'string', 'in:BFC,BDL,PFC,RH,Feedmill'],
+            'company' => ['required', 'string', Rule::exists('companies', 'name')],
             'manager' => ['required', 'string', 'max:255'],
-            'dept'    => ['required', 'string', 'in:Operations,Finance,Human Resources,Maintenance,Logistics,Harvesting,Other'],
+            'dept'    => ['required', 'string', Rule::exists('departments', 'name')],
             'amount'  => ['required', 'numeric', 'min:0'],
         ];
     }

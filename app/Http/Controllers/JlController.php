@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreJlRequest;
+use App\Models\Company;
+use App\Models\Department;
 use App\Models\JlEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,17 +13,12 @@ use Inertia\Response;
 
 class JlController extends Controller
 {
-    private const SERIAL_PREFIX = [
-        'BFC'      => 'BFC',
-        'BDL'      => 'BDL',
-        'PFC'      => 'PFC',
-        'RH'       => 'RH',
-        'Feedmill' => 'FML',
-    ];
-
     public function submit(): Response
     {
-        return Inertia::render('jl/Submit');
+        return Inertia::render('jl/Submit', [
+            'companies'   => Company::orderBy('name')->get(['id', 'name']),
+            'departments' => Department::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function reviewer(): Response
@@ -91,8 +88,9 @@ class JlController extends Controller
 
     private function generateSerial(JlEntry $entry): string
     {
-        $year   = now()->year;
-        $prefix = self::SERIAL_PREFIX[$entry->company] ?? strtoupper(substr($entry->company, 0, 3));
+        $year    = now()->year;
+        $company = Company::where('name', $entry->company)->first();
+        $prefix  = $company?->code ?? strtoupper(substr($entry->company, 0, 3));
 
         $count = JlEntry::where('company', $entry->company)
             ->whereYear('approved_at', $year)
