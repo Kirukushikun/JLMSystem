@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(Remove-Item \"c:\\\\laragon\\\\www\\\\jlm-system\\\\database\\\\migrations\\\\2026_06_22_000001_add_role_to_users_table.php\")"
     ]
   }
 }
