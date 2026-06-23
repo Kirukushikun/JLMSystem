@@ -127,6 +127,22 @@ export default function JlModal({
                                 : <em className="text-gray-400">Not yet assigned</em>
                         }
                     />
+                    {entry.attachment_url && (
+                        <DetailItem
+                            label="Attachment"
+                            value={
+                                <a
+                                    href={entry.attachment_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
+                                >
+                                    📎 {entry.attachment_name ?? 'View Attachment'}
+                                </a>
+                            }
+                            full
+                        />
+                    )}
                     {entry.reject_reason && (
                         <DetailItem
                             label="Rejection Reason"

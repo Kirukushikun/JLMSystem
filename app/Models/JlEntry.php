@@ -20,15 +20,19 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $reviewed_at
  * @property \Illuminate\Support\Carbon|null $approved_at
  * @property string|null $reject_reason
+ * @property string|null $attachment
+ * @property string|null $attachment_name
  * @property-read string $reference
+ * @property-read string|null $attachment_url
  */
 #[Fillable([
     'title', 'date', 'company', 'manager', 'dept', 'amount',
     'status', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
+    'attachment', 'attachment_name',
 ])]
 class JlEntry extends Model
 {
-    protected $appends = ['reference'];
+    protected $appends = ['reference', 'attachment_url'];
 
     protected function casts(): array
     {
@@ -47,6 +51,13 @@ class JlEntry extends Model
         return Attribute::get(
             fn () => 'JL-' . str_pad((string) $this->id, 3, '0', STR_PAD_LEFT)
                    . '-' . ($this->submitted_at?->year ?? now()->year)
+        );
+    }
+
+    protected function attachmentUrl(): Attribute
+    {
+        return Attribute::get(
+            fn () => $this->attachment ? route('jl.attachment', $this->id) : null,
         );
     }
 }

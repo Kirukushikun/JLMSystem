@@ -23,6 +23,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/reviewer', [JlController::class, 'reviewer'])->middleware('role:reviewer,admin')->name('jl.reviewer');
     Route::get('/vp', [JlController::class, 'vp'])->middleware('role:vp,admin')->name('jl.vp');
 
+    // Attachment download/view
+    Route::get('/jl/{entry}/attachment', [JlController::class, 'attachment'])->name('jl.attachment');
+
     // Workflow actions
     Route::patch('/jl/{entry}/check',   [JlController::class, 'check'])->middleware('role:reviewer,admin')->name('jl.check');
     Route::patch('/jl/{entry}/approve', [JlController::class, 'approve'])->middleware('role:vp,admin')->name('jl.approve');

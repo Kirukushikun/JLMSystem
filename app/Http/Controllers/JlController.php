@@ -8,8 +8,10 @@ use App\Models\Department;
 use App\Models\JlEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class JlController extends Controller
 {
@@ -39,13 +41,37 @@ class JlController extends Controller
 
     public function store(StoreJlRequest $request): RedirectResponse
     {
+        $data = $request->safe()->except(['attachment']);
+
+        $path         = null;
+        $originalName = null;
+
+        if ($request->hasFile('attachment')) {
+            $file         = $request->file('attachment');
+            $originalName = $file->getClientOriginalName();
+            $path         = $file->store('jl-attachments', 'local');
+        }
+
         $entry = JlEntry::create([
-            ...$request->validated(),
-            'status'       => 'Pending',
-            'submitted_at' => now()->toDateString(),
+            ...$data,
+            'attachment'      => $path,
+            'attachment_name' => $originalName,
+            'status'          => 'Pending',
+            'submitted_at'    => now()->toDateString(),
         ]);
 
         return back()->with('success', "Form submitted! Reference: {$entry->reference}");
+    }
+
+    public function attachment(JlEntry $entry): StreamedResponse
+    {
+        abort_if(! $entry->attachment, 404);
+        abort_if(! Storage::disk('local')->exists($entry->attachment), 404);
+
+        return Storage::disk('local')->response(
+            $entry->attachment,
+            $entry->attachment_name,
+        );
     }
 
     public function check(JlEntry $entry): RedirectResponse

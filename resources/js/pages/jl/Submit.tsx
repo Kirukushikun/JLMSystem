@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/AppLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -21,19 +22,25 @@ interface PageProps {
 
 export default function Submit() {
     const { flash, companies, departments } = usePage<PageProps>().props;
+    const [fileKey, setFileKey] = useState(0);
 
     const form = useForm({
-        title:   '',
-        date:    new Date().toISOString().slice(0, 10),
-        company: '',
-        manager: '',
-        dept:    '',
-        amount:  '',
+        title:      '',
+        date:       new Date().toISOString().slice(0, 10),
+        company:    '',
+        manager:    '',
+        dept:       '',
+        amount:     '',
+        attachment: null as File | null,
     });
 
     function handleSubmit() {
         form.post('/jl', {
-            onSuccess: () => form.reset(),
+            forceFormData: true,
+            onSuccess: () => {
+                form.reset();
+                setFileKey((k) => k + 1);
+            },
         });
     }
 
@@ -145,11 +152,29 @@ export default function Submit() {
                             disabled={form.processing}
                         />
                     </div>
+
+                    <div className="col-span-2">
+                        <Label>Supporting Document (optional)</Label>
+                        <input
+                            key={fileKey}
+                            className={INPUT + ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                            onChange={(e) => form.setData('attachment', e.target.files?.[0] ?? null)}
+                            disabled={form.processing}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                            PDF, image, or Office document — max 10 MB
+                        </p>
+                        {form.errors.attachment && (
+                            <p className="mt-1 text-xs text-red-500">{form.errors.attachment}</p>
+                        )}
+                    </div>
                 </div>
 
                 <div className="mt-7 flex justify-end gap-3">
                     <button
-                        onClick={() => form.reset()}
+                        onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
                         disabled={form.processing}
                         className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                     >
