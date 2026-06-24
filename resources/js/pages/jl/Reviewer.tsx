@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
+import RejectModal from '@/components/jl/RejectModal';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { JlEntry } from '@/types/jl';
@@ -63,6 +64,7 @@ export default function Reviewer({ entries }: Props) {
     const [modal, setModal]               = useState<JlEntry | null>(null);
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
+    const [rejectEntry, setRejectEntry]   = useState<JlEntry | null>(null);
     const [toast, setToast]               = useState('');
 
     function showToast(msg: string) {
@@ -86,6 +88,13 @@ export default function Reviewer({ entries }: Props) {
         router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
             preserveScroll: true,
             onSuccess: () => { closeModal(); showToast('Form rejected.'); },
+        });
+    }
+
+    function handleDirectReject(id: number, reason: string) {
+        router.patch(`/jl/${id}/reject`, { reject_reason: reason }, {
+            preserveScroll: true,
+            onSuccess: () => { setRejectEntry(null); showToast('Form rejected.'); },
         });
     }
 
@@ -145,6 +154,7 @@ export default function Reviewer({ entries }: Props) {
                     entries={filtered}
                     context="reviewer"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
+                    onReject={setRejectEntry}
                 />
             </div>
 
@@ -160,6 +170,12 @@ export default function Reviewer({ entries }: Props) {
                 rejectReason={rejectReason}
                 onRejectReasonChange={setRejectReason}
                 onConfirmReject={handleConfirmReject}
+            />
+
+            <RejectModal
+                entry={rejectEntry}
+                onClose={() => setRejectEntry(null)}
+                onConfirm={handleDirectReject}
             />
 
             {toast && (

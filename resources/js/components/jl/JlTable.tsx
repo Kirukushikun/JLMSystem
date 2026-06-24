@@ -12,6 +12,7 @@ interface Props {
     entries: JlEntry[];
     context: 'reviewer' | 'vp';
     onView: (entry: JlEntry) => void;
+    onReject: (entry: JlEntry) => void;
 }
 
 function fmtAmt(n: number) {
@@ -33,7 +34,7 @@ const HEADERS = [
 const TH_BASE =
     'whitespace-nowrap px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 bg-gray-50';
 
-export default function JlTable({ entries, context, onView }: Props) {
+export default function JlTable({ entries, context, onView, onReject }: Props) {
     const [kebab, setKebab] = useState<KebabState | null>(null);
 
     useEffect(() => {
@@ -163,25 +164,16 @@ export default function JlTable({ entries, context, onView }: Props) {
                 >
                     {canAct(kebab.entry) ? (
                         <>
-                            {context === 'reviewer' ? (
-                                <KebabItem
-                                    color="green"
-                                    onClick={() => { onView(kebab.entry); setKebab(null); }}
-                                >
-                                    ✓ Mark as Checked
-                                </KebabItem>
-                            ) : (
-                                <KebabItem
-                                    color="green"
-                                    onClick={() => { onView(kebab.entry); setKebab(null); }}
-                                >
-                                    ✓ Approve
-                                </KebabItem>
-                            )}
+                            <KebabItem
+                                color="green"
+                                onClick={() => { onView(kebab.entry); setKebab(null); }}
+                            >
+                                {context === 'reviewer' ? '✓ For Review' : '✓ For Approval'}
+                            </KebabItem>
                             <div className="mx-1 h-px bg-gray-100" />
                             <KebabItem
                                 color="red"
-                                onClick={() => { onView(kebab.entry); setKebab(null); }}
+                                onClick={() => { onReject(kebab.entry); setKebab(null); }}
                             >
                                 ✕ Reject
                             </KebabItem>
