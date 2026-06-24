@@ -33,7 +33,7 @@ class JlController extends Controller
     public function vp(): Response
     {
         return Inertia::render('jl/Vp', [
-            'entries' => JlEntry::whereIn('status', ['Checked', 'Approved', 'VP Rejected'])
+            'entries' => JlEntry::whereIn('status', ['Reviewed', 'Approved', 'VP Rejected'])
                 ->latest()
                 ->get(),
         ]);
@@ -74,12 +74,12 @@ class JlController extends Controller
         );
     }
 
-    public function check(JlEntry $entry): RedirectResponse
+    public function review(JlEntry $entry): RedirectResponse
     {
         abort_if($entry->status !== 'Pending', 422, 'Entry is not pending.');
 
         $entry->update([
-            'status'      => 'Checked',
+            'status'      => 'Reviewed',
             'reviewed_at' => now()->toDateString(),
         ]);
 
@@ -88,7 +88,7 @@ class JlController extends Controller
 
     public function approve(JlEntry $entry): RedirectResponse
     {
-        abort_if($entry->status !== 'Checked', 422, 'Entry is not checked.');
+        abort_if($entry->status !== 'Reviewed', 422, 'Entry is not reviewed.');
 
         $entry->update([
             'status'      => 'Approved',
@@ -101,10 +101,10 @@ class JlController extends Controller
 
     public function reject(Request $request, JlEntry $entry): RedirectResponse
     {
-        abort_if(! in_array($entry->status, ['Pending', 'Checked']), 422, 'Entry cannot be rejected.');
+        abort_if(! in_array($entry->status, ['Pending', 'Reviewed']), 422, 'Entry cannot be rejected.');
 
         $entry->update([
-            'status'        => $entry->status === 'Checked' ? 'VP Rejected' : 'Rejected',
+            'status'        => $entry->status === 'Reviewed' ? 'VP Rejected' : 'Rejected',
             'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $request->input('reject_reason') ?: 'No reason provided.',
         ]);

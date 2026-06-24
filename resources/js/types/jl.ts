@@ -1,4 +1,4 @@
-export type JlStatus = 'Pending' | 'Checked' | 'Rejected' | 'Approved' | 'VP Rejected';
+export type JlStatus = 'Pending' | 'Reviewed' | 'Rejected' | 'Approved' | 'VP Rejected';
 
 export interface JlEntry {
     id: number;

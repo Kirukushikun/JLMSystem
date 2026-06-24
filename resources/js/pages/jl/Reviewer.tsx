@@ -77,9 +77,9 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function handleCheck(id: number) {
-        router.patch(`/jl/${id}/check`, {}, {
+        router.patch(`/jl/${id}/review`, {}, {
             preserveScroll: true,
-            onSuccess: () => showToast('Marked as Checked — forwarded to VP Approver.'),
+            onSuccess: () => showToast('Marked as Reviewed — forwarded to VP Approver.'),
         });
     }
 
@@ -108,7 +108,7 @@ export default function Reviewer({ entries }: Props) {
 
     const total    = entries.length;
     const pending  = entries.filter((e) => e.status === 'Pending').length;
-    const checked  = entries.filter((e) => e.status === 'Checked').length;
+    const checked  = entries.filter((e) => e.status === 'Reviewed').length;
     const approved = entries.filter((e) => e.status === 'Approved').length;
 
     return (
@@ -125,7 +125,7 @@ export default function Reviewer({ entries }: Props) {
             <div className="mb-7 grid grid-cols-4 gap-4">
                 <StatCard label="Total Submissions"   value={total}    color="#1e3a5f" />
                 <StatCard label="Pending Review"       value={pending}  color="#d97706" />
-                <StatCard label="Checked / Forwarded"  value={checked}  color="#2563eb" />
+                <StatCard label="Reviewed / Forwarded"  value={checked}  color="#2563eb" />
                 <StatCard label="VP Approved"          value={approved} color="#16a34a" />
             </div>
 
@@ -143,7 +143,7 @@ export default function Reviewer({ entries }: Props) {
                 >
                     <option value="">All Statuses</option>
                     <option>Pending</option>
-                    <option>Checked</option>
+                    <option>Reviewed</option>
                     <option>Rejected</option>
                     <option>Approved</option>
                 </select>

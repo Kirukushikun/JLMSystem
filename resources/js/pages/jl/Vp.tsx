@@ -68,7 +68,7 @@ export default function Vp({ entries }: Props) {
     });
 
     const forwarded = entries.length;
-    const pending   = entries.filter((e) => e.status === 'Checked').length;
+    const pending   = entries.filter((e) => e.status === 'Reviewed').length;
     const approved  = entries.filter((e) => e.status === 'Approved').length;
     const rejected  = entries.filter((e) => e.status === 'VP Rejected').length;
 
@@ -103,7 +103,7 @@ export default function Vp({ entries }: Props) {
                     onChange={(e) => setStatusFilter(e.target.value)}
                 >
                     <option value="">All Statuses</option>
-                    <option value="Checked">Checked (Pending VP)</option>
+                    <option value="Reviewed">Reviewed (Pending VP)</option>
                     <option value="Approved">Approved</option>
                     <option value="VP Rejected">VP Rejected</option>
                 </select>

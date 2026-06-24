@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JL Monitoring System — Presentation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f1f35;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    color: #1e293b;
+  }
+
+  .deck {
+    width: min(960px, 96vw);
+  }
+
+  .slide {
+    display: none;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,.45);
+    min-height: 520px;
+    animation: fadeIn .3s ease;
+  }
+  .slide.active { display: flex; flex-direction: column; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Header band ── */
+  .slide-header {
+    background: #1e3a5f;
+    color: #fff;
+    padding: 28px 40px 24px;
+  }
+  .slide-header .tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    margin-bottom: 6px;
+  }
+  .slide-header h2 {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  /* ── Body ── */
+  .slide-body {
+    padding: 36px 40px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* ── Title slide ── */
+  .slide.title {
+    background: linear-gradient(145deg, #1e3a5f 0%, #0f2440 100%);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0;
+  }
+  .slide.title .logo { font-size: 48px; margin-bottom: 16px; }
+  .slide.title h1 { font-size: 38px; font-weight: 900; color: #fff; line-height: 1.15; }
+  .slide.title .subtitle { margin-top: 12px; font-size: 16px; color: #93c5fd; font-weight: 500; }
+  .slide.title .meta { margin-top: 32px; font-size: 12px; color: #64748b; letter-spacing: .08em; text-transform: uppercase; }
+  .slide.title .divider { width: 60px; height: 3px; background: #3b82f6; border-radius: 2px; margin: 20px auto 0; }
+
+  /* ── Two-column layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+
+  /* ── List ── */
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  ul.points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #334155;
+  }
+  ul.points li .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── Workflow steps ── */
+  .steps { display: flex; gap: 0; align-items: stretch; }
+  .step {
+    flex: 1;
+    text-align: center;
+    padding: 24px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    position: relative;
+  }
+  .step + .step::before {
+    content: '→';
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #94a3b8;
+  }
+  .steps { gap: 32px; }
+  .step-num {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1e3a5f;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .step h4 { font-size: 14px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
+  .step p  { font-size: 12px; color: #64748b; line-height: 1.5; }
+  .step .badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    background: #dcfce7;
+    color: #15803d;
+  }
+
+  /* ── Role cards ── */
+  .roles { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .role-card {
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .role-card .role-icon { font-size: 28px; margin-bottom: 10px; }
+  .role-card h4 { font-size: 14px; font-weight: 800; color: #1e3a5f; margin-bottom: 8px; }
+  .role-card ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .role-card ul li { font-size: 12.5px; color: #475569; padding-left: 14px; position: relative; }
+  .role-card ul li::before { content: '·'; position: absolute; left: 4px; color: #94a3b8; }
+
+  /* ── Feature grid ── */
+  .features { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  .feature {
+    border-radius: 10px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+  .feature .fi { font-size: 22px; margin-bottom: 8px; }
+  .feature h4 { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+  .feature p  { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+  /* ── Security items ── */
+  .security { display: flex; flex-direction: column; gap: 14px; }
+  .sec-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+  .sec-item .si { font-size: 22px; flex-shrink: 0; }
+  .sec-item h4 { font-size: 13.5px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+  .sec-item p  { font-size: 12.5px; color: #64748b; }
+
+  /* ── Tech stack ── */
+  .stack { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+  .stack-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+  .stack-item .si { font-size: 24px; flex-shrink: 0; }
+  .stack-item .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; }
+  .stack-item .value { font-size: 14px; font-weight: 700; color: #1e293b; }
+
+  /* ── Summary ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+  .summary-card {
+    padding: 20px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+  }
+  .summary-card .num { font-size: 36px; font-weight: 900; color: #1e3a5f; line-height: 1; }
+  .summary-card .lbl { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  /* ── Nav ── */
+  .nav {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .nav button {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .nav button:hover { background: rgba(255,255,255,.22); }
+  .nav button:disabled { opacity: .3; cursor: default; }
+  .progress {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.25);
+    cursor: pointer;
+    transition: background .15s, transform .15s;
+  }
+  .dot.active { background: #fff; transform: scale(1.25); }
+  .counter { color: rgba(255,255,255,.5); font-size: 13px; margin-left: 8px; }
+
+  h3.section { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; margin-bottom: 16px; }
+  .highlight { color: #1e3a5f; font-weight: 800; }
+  .lead { font-size: 17px; color: #334155; line-height: 1.65; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- ══ SLIDE 1: Title ══ -->
+  <div class="slide title active">
+    <div class="logo">📋</div>
+    <h1>JL Monitoring System</h1>
+    <p class="subtitle">Digital Workflow for Job Labor Form Management</p>
+    <div class="divider"></div>
+    <p class="meta">BFC Group &nbsp;·&nbsp; IT Department &nbsp;·&nbsp; 2026</p>
+  </div>
+
+  <!-- ══ SLIDE 2: Overview ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Overview</div>
+      <h2>What is the JL Monitoring System?</h2>
+    </div>
+    <div class="slide-body">
+      <p class="lead">A centralized web application that digitizes the submission, review, and approval of <span class="highlight">Job Labor (JL) cost forms</span> across the organization's farms and departments.</p>
+      <div class="two-col">
+        <div>
+          <h3 class="section">The Problem Before</h3>
+          <ul class="points">
+            <li><div class="icon">❌</div>JL forms submitted and tracked manually</li>
+            <li><div class="icon">❌</div>No visibility on who reviewed or approved</li>
+            <li><div class="icon">❌</div>No audit trail or reference numbering</li>
+            <li><div class="icon">❌</div>Approval bottlenecks and delays</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="section">The Solution Now</h3>
+          <ul class="points">
+            <li><div class="icon">✅</div>Forms submitted online by anyone with the link</li>
+            <li><div class="icon">✅</div>Structured 2-step approval workflow</li>
+            <li><div class="icon">✅</div>Auto-generated serial number on final approval</li>
+            <li><div class="icon">✅</div>Full audit trail with timestamps</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 3: Workflow ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Workflow</div>
+      <h2>How It Works — 3-Step Approval Process</h2>
+    </div>
+    <div class="slide-body">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h4>Submission</h4>
+          <p>Farm manager or supervisor fills in the JL form online. No account required — just the link.</p>
+          <span class="badge">Public Access</span>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h4>Review</h4>
+          <p>Reviewer checks the form details and marks it as <strong>Reviewed</strong> or rejects it with a reason.</p>
+          <span class="badge">Reviewer Role</span>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h4>VP Approval</h4>
+          <p>VP Approver gives final sign-off. Upon approval, a unique serial number is automatically assigned.</p>
+          <span class="badge">VP Role</span>
+        </div>
+      </div>
+      <div style="margin-top:28px; padding:16px 20px; background:#eff6ff; border-radius:10px; border:1px solid #bfdbfe;">
+        <strong style="color:#1e3a5f; font-size:14px;">Serial Number Format:</strong>
+        <span style="font-family:monospace; font-size:15px; font-weight:700; color:#1d4ed8; margin-left:12px;">BFC-JL-001-2026</span>
+        <span style="color:#64748b; font-size:13px; margin-left:8px;">— auto-generated per company, per year, on VP approval</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 4: Features ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Features</div>
+      <h2>Key System Features</h2>
+    </div>
+    <div class="slide-body">
+      <div class="features">
+        <div class="feature">
+          <div class="fi">🔗</div>
+          <h4>Public Submission Link</h4>
+          <p>Anyone with the link can submit a JL form — no login or account needed.</p>
+        </div>
+        <div class="feature">
+          <div class="fi">📊</div>
+          <h4>Live Dashboard</h4>
+          <p>Reviewer and VP see real-time stats: pending, reviewed, approved, rejected counts.</p>
+        </div>
+        <div class="feature">
+          <div class="fi">🔖</div>
+          <h4>Auto Serial Numbers</h4>
+          <p>Unique serial number generated on VP approval — sequential per company per year.</p>
+        </div>
+        <div class="feature">
+          <div class="fi">📎</div>
+          <h4>File Attachments</h4>
+          <p>Submitters can attach supporting documents (PDF, images, Office files up to 10 MB).</p>
+        </div>
+        <div class="feature">
+          <div class="fi">🔍</div>
+          <h4>Search & Filter</h4>
+          <p>Filter by status and search by title, company, or manager across all submissions.</p>
+        </div>
+        <div class="feature">
+          <div class="fi">🕓</div>
+          <h4>Audit Trail</h4>
+          <p>Every action timestamped — submission date, review date, and approval date all tracked.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 5: Roles ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Access Control</div>
+      <h2>User Roles & Permissions</h2>
+    </div>
+    <div class="slide-body">
+      <div class="roles">
+        <div class="role-card">
+          <div class="role-icon">👁️</div>
+          <h4>Reviewer</h4>
+          <ul>
+            <li>View all submitted JL forms</li>
+            <li>Mark forms as Reviewed</li>
+            <li>Reject forms with a reason</li>
+            <li>Share form submission link</li>
+            <li>View attachments</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">✅</div>
+          <h4>VP Approver</h4>
+          <ul>
+            <li>View reviewed forms only</li>
+            <li>Give final approval</li>
+            <li>Reject with a reason</li>
+            <li>Triggers serial number generation</li>
+            <li>View attachments</li>
+          </ul>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">⚙️</div>
+          <h4>Admin</h4>
+          <ul>
+            <li>All reviewer + VP access</li>
+            <li>Grant & revoke user access</li>
+            <li>Manage company/farm list</li>
+            <li>Manage department list</li>
+            <li>Full system oversight</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:20px; font-size:13px; color:#64748b; padding:12px 16px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+        <strong>Note:</strong> Each user has exactly one role. Access is granted by an Admin through the User Management panel — no direct database access needed.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 6: Admin Tools ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Admin Panel</div>
+      <h2>Admin Capabilities</h2>
+    </div>
+    <div class="slide-body">
+      <div class="two-col">
+        <div>
+          <h3 class="section">User Management</h3>
+          <ul class="points">
+            <li><div class="icon">🏢</div>Pulls all organization employees from the central HR system automatically</li>
+            <li><div class="icon">✔</div>Grant access with a single click — assign Reviewer, VP, or Admin role</li>
+            <li><div class="icon">✘</div>Revoke access instantly at any time</li>
+            <li><div class="icon">📋</div>See which employees have access and which don't</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="section">Maintenance</h3>
+          <ul class="points">
+            <li><div class="icon">🏭</div>Add or remove Company / Farm entries shown in the submission form</li>
+            <li><div class="icon">🏷</div>Each company has a custom serial code used in serial number generation</li>
+            <li><div class="icon">📂</div>Add or remove Department options in the form</li>
+            <li><div class="icon">🔒</div>Deletion blocked if company/dept has existing JL entries</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 7: Security ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Security</div>
+      <h2>Security & Authentication</h2>
+    </div>
+    <div class="slide-body">
+      <div class="security">
+        <div class="sec-item">
+          <div class="si">🔐</div>
+          <div>
+            <h4>Organization Single Sign-On</h4>
+            <p>Credentials are validated against the organization's central Auth API — no separate passwords stored in this system.</p>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="si">🛡</div>
+          <div>
+            <h4>Brute-Force Protection</h4>
+            <p>3 failed login attempts trigger a 15-minute lockout. Attempt counter resets automatically on successful login.</p>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="si">📝</div>
+          <div>
+            <h4>Access Logging</h4>
+            <p>Every login attempt — successful or failed — is logged with the IP address, timestamp, and user agent.</p>
+          </div>
+        </div>
+        <div class="sec-item">
+          <div class="si">🔒</div>
+          <div>
+            <h4>Role-Based Route Guards</h4>
+            <p>Protected pages enforce role checks at the server level. File attachments require authentication to access.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 8: Tech Stack ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Technology</div>
+      <h2>Tech Stack</h2>
+    </div>
+    <div class="slide-body">
+      <div class="stack">
+        <div class="stack-item">
+          <div class="si">🧱</div>
+          <div>
+            <div class="label">Backend Framework</div>
+            <div class="value">Laravel 13 · PHP 8.3</div>
+          </div>
+        </div>
+        <div class="stack-item">
+          <div class="si">⚛️</div>
+          <div>
+            <div class="label">Frontend</div>
+            <div class="value">React 19 · Inertia.js v3</div>
+          </div>
+        </div>
+        <div class="stack-item">
+          <div class="si">🎨</div>
+          <div>
+            <div class="label">Styling</div>
+            <div class="value">Tailwind CSS v4</div>
+          </div>
+        </div>
+        <div class="stack-item">
+          <div class="si">🗄</div>
+          <div>
+            <div class="label">Database</div>
+            <div class="value">MySQL 8.0</div>
+          </div>
+        </div>
+        <div class="stack-item">
+          <div class="si">🔑</div>
+          <div>
+            <div class="label">Authentication</div>
+            <div class="value">External Org Auth API</div>
+          </div>
+        </div>
+        <div class="stack-item">
+          <div class="si">☁️</div>
+          <div>
+            <div class="label">Deployment</div>
+            <div class="value">Production Server · Laragon (local)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SLIDE 9: Summary ══ -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="tag">Summary</div>
+      <h2>At a Glance</h2>
+    </div>
+    <div class="slide-body">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="num">3</div>
+          <div class="lbl">User roles — Reviewer, VP Approver, Admin</div>
+        </div>
+        <div class="summary-card">
+          <div class="num">2</div>
+          <div class="lbl">Approval steps before a serial number is issued</div>
+        </div>
+        <div class="summary-card">
+          <div class="num">0</div>
+          <div class="lbl">Accounts needed to submit a form (public link)</div>
+        </div>
+        <div class="summary-card">
+          <div class="num">∞</div>
+          <div class="lbl">Org employees who can be granted access by Admin</div>
+        </div>
+      </div>
+      <div style="margin-top:24px; padding:18px 22px; background:#1e3a5f; border-radius:12px; color:#fff; text-align:center;">
+        <p style="font-size:15px; font-weight:600; line-height:1.6;">
+          The JL Monitoring System replaces manual tracking with a structured, auditable, and fully digital workflow —<br>accessible to the right people, at the right stage, from any device.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- ── Navigation ── -->
+<div class="nav" style="width:min(960px,96vw)">
+  <button id="prev" onclick="go(-1)" disabled>← Previous</button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="progress" id="dots"></div>
+    <span class="counter" id="counter"></span>
+  </div>
+  <button id="next" onclick="go(1)">Next →</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let cur = 0;
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.onclick = () => show(i);
+    dotsEl.appendChild(d);
+  });
+
+  function show(n) {
+    slides[cur].classList.remove('active');
+    dotsEl.children[cur].classList.remove('active');
+    cur = n;
+    slides[cur].classList.add('active');
+    dotsEl.children[cur].classList.add('active');
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === slides.length - 1;
+    counter.textContent = (cur + 1) + ' / ' + slides.length;
+  }
+
+  function go(d) { show(Math.max(0, Math.min(slides.length - 1, cur + d))); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  });
+
+  show(0);
+</script>
+</body>
+</html>

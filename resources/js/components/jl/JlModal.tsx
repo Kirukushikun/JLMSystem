@@ -71,11 +71,11 @@ export default function JlModal({
     if (!entry) return null;
 
     const s = entry.status;
-    const reviewedState: WfState = ['Checked', 'Approved', 'Rejected', 'VP Rejected'].includes(s) ? 'done' : 'active';
-    const approvedState: WfState = s === 'Approved' ? 'done' : s === 'Checked' ? 'active' : 'idle';
+    const reviewedState: WfState = ['Reviewed', 'Approved', 'Rejected', 'VP Rejected'].includes(s) ? 'done' : 'active';
+    const approvedState: WfState = s === 'Approved' ? 'done' : s === 'Reviewed' ? 'active' : 'idle';
 
     const canCheck  = context === 'reviewer' && s === 'Pending';
-    const canApprove = context === 'vp' && s === 'Checked';
+    const canApprove = context === 'vp' && s === 'Reviewed';
     const canReject  = canCheck || canApprove;
 
     return (
@@ -191,7 +191,7 @@ export default function JlModal({
                                     onClick={() => { onCheck?.(entry.id); onClose(); }}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    ✓ Mark as Checked
+                                    ✓ Mark as Reviewed
                                 </button>
                             )}
                             {canApprove && (

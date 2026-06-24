@@ -55,7 +55,7 @@ export default function JlTable({ entries, context, onView, onReject }: Props) {
 
     function canAct(e: JlEntry) {
         return (context === 'reviewer' && e.status === 'Pending') ||
-               (context === 'vp' && e.status === 'Checked');
+               (context === 'vp' && e.status === 'Reviewed');
     }
 
     return (
