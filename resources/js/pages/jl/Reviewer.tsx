@@ -106,10 +106,12 @@ export default function Reviewer({ entries }: Props) {
         );
     });
 
-    const total    = entries.length;
-    const pending  = entries.filter((e) => e.status === 'Pending').length;
-    const checked  = entries.filter((e) => e.status === 'Reviewed').length;
-    const approved = entries.filter((e) => e.status === 'Approved').length;
+    const total            = entries.length;
+    const pending          = entries.filter((e) => e.status === 'Pending').length;
+    const checked          = entries.filter((e) => e.status === 'Reviewed').length;
+    const approved         = entries.filter((e) => e.status === 'Approved').length;
+    const reviewerRejected = entries.filter((e) => e.status === 'Rejected').length;
+    const vpRejected       = entries.filter((e) => e.status === 'VP Rejected').length;
 
     return (
         <AppLayout>
@@ -122,11 +124,15 @@ export default function Reviewer({ entries }: Props) {
                 </p>
             </div>
 
-            <div className="mb-7 grid grid-cols-4 gap-4">
-                <StatCard label="Total Submissions"   value={total}    color="#1e3a5f" />
+            <div className="mb-3 grid grid-cols-4 gap-4">
+                <StatCard label="Total Submissions"    value={total}    color="#1e3a5f" />
                 <StatCard label="Pending Review"       value={pending}  color="#d97706" />
-                <StatCard label="Reviewed / Forwarded"  value={checked}  color="#2563eb" />
+                <StatCard label="Reviewed / Forwarded" value={checked}  color="#2563eb" />
                 <StatCard label="VP Approved"          value={approved} color="#16a34a" />
+            </div>
+            <div className="mb-7 grid grid-cols-2 gap-4">
+                <StatCard label="Rejected by Reviewer" value={reviewerRejected} color="#dc2626" />
+                <StatCard label="Rejected by VP"       value={vpRejected}       color="#dc2626" />
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">

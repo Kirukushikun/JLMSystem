@@ -33,7 +33,7 @@ class JlController extends Controller
     public function vp(): Response
     {
         return Inertia::render('jl/Vp', [
-            'entries' => JlEntry::whereIn('status', ['Reviewed', 'Approved', 'VP Rejected'])
+            'entries' => JlEntry::whereIn('status', ['Reviewed', 'Rejected', 'Approved', 'VP Rejected'])
                 ->latest()
                 ->get(),
         ]);

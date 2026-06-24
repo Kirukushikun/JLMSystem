@@ -67,10 +67,11 @@ export default function Vp({ entries }: Props) {
         );
     });
 
-    const forwarded = entries.length;
-    const pending   = entries.filter((e) => e.status === 'Reviewed').length;
-    const approved  = entries.filter((e) => e.status === 'Approved').length;
-    const rejected  = entries.filter((e) => e.status === 'VP Rejected').length;
+    const forwarded        = entries.filter((e) => e.status !== 'Rejected').length;
+    const pending          = entries.filter((e) => e.status === 'Reviewed').length;
+    const approved         = entries.filter((e) => e.status === 'Approved').length;
+    const vpRejected       = entries.filter((e) => e.status === 'VP Rejected').length;
+    const reviewerRejected = entries.filter((e) => e.status === 'Rejected').length;
 
     return (
         <AppLayout>
@@ -83,11 +84,14 @@ export default function Vp({ entries }: Props) {
                 </p>
             </div>
 
-            <div className="mb-7 grid grid-cols-4 gap-4">
-                <StatCard label="Forwarded to VP"  value={forwarded} color="#1e3a5f" />
+            <div className="mb-3 grid grid-cols-4 gap-4">
+                <StatCard label="Forwarded to VP"  value={forwarded}  color="#1e3a5f" />
                 <StatCard label="Awaiting Approval" value={pending}   color="#d97706" />
                 <StatCard label="Approved"          value={approved}  color="#16a34a" />
-                <StatCard label="Rejected by VP"    value={rejected}  color="#dc2626" />
+                <StatCard label="Rejected by VP"    value={vpRejected} color="#dc2626" />
+            </div>
+            <div className="mb-7 grid grid-cols-1 gap-4">
+                <StatCard label="Rejected by Reviewer (visible for reference — no action required)" value={reviewerRejected} color="#94a3b8" />
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -106,6 +110,7 @@ export default function Vp({ entries }: Props) {
                     <option value="Reviewed">Reviewed (Pending VP)</option>
                     <option value="Approved">Approved</option>
                     <option value="VP Rejected">VP Rejected</option>
+                    <option value="Rejected">Rejected by Reviewer</option>
                 </select>
             </div>
 
