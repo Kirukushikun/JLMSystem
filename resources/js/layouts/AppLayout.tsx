@@ -8,6 +8,7 @@ const NAV_ITEMS = [
     { label: 'VP Approver',        href: '/vp',                  roles: ['vp', 'admin'] },
     { label: 'User Management',    href: '/admin/users',         roles: ['admin'] },
     { label: 'Maintenance',        href: '/admin/maintenance',   roles: ['admin'] },
+    { label: 'Audit Trail',        href: '/admin/audit-trail',   roles: ['admin'] },
 ] as const;
 
 type PageProps = { auth: { user: User | null }; [key: string]: unknown };

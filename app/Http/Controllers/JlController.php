@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreJlRequest;
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\JlAuditLog;
 use App\Models\JlEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,15 @@ class JlController extends Controller
         ]);
     }
 
+    public function auditTrail(): Response
+    {
+        $logs = JlAuditLog::with('entry:id,reference,title,company')
+            ->latest()
+            ->get();
+
+        return Inertia::render('jl/AuditTrail', ['logs' => $logs]);
+    }
+
     public function store(StoreJlRequest $request): RedirectResponse
     {
         $data = $request->safe()->except(['attachment']);
@@ -58,6 +68,12 @@ class JlController extends Controller
             'attachment_name' => $originalName,
             'status'          => 'Pending',
             'submitted_at'    => now()->toDateString(),
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'submitted',
+            'actor'       => null,
         ]);
 
         return back()->with('success', "Form submitted! Reference: {$entry->reference}");
@@ -83,6 +99,12 @@ class JlController extends Controller
             'reviewed_at' => now()->toDateString(),
         ]);
 
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'reviewed',
+            'actor'       => auth()->user()->name,
+        ]);
+
         return back();
     }
 
@@ -96,6 +118,12 @@ class JlController extends Controller
             'serial'      => $this->generateSerial($entry),
         ]);
 
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'approved',
+            'actor'       => auth()->user()->name,
+        ]);
+
         return back();
     }
 
@@ -103,10 +131,20 @@ class JlController extends Controller
     {
         abort_if(! in_array($entry->status, ['Pending', 'Reviewed']), 422, 'Entry cannot be rejected.');
 
+        $isVpReject = $entry->status === 'Reviewed';
+        $reason     = $request->input('reject_reason') ?: 'No reason provided.';
+
         $entry->update([
-            'status'        => $entry->status === 'Reviewed' ? 'VP Rejected' : 'Rejected',
+            'status'        => $isVpReject ? 'VP Rejected' : 'Rejected',
             'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
-            'reject_reason' => $request->input('reject_reason') ?: 'No reason provided.',
+            'reject_reason' => $reason,
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => $isVpReject ? 'vp_rejected' : 'rejected',
+            'actor'       => auth()->user()->name,
+            'notes'       => $request->input('reject_reason') ?: null,
         ]);
 
         return back();

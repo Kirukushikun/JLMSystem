@@ -36,6 +36,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/users/assign', [UserManagementController::class, 'assign'])->middleware('role:admin')->name('admin.users.assign');
     Route::delete('/admin/users/{id}', [UserManagementController::class, 'revoke'])->middleware('role:admin')->name('admin.users.revoke');
 
+    // Admin: audit trail
+    Route::get('/admin/audit-trail', [JlController::class, 'auditTrail'])->middleware('role:admin')->name('jl.audit');
+
     // Admin: maintenance
     Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])->middleware('role:admin')->name('admin.maintenance');
     Route::post('/admin/maintenance/companies', [MaintenanceController::class, 'storeCompany'])->middleware('role:admin')->name('admin.maintenance.companies.store');

@@ -32,6 +32,7 @@
     animation: fadeIn .3s ease;
   }
   .slide.active { display: flex; flex-direction: column; }
+  .slide-hidden { display: none; }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -268,7 +269,7 @@
   <div class="slide title active">
     <div class="logo">📋</div>
     <h1>JL Monitoring System</h1>
-    <p class="subtitle">Digital Workflow for Job Labor Form Management</p>
+    <p class="subtitle">Digital Workflow for Justification Letter Form Management</p>
     <div class="divider"></div>
     <p class="meta">BFC Group &nbsp;·&nbsp; IT Department &nbsp;·&nbsp; 2026</p>
   </div>
@@ -280,24 +281,24 @@
       <h2>What is the JL Monitoring System?</h2>
     </div>
     <div class="slide-body">
-      <p class="lead">A centralized web application that digitizes the submission, review, and approval of <span class="highlight">Job Labor (JL) cost forms</span> across the organization's farms and departments.</p>
+      <p class="lead">A unified platform that brings JL form submission, approval, and tracking together — replacing a scattered workflow of Google Forms, Excel sheets, and Viber messages.</p>
       <div class="two-col">
         <div>
-          <h3 class="section">The Problem Before</h3>
+          <h3 class="section">The Old Way</h3>
           <ul class="points">
-            <li><div class="icon">❌</div>JL forms submitted and tracked manually</li>
-            <li><div class="icon">❌</div>No visibility on who reviewed or approved</li>
-            <li><div class="icon">❌</div>No audit trail or reference numbering</li>
-            <li><div class="icon">❌</div>Approval bottlenecks and delays</li>
+            <li><div class="icon">📋</div>Forms submitted via Google Form — but no approval chain attached</li>
+            <li><div class="icon">💬</div>Review results communicated through Viber, easy to miss or lose</li>
+            <li><div class="icon">📊</div>Approvals recorded manually in Excel, managed per person</li>
+            <li><div class="icon">🔢</div>Serial numbers assigned manually — no standard system</li>
           </ul>
         </div>
         <div>
-          <h3 class="section">The Solution Now</h3>
+          <h3 class="section">Now, In One System</h3>
           <ul class="points">
-            <li><div class="icon">✅</div>Forms submitted online by anyone with the link</li>
-            <li><div class="icon">✅</div>Structured 2-step approval workflow</li>
-            <li><div class="icon">✅</div>Auto-generated serial number on final approval</li>
-            <li><div class="icon">✅</div>Full audit trail with timestamps</li>
+            <li><div class="icon">✅</div>Same familiar online form — now directly feeds the approval chain</li>
+            <li><div class="icon">✅</div>Reviewers and VP act on forms inside the system — no Viber needed</li>
+            <li><div class="icon">✅</div>Live dashboard replaces the Excel sheet</li>
+            <li><div class="icon">✅</div>Serial number auto-generated on VP approval</li>
           </ul>
         </div>
       </div>
@@ -349,40 +350,41 @@
       <div class="features">
         <div class="feature">
           <div class="fi">🔗</div>
-          <h4>Public Submission Link</h4>
-          <p>Anyone with the link can submit a JL form — no login or account needed.</p>
+          <h4>Same Familiar Link</h4>
+          <p>Submit from any device with just a shared link — no account needed, just like Google Form but now connected to the approval chain.</p>
         </div>
         <div class="feature">
           <div class="fi">📊</div>
-          <h4>Live Dashboard</h4>
-          <p>Reviewer and VP see real-time stats: pending, reviewed, approved, rejected counts.</p>
+          <h4>Approval Dashboard</h4>
+          <p>Replaces the Excel sheet and Viber updates — all forms, their status, and actions are visible in one live dashboard.</p>
         </div>
         <div class="feature">
           <div class="fi">🔖</div>
           <h4>Auto Serial Numbers</h4>
-          <p>Unique serial number generated on VP approval — sequential per company per year.</p>
+          <p>No more manual code assignment — the system generates a unique serial number the moment the VP approves.</p>
         </div>
         <div class="feature">
           <div class="fi">📎</div>
-          <h4>File Attachments</h4>
-          <p>Submitters can attach supporting documents (PDF, images, Office files up to 10 MB).</p>
+          <h4>Attachments Included</h4>
+          <p>Supporting documents are uploaded with the form and stored alongside it — no separate sharing or file hunting.</p>
         </div>
         <div class="feature">
           <div class="fi">🔍</div>
-          <h4>Search & Filter</h4>
-          <p>Filter by status and search by title, company, or manager across all submissions.</p>
+          <h4>Instant Search & Filter</h4>
+          <p>All submissions live in one place — search by title, company, or manager and filter by status in seconds.</p>
         </div>
         <div class="feature">
           <div class="fi">🕓</div>
-          <h4>Audit Trail</h4>
-          <p>Every action timestamped — submission date, review date, and approval date all tracked.</p>
+          <h4>Complete History</h4>
+          <p>Full timeline of every form — who submitted, who reviewed, who approved, and when. No more chasing records.</p>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- ══ SLIDE 5–8: Hidden for client presentation. Change class to "slide" to restore. ══ -->
   <!-- ══ SLIDE 5: Roles ══ -->
-  <div class="slide">
+  <div class="slide-hidden">
     <div class="slide-header">
       <div class="tag">Access Control</div>
       <h2>User Roles & Permissions</h2>
@@ -415,7 +417,6 @@
           <div class="role-icon">⚙️</div>
           <h4>Admin</h4>
           <ul>
-            <li>All reviewer + VP access</li>
             <li>Grant & revoke user access</li>
             <li>Manage company/farm list</li>
             <li>Manage department list</li>
@@ -430,7 +431,7 @@
   </div>
 
   <!-- ══ SLIDE 6: Admin Tools ══ -->
-  <div class="slide">
+  <div class="slide-hidden">
     <div class="slide-header">
       <div class="tag">Admin Panel</div>
       <h2>Admin Capabilities</h2>
@@ -460,7 +461,7 @@
   </div>
 
   <!-- ══ SLIDE 7: Security ══ -->
-  <div class="slide">
+  <div class="slide-hidden">
     <div class="slide-header">
       <div class="tag">Security</div>
       <h2>Security & Authentication</h2>
@@ -500,7 +501,7 @@
   </div>
 
   <!-- ══ SLIDE 8: Tech Stack ══ -->
-  <div class="slide">
+  <div class="slide-hidden">
     <div class="slide-header">
       <div class="tag">Technology</div>
       <h2>Tech Stack</h2>
