@@ -42,7 +42,7 @@ class JlController extends Controller
 
     public function auditTrail(): Response
     {
-        $logs = JlAuditLog::with('entry:id,reference,title,company')
+        $logs = JlAuditLog::with('entry:id,title,company,submitted_at')
             ->latest()
             ->get();
 
