@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -47,6 +48,19 @@ export default function Submit() {
     return (
         <AppLayout>
             <Head title="Submit Form" />
+
+            <InfoPanel type="help" title="Submitting a JL Form">
+                <p>Fill in all required fields and click <strong>Submit Form</strong> when ready. Your entry will be queued for reviewer approval.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li><strong>Title</strong> — brief description of the job labor cost.</li>
+                    <li><strong>Date</strong> — the date the cost was incurred.</li>
+                    <li><strong>Company / Farm</strong> and <strong>Department</strong> — select from the available options.</li>
+                    <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
+                    <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
+                    <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
+                </ul>
+                <p className="mt-2">After submission you will receive a reference number. A serial number is only assigned once the VP approves.</p>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>

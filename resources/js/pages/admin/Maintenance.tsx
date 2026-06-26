@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 
 interface Company {
@@ -55,6 +56,15 @@ export default function Maintenance() {
     return (
         <AppLayout>
             <Head title="Maintenance" />
+
+            <InfoPanel type="about" title="Maintenance">
+                <p>Manage the dynamic lookup values used across the system. Changes here are reflected immediately in the submission form.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li><strong>Companies / Farms</strong> — each entry has a name and a short serial code (e.g. BFC) used when generating JL serial numbers on approval.</li>
+                    <li><strong>Departments</strong> — the list of departments selectable on the submission form.</li>
+                    <li>Entries that are already referenced by existing JL forms cannot be deleted to protect data integrity.</li>
+                </ul>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>Maintenance</h1>

@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import type { UserRole } from '@/types/auth';
@@ -140,6 +141,16 @@ export default function Users({ apiUsers, localUsers }: Props) {
     return (
         <AppLayout>
             <Head title="User Management" />
+
+            <InfoPanel type="about" title="User Management">
+                <p>Control who has access to the JL Monitoring System and what they can do. All organization employees are loaded from the central HR system.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li><strong>Reviewer</strong> — can view all submitted forms, mark as Reviewed, and reject.</li>
+                    <li><strong>VP Approver</strong> — sees Reviewed forms only; can give final approval or reject.</li>
+                    <li><strong>Admin</strong> — full access including User Management, Maintenance, and Audit Trail.</li>
+                    <li>Each user can only have one role. Revoking access takes effect immediately.</li>
+                </ul>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>User Management</h1>

@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -75,6 +76,17 @@ export default function AuditTrail({ logs }: Props) {
     return (
         <AppLayout>
             <Head title="Audit Trail" />
+
+            <InfoPanel type="overview" title="Audit Trail">
+                <p>A complete, chronological log of every action taken on JL forms across the entire system.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li><strong>Submitted</strong> — recorded when a form is submitted via the public link (no actor).</li>
+                    <li><strong>Reviewed</strong> — recorded when a Reviewer marks a form as Reviewed.</li>
+                    <li><strong>Approved</strong> — recorded when the VP Approver gives final approval.</li>
+                    <li><strong>Rejected / Rejected by VP</strong> — recorded with the actor and rejection reason (if provided).</li>
+                </ul>
+                <p className="mt-2">Use the search and filter to narrow down by reference, company, actor, or event type.</p>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>Audit Trail</h1>

@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
 import RejectModal from '@/components/jl/RejectModal';
@@ -76,6 +77,17 @@ export default function Vp({ entries }: Props) {
     return (
         <AppLayout>
             <Head title="VP Approver" />
+
+            <InfoPanel type="overview" title="VP Approver Dashboard">
+                <p>This is your final-approval queue. Only forms already reviewed by the Reviewer appear here as actionable.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li>Forms with status <strong>Reviewed</strong> are waiting for your action — use the kebab menu (⋮).</li>
+                    <li><strong>For Approval</strong> — opens the full form details before you confirm approval.</li>
+                    <li><strong>Approve</strong> — grants final approval and triggers the auto-generated serial number.</li>
+                    <li><strong>Reject</strong> — opens a confirmation with an optional reason; status becomes VP Rejected.</li>
+                    <li>Forms rejected by the Reviewer are also visible here for reference but require no action.</li>
+                </ul>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>VP Approver Dashboard</h1>

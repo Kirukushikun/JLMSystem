@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/AppLayout';
+import InfoPanel from '@/components/InfoPanel';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
 import RejectModal from '@/components/jl/RejectModal';
@@ -116,6 +117,16 @@ export default function Reviewer({ entries }: Props) {
     return (
         <AppLayout>
             <Head title="Reviewer Dashboard" />
+
+            <InfoPanel type="overview" title="Reviewer Dashboard">
+                <p>This is your queue of all submitted JL forms. You are the first approval step before forms reach the VP Approver.</p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li>Forms with status <strong>Pending</strong> require your action — use the kebab menu (⋮) to act.</li>
+                    <li><strong>For Review</strong> — opens the form details for you to inspect before marking as Reviewed.</li>
+                    <li><strong>Reject</strong> — opens a quick confirmation where you can enter an optional rejection reason.</li>
+                    <li>Once marked as Reviewed, the form moves to the VP Approver's queue automatically.</li>
+                </ul>
+            </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>Reviewer Dashboard</h1>
