@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -24,23 +24,28 @@ interface PageProps {
 
 export default function Submit() {
     const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
-    const [fileKey, setFileKey]         = useState(0);
+    const [fileKey, setFileKey]               = useState(0);
     const [turnstileToken, setTurnstileToken] = useState('');
+    const turnstileRef = useRef<HTMLDivElement>(null);
+    const widgetId     = useRef<string | null>(null);
 
     useEffect(() => {
-        (window as any).onTurnstileVerified = (token: string) => setTurnstileToken(token);
-
-        // Load after React renders so Cloudflare finds the cf-turnstile div
         const script = document.createElement('script');
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
         script.async = true;
         script.defer = true;
-        document.head.appendChild(script);
-
-        return () => {
-            delete (window as any).onTurnstileVerified;
-            document.head.removeChild(script);
+        script.onload = () => {
+            const ts = (window as any).turnstile;
+            if (ts && turnstileRef.current) {
+                widgetId.current = ts.render(turnstileRef.current, {
+                    sitekey:           turnstileSiteKey,
+                    callback:          (token: string) => setTurnstileToken(token),
+                    'expired-callback': () => setTurnstileToken(''),
+                });
+            }
         };
+        document.head.appendChild(script);
+        return () => { document.head.removeChild(script); };
     }, []);
 
     const form = useForm({
@@ -60,6 +65,10 @@ export default function Submit() {
                 form.reset();
                 setFileKey((k) => k + 1);
                 setTurnstileToken('');
+                const ts = (window as any).turnstile;
+                if (ts && widgetId.current !== null) {
+                    ts.reset(widgetId.current);
+                }
             },
         });
     }
@@ -206,15 +215,17 @@ export default function Submit() {
                 </div>
 
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-                    <div
-                        className="cf-turnstile"
-                        data-sitekey={turnstileSiteKey}
-                        data-callback="onTurnstileVerified"
-                    />
+                    <div ref={turnstileRef} />
 
                     <div className="flex gap-3">
                         <button
-                            onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
+                            onClick={() => {
+                                form.reset();
+                                setFileKey((k) => k + 1);
+                                setTurnstileToken('');
+                                const ts = (window as any).turnstile;
+                                if (ts && widgetId.current !== null) ts.reset(widgetId.current);
+                            }}
                             disabled={form.processing}
                             className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                         >
