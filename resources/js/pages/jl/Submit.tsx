@@ -15,7 +15,6 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 interface PageProps {
-    flash: { success?: string };
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
     turnstileSiteKey: string;
@@ -23,21 +22,26 @@ interface PageProps {
 }
 
 export default function Submit() {
-    const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
-    const [fileKey, setFileKey]               = useState(0);
-    const [turnstileToken, setTurnstileToken] = useState('');
-    const [turnstileExpired, setTurnstileExpired] = useState(false);
+    const { companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
+    const [successMsg, setSuccessMsg] = useState('');
     const turnstileRef = useRef<HTMLDivElement>(null);
-    const widgetId     = useRef<string | null>(null);
 
+    // Show success message that survived the reload
+    useEffect(() => {
+        const msg = sessionStorage.getItem('jl_success');
+        if (msg) {
+            setSuccessMsg(msg);
+            sessionStorage.removeItem('jl_success');
+        }
+    }, []);
+
+    // Load Turnstile after React renders so it finds the div
     useEffect(() => {
         (window as any).onTurnstileReady = () => {
             const ts = (window as any).turnstile;
             if (ts && turnstileRef.current) {
-                widgetId.current = ts.render(turnstileRef.current, {
-                    sitekey:            turnstileSiteKey,
-                    callback:           (token: string) => { setTurnstileToken(token); setTurnstileExpired(false); },
-                    'expired-callback': () => { setTurnstileToken(''); setTurnstileExpired(true); },
+                ts.render(turnstileRef.current, {
+                    sitekey: turnstileSiteKey,
                 });
             }
         };
@@ -66,10 +70,10 @@ export default function Submit() {
     function handleSubmit() {
         form.post('/jl', {
             forceFormData: true,
-            onSuccess: () => {
-                form.reset();
-                setFileKey((k) => k + 1);
-                // Turnstile stays verified — user can submit again immediately
+            onSuccess: (page: any) => {
+                const msg = page.props?.flash?.success ?? 'Form submitted successfully.';
+                sessionStorage.setItem('jl_success', msg);
+                window.location.reload();
             },
         });
     }
@@ -98,10 +102,9 @@ export default function Submit() {
                 <p className="mt-1 text-sm text-gray-500">Fill in all required fields and submit for review.</p>
             </div>
 
-            {/* Success banner */}
-            {flash.success && (
+            {successMsg && (
                 <div className="mb-5 rounded-xl border-l-4 border-green-500 bg-green-50 p-5">
-                    <p className="font-semibold text-green-700">✓ {flash.success}</p>
+                    <p className="font-semibold text-green-700">✓ {successMsg}</p>
                     <p className="mt-1 text-sm text-green-800">
                         Your submission is now pending review. A serial number will be assigned after VP approval.
                     </p>
@@ -109,7 +112,6 @@ export default function Submit() {
             )}
 
             <div className="rounded-xl bg-white p-7 shadow-sm">
-                {/* Server-side validation errors */}
                 {Object.keys(form.errors).length > 0 && (
                     <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
                         {Object.values(form.errors).map((e) => (
@@ -199,7 +201,6 @@ export default function Submit() {
                     <div className="col-span-2">
                         <Label>Supporting Document (optional)</Label>
                         <input
-                            key={fileKey}
                             className={INPUT + ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'}
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
@@ -220,29 +221,20 @@ export default function Submit() {
 
                     <div className="flex gap-3">
                         <button
-                            onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
+                            onClick={() => form.reset()}
                             disabled={form.processing}
                             className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                         >
                             ↺ Clear
                         </button>
-                        {turnstileExpired ? (
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
-                            >
-                                ↻ Session Expired — Refresh
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleSubmit}
-                                disabled={form.processing || !turnstileToken}
-                                className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                                style={{ background: '#1e3a5f' }}
-                            >
-                                {form.processing ? 'Submitting…' : '➤ Submit Form'}
-                            </button>
-                        )}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={form.processing}
+                            className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                            style={{ background: '#1e3a5f' }}
+                        >
+                            {form.processing ? 'Submitting…' : '➤ Submit Form'}
+                        </button>
                     </div>
                 </div>
             </div>
