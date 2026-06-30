@@ -19,17 +19,19 @@ interface Props {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-    reviewer: 'Reviewer',
-    vp:       'VP Approver',
-    admin:    'Admin',
-    '':       'No Access',
+    reviewer:   'Reviewer',
+    vp:         'VP Approver',
+    purchasing: 'Purchasing',
+    admin:      'Admin',
+    '':         'No Access',
 };
 
 const BADGE: Record<string, string> = {
-    reviewer: 'bg-blue-100 text-blue-700',
-    vp:       'bg-purple-100 text-purple-700',
-    admin:    'bg-red-100 text-red-700',
-    '':       'bg-gray-100 text-gray-400',
+    reviewer:   'bg-blue-100 text-blue-700',
+    vp:         'bg-purple-100 text-purple-700',
+    purchasing: 'bg-amber-100 text-amber-700',
+    admin:      'bg-red-100 text-red-700',
+    '':         'bg-gray-100 text-gray-400',
 };
 
 function UserRow({
@@ -88,6 +90,7 @@ function UserRow({
                     <option value="">No Access</option>
                     <option value="reviewer">Reviewer</option>
                     <option value="vp">VP Approver</option>
+                    <option value="purchasing">Purchasing</option>
                     <option value="admin">Admin</option>
                 </select>
             </td>
@@ -145,8 +148,9 @@ export default function Users({ apiUsers, localUsers }: Props) {
             <InfoPanel type="about" title="User Management">
                 <p>Control who has access to the JL Monitoring System and what they can do. All organization employees are loaded from the central HR system.</p>
                 <ul className="mt-2 list-disc pl-4">
-                    <li><strong>Reviewer</strong> — can view all submitted forms, mark as Reviewed, and reject.</li>
-                    <li><strong>VP Approver</strong> — sees Reviewed forms only; can give final approval or reject.</li>
+                    <li><strong>Reviewer</strong> — can view all submitted forms, mark as Reviewed, reject, or put on hold.</li>
+                    <li><strong>VP Approver</strong> — sees Reviewed forms; can give final approval, reject, or put on hold.</li>
+                    <li><strong>Purchasing</strong> — sees VP-approved forms; can mark as On Process or put on hold.</li>
                     <li><strong>Admin</strong> — full access including User Management, Maintenance, and Audit Trail.</li>
                     <li>Each user can only have one role. Revoking access takes effect immediately.</li>
                 </ul>

@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
-    context: 'reviewer' | 'vp';
+    context: 'reviewer' | 'vp' | 'purchasing';
     onClose: () => void;
     onCheck?: (id: number) => void;
     onApprove?: (id: number) => void;
@@ -70,12 +70,16 @@ export default function JlModal({
 
     if (!entry) return null;
 
-    const s = entry.status;
-    const reviewedState: WfState = ['Reviewed', 'Approved', 'Rejected', 'VP Rejected'].includes(s) ? 'done' : 'active';
-    const approvedState: WfState = s === 'Approved' ? 'done' : s === 'Reviewed' ? 'active' : 'idle';
+    const s         = entry.status;
+    const effective = s === 'On Hold' ? (entry.held_at ?? 'Pending') : s;
 
-    const canCheck  = context === 'reviewer' && s === 'Pending';
-    const canApprove = context === 'vp' && s === 'Reviewed';
+    const reviewedState: WfState = ['Reviewed', 'Approved', 'Rejected', 'VP Rejected', 'On Process'].includes(effective)
+        ? 'done' : 'active';
+    const approvedState: WfState = ['Approved', 'On Process'].includes(effective)
+        ? 'done' : effective === 'Reviewed' ? 'active' : 'idle';
+
+    const canCheck   = context === 'reviewer' && (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
+    const canApprove = context === 'vp' && (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
     const canReject  = canCheck || canApprove;
 
     return (

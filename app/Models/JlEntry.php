@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 #[Fillable([
     'title', 'date', 'company', 'manager', 'dept', 'amount',
-    'status', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
+    'status', 'held_at', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
     'attachment', 'attachment_name',
 ])]
 class JlEntry extends Model

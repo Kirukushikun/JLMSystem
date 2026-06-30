@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(php artisan *)",
-      "Bash(Remove-Item \"c:\\\\laragon\\\\www\\\\jlm-system\\\\database\\\\migrations\\\\2026_06_22_000001_add_role_to_users_table.php\")"
+      "Bash(Remove-Item \"c:\\\\laragon\\\\www\\\\jlm-system\\\\database\\\\migrations\\\\2026_06_22_000001_add_role_to_users_table.php\")",
+      "Bash(net start *)",
+      "Read(//c/laragon/**)",
+      "Bash(tasklist)",
+      "PowerShell(& \"C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\bin\\\\mysqld.exe\" --install-manual \"laragon-mysql\" 2>&1)",
+      "PowerShell(Start-Service \"laragon-mysql\" 2>&1)",
+      "PowerShell(Start-Process \"C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\bin\\\\mysqld.exe\" -ArgumentList \"--console\", \"--port=3306\", \"--datadir=C:\\\\laragon\\\\data\\\\mysql\" -WindowStyle Hidden)",
+      "PowerShell(Get-Process mysqld -ErrorAction SilentlyContinue)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

@@ -10,9 +10,11 @@ interface KebabState {
 
 interface Props {
     entries: JlEntry[];
-    context: 'reviewer' | 'vp';
+    context: 'reviewer' | 'vp' | 'purchasing';
     onView: (entry: JlEntry) => void;
-    onReject: (entry: JlEntry) => void;
+    onReject?: (entry: JlEntry) => void;
+    onHold?: (entry: JlEntry) => void;
+    onProcess?: (entry: JlEntry) => void;
 }
 
 function fmtAmt(n: number) {
@@ -34,7 +36,7 @@ const HEADERS = [
 const TH_BASE =
     'whitespace-nowrap px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 bg-gray-50';
 
-export default function JlTable({ entries, context, onView, onReject }: Props) {
+export default function JlTable({ entries, context, onView, onReject, onHold, onProcess }: Props) {
     const [kebab, setKebab] = useState<KebabState | null>(null);
 
     useEffect(() => {
@@ -53,9 +55,110 @@ export default function JlTable({ entries, context, onView, onReject }: Props) {
         setKebab((prev) => (prev?.entry.id === entry.id ? null : { entry, rect }));
     }
 
+    function isReviewerActionable(e: JlEntry) {
+        return e.status === 'Pending' || (e.status === 'On Hold' && e.held_at === 'Pending');
+    }
+    function isVpActionable(e: JlEntry) {
+        return e.status === 'Reviewed' || (e.status === 'On Hold' && e.held_at === 'Reviewed');
+    }
+    function isPurchasingActionable(e: JlEntry) {
+        return e.status === 'Approved'
+            || e.status === 'On Process'
+            || (e.status === 'On Hold' && (e.held_at === 'Approved' || e.held_at === 'On Process'));
+    }
+
     function canAct(e: JlEntry) {
-        return (context === 'reviewer' && e.status === 'Pending') ||
-               (context === 'vp' && e.status === 'Reviewed');
+        if (context === 'reviewer')   return isReviewerActionable(e);
+        if (context === 'vp')         return isVpActionable(e);
+        if (context === 'purchasing') return isPurchasingActionable(e);
+        return false;
+    }
+
+    function renderKebabItems(entry: JlEntry) {
+        if (!canAct(entry)) {
+            return (
+                <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                    👁 View Details
+                </KebabItem>
+            );
+        }
+
+        const alreadyOnHold = entry.status === 'On Hold';
+
+        if (context === 'reviewer') {
+            return (
+                <>
+                    <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
+                        ✓ For Review
+                    </KebabItem>
+                    <div className="mx-1 h-px bg-gray-100" />
+                    <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
+                        ✕ Reject
+                    </KebabItem>
+                    {!alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                                ⏸ On Hold
+                            </KebabItem>
+                        </>
+                    )}
+                </>
+            );
+        }
+
+        if (context === 'vp') {
+            return (
+                <>
+                    <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
+                        ✓ For Approval
+                    </KebabItem>
+                    <div className="mx-1 h-px bg-gray-100" />
+                    <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
+                        ✕ Reject
+                    </KebabItem>
+                    {!alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                                ⏸ On Hold
+                            </KebabItem>
+                        </>
+                    )}
+                </>
+            );
+        }
+
+        if (context === 'purchasing') {
+            const canProcess = entry.status === 'Approved'
+                || (entry.status === 'On Hold' && (entry.held_at === 'Approved' || entry.held_at === 'On Process'));
+
+            return (
+                <>
+                    {canProcess && (
+                        <>
+                            <KebabItem color="green" onClick={() => { onProcess?.(entry); setKebab(null); }}>
+                                ▶ On Process
+                            </KebabItem>
+                            <div className="mx-1 h-px bg-gray-100" />
+                        </>
+                    )}
+                    <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                        👁 View Details
+                    </KebabItem>
+                    {!alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                                ⏸ On Hold
+                            </KebabItem>
+                        </>
+                    )}
+                </>
+            );
+        }
+
+        return null;
     }
 
     return (
@@ -162,27 +265,7 @@ export default function JlTable({ entries, context, onView, onReject }: Props) {
                     className="min-w-[160px] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {canAct(kebab.entry) ? (
-                        <>
-                            <KebabItem
-                                color="green"
-                                onClick={() => { onView(kebab.entry); setKebab(null); }}
-                            >
-                                {context === 'reviewer' ? '✓ For Review' : '✓ For Approval'}
-                            </KebabItem>
-                            <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem
-                                color="red"
-                                onClick={() => { onReject(kebab.entry); setKebab(null); }}
-                            >
-                                ✕ Reject
-                            </KebabItem>
-                        </>
-                    ) : (
-                        <KebabItem onClick={() => { onView(kebab.entry); setKebab(null); }}>
-                            👁 View Details
-                        </KebabItem>
-                    )}
+                    {renderKebabItems(kebab.entry)}
                 </div>
             )}
         </>
@@ -196,14 +279,16 @@ function KebabItem({
 }: {
     children: React.ReactNode;
     onClick: () => void;
-    color?: 'red' | 'green';
+    color?: 'red' | 'green' | 'amber';
 }) {
     const cls =
         color === 'red'
             ? 'text-red-600 hover:bg-red-50'
             : color === 'green'
               ? 'text-green-700 hover:bg-green-50'
-              : 'text-gray-700 hover:bg-gray-50';
+              : color === 'amber'
+                ? 'text-amber-600 hover:bg-amber-50'
+                : 'text-gray-700 hover:bg-gray-50';
     return (
         <button
             onClick={onClick}

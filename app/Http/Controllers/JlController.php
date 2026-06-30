@@ -19,8 +19,9 @@ class JlController extends Controller
     public function submit(): Response
     {
         return Inertia::render('jl/Submit', [
-            'companies'   => Company::orderBy('name')->get(['id', 'name']),
-            'departments' => Department::orderBy('name')->get(['id', 'name']),
+            'companies'      => Company::orderBy('name')->get(['id', 'name']),
+            'departments'    => Department::orderBy('name')->get(['id', 'name']),
+            'turnstileSiteKey' => config('services.turnstile.site_key'),
         ]);
     }
 
@@ -33,11 +34,29 @@ class JlController extends Controller
 
     public function vp(): Response
     {
-        return Inertia::render('jl/Vp', [
-            'entries' => JlEntry::whereIn('status', ['Reviewed', 'Rejected', 'Approved', 'VP Rejected'])
-                ->latest()
-                ->get(),
-        ]);
+        $entries = JlEntry::where(function ($q) {
+            $q->whereIn('status', ['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Process'])
+              ->orWhere(function ($q2) {
+                  // On Hold entries held at Reviewer or VP stage (not Purchasing)
+                  $q2->where('status', 'On Hold')
+                     ->where('held_at', '!=', 'Pending');
+              });
+        })->latest()->get();
+
+        return Inertia::render('jl/Vp', ['entries' => $entries]);
+    }
+
+    public function purchasing(): Response
+    {
+        $entries = JlEntry::where(function ($q) {
+            $q->whereIn('status', ['Approved', 'On Process'])
+              ->orWhere(function ($q2) {
+                  $q2->where('status', 'On Hold')
+                     ->whereIn('held_at', ['Approved', 'On Process']);
+              });
+        })->latest()->get();
+
+        return Inertia::render('jl/Purchasing', ['entries' => $entries]);
     }
 
     public function auditTrail(): Response
@@ -92,10 +111,12 @@ class JlController extends Controller
 
     public function review(JlEntry $entry): RedirectResponse
     {
-        abort_if($entry->status !== 'Pending', 422, 'Entry is not pending.');
+        $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+        abort_if($effective !== 'Pending', 422, 'Entry is not pending.');
 
         $entry->update([
             'status'      => 'Reviewed',
+            'held_at'     => null,
             'reviewed_at' => now()->toDateString(),
         ]);
 
@@ -110,10 +131,12 @@ class JlController extends Controller
 
     public function approve(JlEntry $entry): RedirectResponse
     {
-        abort_if($entry->status !== 'Reviewed', 422, 'Entry is not reviewed.');
+        $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+        abort_if($effective !== 'Reviewed', 422, 'Entry is not reviewed.');
 
         $entry->update([
             'status'      => 'Approved',
+            'held_at'     => null,
             'approved_at' => now()->toDateString(),
             'serial'      => $this->generateSerial($entry),
         ]);
@@ -129,13 +152,15 @@ class JlController extends Controller
 
     public function reject(Request $request, JlEntry $entry): RedirectResponse
     {
-        abort_if(! in_array($entry->status, ['Pending', 'Reviewed']), 422, 'Entry cannot be rejected.');
+        $effective  = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+        abort_if(! in_array($effective, ['Pending', 'Reviewed']), 422, 'Entry cannot be rejected.');
 
-        $isVpReject = $entry->status === 'Reviewed';
+        $isVpReject = $effective === 'Reviewed';
         $reason     = $request->input('reject_reason') ?: 'No reason provided.';
 
         $entry->update([
             'status'        => $isVpReject ? 'VP Rejected' : 'Rejected',
+            'held_at'       => null,
             'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $reason,
         ]);
@@ -148,6 +173,110 @@ class JlController extends Controller
         ]);
 
         return back();
+    }
+
+    public function hold(Request $request, JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->status === 'On Hold', 422, 'Entry is already on hold.');
+
+        $previousStatus = $entry->status;
+
+        $entry->update([
+            'status'  => 'On Hold',
+            'held_at' => $previousStatus,
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'on_hold',
+            'actor'       => auth()->user()->name,
+            'notes'       => $request->input('reason') ?: null,
+        ]);
+
+        return back();
+    }
+
+    public function process(JlEntry $entry): RedirectResponse
+    {
+        $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+        abort_if(! in_array($effective, ['Approved', 'On Process']), 422, 'Entry cannot be marked as On Process.');
+
+        $entry->update([
+            'status'  => 'On Process',
+            'held_at' => null,
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'on_process',
+            'actor'       => auth()->user()->name,
+        ]);
+
+        return back();
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $user = auth()->user();
+        $allowed = $this->allowedExportStatuses($user->role);
+
+        $requested = $request->input('statuses', $allowed);
+        $statuses  = array_values(array_filter($requested, fn ($s) => in_array($s, $allowed)));
+
+        if (empty($statuses)) {
+            $statuses = $allowed;
+        }
+
+        $query = JlEntry::whereIn('status', $statuses);
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('submitted_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('submitted_at', '<=', $request->date_to);
+        }
+
+        $entries  = $query->orderBy('submitted_at', 'desc')->get();
+        $filename = 'jl-export-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($entries) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'Reference', 'Title', 'Date Prepared', 'Company', 'Department',
+                'Manager', 'Est. Amount', 'Status', 'Held At', 'Serial No.',
+                'Submitted', 'Reviewed', 'Approved', 'Reject Reason',
+            ]);
+            foreach ($entries as $e) {
+                fputcsv($out, [
+                    $e->reference,
+                    $e->title,
+                    $e->date,
+                    $e->company,
+                    $e->dept,
+                    $e->manager,
+                    $e->amount,
+                    $e->status,
+                    $e->held_at ?? '',
+                    $e->serial ?? '',
+                    $e->submitted_at,
+                    $e->reviewed_at ?? '',
+                    $e->approved_at ?? '',
+                    $e->reject_reason ?? '',
+                ]);
+            }
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function allowedExportStatuses(string $role): array
+    {
+        return match ($role) {
+            'reviewer'   => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
+            'vp'         => ['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
+            'purchasing' => ['Approved', 'On Process', 'On Hold'],
+            'admin'      => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
+            default      => [],
+        };
     }
 
     private function generateSerial(JlEntry $entry): string

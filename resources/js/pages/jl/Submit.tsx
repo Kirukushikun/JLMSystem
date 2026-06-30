@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -18,12 +18,30 @@ interface PageProps {
     flash: { success?: string };
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
+    turnstileSiteKey: string;
     [key: string]: unknown;
 }
 
 export default function Submit() {
-    const { flash, companies, departments } = usePage<PageProps>().props;
-    const [fileKey, setFileKey] = useState(0);
+    const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
+    const [fileKey, setFileKey]         = useState(0);
+    const [turnstileToken, setTurnstileToken] = useState('');
+
+    useEffect(() => {
+        (window as any).onTurnstileVerified = (token: string) => setTurnstileToken(token);
+
+        // Load after React renders so Cloudflare finds the cf-turnstile div
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+
+        return () => {
+            delete (window as any).onTurnstileVerified;
+            document.head.removeChild(script);
+        };
+    }, []);
 
     const form = useForm({
         title:      '',
@@ -41,6 +59,7 @@ export default function Submit() {
             onSuccess: () => {
                 form.reset();
                 setFileKey((k) => k + 1);
+                setTurnstileToken('');
             },
         });
     }
@@ -186,22 +205,30 @@ export default function Submit() {
                     </div>
                 </div>
 
-                <div className="mt-7 flex justify-end gap-3">
-                    <button
-                        onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
-                        disabled={form.processing}
-                        className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
-                    >
-                        ↺ Clear
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={form.processing}
-                        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                        style={{ background: '#1e3a5f' }}
-                    >
-                        {form.processing ? 'Submitting…' : '➤ Submit Form'}
-                    </button>
+                <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+                    <div
+                        className="cf-turnstile"
+                        data-sitekey={turnstileSiteKey}
+                        data-callback="onTurnstileVerified"
+                    />
+
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
+                            disabled={form.processing}
+                            className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
+                        >
+                            ↺ Clear
+                        </button>
+                        <button
+                            onClick={handleSubmit}
+                            disabled={form.processing || !turnstileToken}
+                            className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                            style={{ background: '#1e3a5f' }}
+                        >
+                            {form.processing ? 'Submitting…' : '➤ Submit Form'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </AppLayout>

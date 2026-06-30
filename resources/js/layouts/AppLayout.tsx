@@ -6,6 +6,7 @@ const NAV_ITEMS = [
     { label: 'Submit Form',        href: '/',                    roles: ['reviewer', 'vp', 'admin'] },
     { label: 'Reviewer Dashboard', href: '/reviewer',            roles: ['reviewer', 'admin'] },
     { label: 'VP Approver',        href: '/vp',                  roles: ['vp', 'admin'] },
+    { label: 'Purchasing',         href: '/purchasing',          roles: ['purchasing', 'admin'] },
     { label: 'User Management',    href: '/admin/users',         roles: ['admin'] },
     { label: 'Maintenance',        href: '/admin/maintenance',   roles: ['admin'] },
     { label: 'Audit Trail',        href: '/admin/audit-trail',   roles: ['admin'] },
@@ -53,7 +54,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                         </Link>
                     ))}
 
-                    {user && (
+                    {user ? (
                         <>
                             <div className="mx-2 h-5 w-px bg-white/20" />
                             <span className="mr-1 text-xs text-white/60">{user.name}</span>
@@ -64,6 +65,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                                 Logout
                             </button>
                         </>
+                    ) : (
+                        <Link
+                            href="/login"
+                            className="rounded-md px-4 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                        >
+                            Admin Login
+                        </Link>
                     )}
                 </div>
             </nav>

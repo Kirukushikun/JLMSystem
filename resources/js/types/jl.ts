@@ -1,4 +1,11 @@
-export type JlStatus = 'Pending' | 'Reviewed' | 'Rejected' | 'Approved' | 'VP Rejected';
+export type JlStatus =
+    | 'Pending'
+    | 'Reviewed'
+    | 'Rejected'
+    | 'Approved'
+    | 'VP Rejected'
+    | 'On Hold'
+    | 'On Process';
 
 export interface JlEntry {
     id: number;
@@ -10,6 +17,7 @@ export interface JlEntry {
     dept: string;
     amount: number;
     status: JlStatus;
+    held_at: string | null;
     serial: string | null;
     submitted_at: string;
     reviewed_at: string | null;

@@ -1,5 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import ExportModal from '@/components/jl/ExportModal';
+import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
 import RejectModal from '@/components/jl/RejectModal';
@@ -27,6 +29,8 @@ export default function Vp({ entries }: Props) {
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason]   = useState('');
     const [rejectEntry, setRejectEntry]     = useState<JlEntry | null>(null);
+    const [holdEntry, setHoldEntry]         = useState<JlEntry | null>(null);
+    const [showExport, setShowExport]       = useState(false);
     const [toast, setToast]                 = useState('');
 
     function showToast(msg: string) {
@@ -60,6 +64,13 @@ export default function Vp({ entries }: Props) {
         });
     }
 
+    function handleDirectHold(id: number, reason: string) {
+        router.patch(`/jl/${id}/hold`, { reason }, {
+            preserveScroll: true,
+            onSuccess: () => { setHoldEntry(null); showToast('Entry put on hold.'); },
+        });
+    }
+
     const filtered = entries.filter((e) => {
         const q = search.toLowerCase();
         return (
@@ -69,10 +80,11 @@ export default function Vp({ entries }: Props) {
     });
 
     const forwarded        = entries.filter((e) => e.status !== 'Rejected').length;
-    const pending          = entries.filter((e) => e.status === 'Reviewed').length;
+    const pending          = entries.filter((e) => e.status === 'Reviewed' || (e.status === 'On Hold' && e.held_at === 'Reviewed')).length;
     const approved         = entries.filter((e) => e.status === 'Approved').length;
     const vpRejected       = entries.filter((e) => e.status === 'VP Rejected').length;
     const reviewerRejected = entries.filter((e) => e.status === 'Rejected').length;
+    const onHold           = entries.filter((e) => e.status === 'On Hold' && e.held_at === 'Reviewed').length;
 
     return (
         <AppLayout>
@@ -97,12 +109,13 @@ export default function Vp({ entries }: Props) {
             </div>
 
             <div className="mb-3 grid grid-cols-4 gap-4">
-                <StatCard label="Forwarded to VP"  value={forwarded}  color="#1e3a5f" />
-                <StatCard label="Awaiting Approval" value={pending}   color="#d97706" />
-                <StatCard label="Approved"          value={approved}  color="#16a34a" />
+                <StatCard label="Forwarded to VP"   value={forwarded}  color="#1e3a5f" />
+                <StatCard label="Awaiting Approval" value={pending}    color="#d97706" />
+                <StatCard label="Approved"          value={approved}   color="#16a34a" />
                 <StatCard label="Rejected by VP"    value={vpRejected} color="#dc2626" />
             </div>
-            <div className="mb-7 grid grid-cols-1 gap-4">
+            <div className="mb-7 grid grid-cols-2 gap-4">
+                <StatCard label="On Hold"                                                           value={onHold}           color="#d97706" />
                 <StatCard label="Rejected by Reviewer (visible for reference — no action required)" value={reviewerRejected} color="#94a3b8" />
             </div>
 
@@ -123,7 +136,15 @@ export default function Vp({ entries }: Props) {
                     <option value="Approved">Approved</option>
                     <option value="VP Rejected">VP Rejected</option>
                     <option value="Rejected">Rejected by Reviewer</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="On Process">On Process</option>
                 </select>
+                <button
+                    onClick={() => setShowExport(true)}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                    ↓ Export
+                </button>
             </div>
 
             <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
@@ -132,6 +153,7 @@ export default function Vp({ entries }: Props) {
                     context="vp"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
                     onReject={setRejectEntry}
+                    onHold={setHoldEntry}
                 />
             </div>
 
@@ -151,6 +173,18 @@ export default function Vp({ entries }: Props) {
                 entry={rejectEntry}
                 onClose={() => setRejectEntry(null)}
                 onConfirm={handleDirectReject}
+            />
+
+            <HoldModal
+                entry={holdEntry}
+                onClose={() => setHoldEntry(null)}
+                onConfirm={handleDirectHold}
+            />
+
+            <ExportModal
+                open={showExport}
+                onClose={() => setShowExport(false)}
+                allowedStatuses={['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process']}
             />
 
             {toast && (

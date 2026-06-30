@@ -104,8 +104,9 @@ class LoginController extends Controller
             Auth::loginUsingId($user->id);
 
             return match ($user->role) {
-                'vp'    => redirect()->route('jl.vp'),
-                default => redirect()->route('jl.reviewer'), // reviewer + admin
+                'vp'         => redirect()->route('jl.vp'),
+                'purchasing' => redirect()->route('jl.purchasing'),
+                default      => redirect()->route('jl.reviewer'), // reviewer + admin
             };
 
         } catch (\Exception $e) {

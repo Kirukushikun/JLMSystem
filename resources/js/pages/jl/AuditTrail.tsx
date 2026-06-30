@@ -6,7 +6,7 @@ import { useState } from 'react';
 interface AuditLog {
     id: number;
     jl_entry_id: number;
-    event: 'submitted' | 'reviewed' | 'approved' | 'rejected' | 'vp_rejected';
+    event: 'submitted' | 'reviewed' | 'approved' | 'rejected' | 'vp_rejected' | 'on_hold' | 'on_process';
     actor: string | null;
     notes: string | null;
     created_at: string;
@@ -22,11 +22,13 @@ interface Props {
 }
 
 const EVENT_META: Record<AuditLog['event'], { label: string; bg: string; color: string }> = {
-    submitted:   { label: 'Submitted',       bg: '#fef3c7', color: '#92400e' },
-    reviewed:    { label: 'Reviewed',         bg: '#dbeafe', color: '#1e40af' },
-    approved:    { label: 'Approved',         bg: '#dcfce7', color: '#166534' },
-    rejected:    { label: 'Rejected',         bg: '#fee2e2', color: '#991b1b' },
-    vp_rejected: { label: 'Rejected by VP',   bg: '#fce7f3', color: '#9d174d' },
+    submitted:   { label: 'Submitted',      bg: '#fef3c7', color: '#92400e' },
+    reviewed:    { label: 'Reviewed',        bg: '#dbeafe', color: '#1e40af' },
+    approved:    { label: 'Approved',        bg: '#dcfce7', color: '#166534' },
+    rejected:    { label: 'Rejected',        bg: '#fee2e2', color: '#991b1b' },
+    vp_rejected: { label: 'Rejected by VP',  bg: '#fce7f3', color: '#9d174d' },
+    on_hold:     { label: 'On Hold',         bg: '#fef3c7', color: '#92400e' },
+    on_process:  { label: 'On Process',      bg: '#ede9fe', color: '#5b21b6' },
 };
 
 function EventBadge({ event }: { event: AuditLog['event'] }) {
@@ -138,6 +140,8 @@ export default function AuditTrail({ logs }: Props) {
                     <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
                     <option value="vp_rejected">Rejected by VP</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="on_process">On Process</option>
                 </select>
                 {(search || eventFilter) && (
                     <button

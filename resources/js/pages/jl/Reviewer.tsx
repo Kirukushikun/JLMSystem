@@ -1,5 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import ExportModal from '@/components/jl/ExportModal';
+import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
 import RejectModal from '@/components/jl/RejectModal';
@@ -66,6 +68,8 @@ export default function Reviewer({ entries }: Props) {
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [rejectEntry, setRejectEntry]   = useState<JlEntry | null>(null);
+    const [holdEntry, setHoldEntry]       = useState<JlEntry | null>(null);
+    const [showExport, setShowExport]     = useState(false);
     const [toast, setToast]               = useState('');
 
     function showToast(msg: string) {
@@ -99,6 +103,13 @@ export default function Reviewer({ entries }: Props) {
         });
     }
 
+    function handleDirectHold(id: number, reason: string) {
+        router.patch(`/jl/${id}/hold`, { reason }, {
+            preserveScroll: true,
+            onSuccess: () => { setHoldEntry(null); showToast('Entry put on hold.'); },
+        });
+    }
+
     const filtered = entries.filter((e) => {
         const q = search.toLowerCase();
         return (
@@ -113,6 +124,7 @@ export default function Reviewer({ entries }: Props) {
     const approved         = entries.filter((e) => e.status === 'Approved').length;
     const reviewerRejected = entries.filter((e) => e.status === 'Rejected').length;
     const vpRejected       = entries.filter((e) => e.status === 'VP Rejected').length;
+    const onHold           = entries.filter((e) => e.status === 'On Hold').length;
 
     return (
         <AppLayout>
@@ -141,9 +153,10 @@ export default function Reviewer({ entries }: Props) {
                 <StatCard label="Reviewed / Forwarded" value={checked}  color="#2563eb" />
                 <StatCard label="VP Approved"          value={approved} color="#16a34a" />
             </div>
-            <div className="mb-7 grid grid-cols-2 gap-4">
+            <div className="mb-7 grid grid-cols-3 gap-4">
                 <StatCard label="Rejected by Reviewer" value={reviewerRejected} color="#dc2626" />
                 <StatCard label="Rejected by VP"       value={vpRejected}       color="#dc2626" />
+                <StatCard label="On Hold"              value={onHold}           color="#d97706" />
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -163,7 +176,15 @@ export default function Reviewer({ entries }: Props) {
                     <option>Reviewed</option>
                     <option>Rejected</option>
                     <option>Approved</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="On Process">On Process</option>
                 </select>
+                <button
+                    onClick={() => setShowExport(true)}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                    ↓ Export
+                </button>
             </div>
 
             <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
@@ -172,6 +193,7 @@ export default function Reviewer({ entries }: Props) {
                     context="reviewer"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
                     onReject={setRejectEntry}
+                    onHold={setHoldEntry}
                 />
             </div>
 
@@ -193,6 +215,18 @@ export default function Reviewer({ entries }: Props) {
                 entry={rejectEntry}
                 onClose={() => setRejectEntry(null)}
                 onConfirm={handleDirectReject}
+            />
+
+            <HoldModal
+                entry={holdEntry}
+                onClose={() => setHoldEntry(null)}
+                onConfirm={handleDirectHold}
+            />
+
+            <ExportModal
+                open={showExport}
+                onClose={() => setShowExport(false)}
+                allowedStatuses={['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process']}
             />
 
             {toast && (
