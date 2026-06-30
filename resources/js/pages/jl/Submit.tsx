@@ -26,6 +26,7 @@ export default function Submit() {
     const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
     const [fileKey, setFileKey]               = useState(0);
     const [turnstileToken, setTurnstileToken] = useState('');
+    const [turnstileExpired, setTurnstileExpired] = useState(false);
     const turnstileRef = useRef<HTMLDivElement>(null);
     const widgetId     = useRef<string | null>(null);
 
@@ -35,8 +36,8 @@ export default function Submit() {
             if (ts && turnstileRef.current) {
                 widgetId.current = ts.render(turnstileRef.current, {
                     sitekey:            turnstileSiteKey,
-                    callback:           (token: string) => setTurnstileToken(token),
-                    'expired-callback': () => setTurnstileToken(''),
+                    callback:           (token: string) => { setTurnstileToken(token); setTurnstileExpired(false); },
+                    'expired-callback': () => { setTurnstileToken(''); setTurnstileExpired(true); },
                 });
             }
         };
@@ -68,11 +69,7 @@ export default function Submit() {
             onSuccess: () => {
                 form.reset();
                 setFileKey((k) => k + 1);
-                setTurnstileToken('');
-                const ts = (window as any).turnstile;
-                if (ts && widgetId.current !== null) {
-                    ts.reset(widgetId.current);
-                }
+                // Turnstile stays verified — user can submit again immediately
             },
         });
     }
@@ -223,26 +220,29 @@ export default function Submit() {
 
                     <div className="flex gap-3">
                         <button
-                            onClick={() => {
-                                form.reset();
-                                setFileKey((k) => k + 1);
-                                setTurnstileToken('');
-                                const ts = (window as any).turnstile;
-                                if (ts && widgetId.current !== null) ts.reset(widgetId.current);
-                            }}
+                            onClick={() => { form.reset(); setFileKey((k) => k + 1); }}
                             disabled={form.processing}
                             className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                         >
                             ↺ Clear
                         </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={form.processing || !turnstileToken}
-                            className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                            style={{ background: '#1e3a5f' }}
-                        >
-                            {form.processing ? 'Submitting…' : '➤ Submit Form'}
-                        </button>
+                        {turnstileExpired ? (
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                ↻ Session Expired — Refresh
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleSubmit}
+                                disabled={form.processing || !turnstileToken}
+                                className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                                style={{ background: '#1e3a5f' }}
+                            >
+                                {form.processing ? 'Submitting…' : '➤ Submit Form'}
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
