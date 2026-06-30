@@ -30,22 +30,26 @@ export default function Submit() {
     const widgetId     = useRef<string | null>(null);
 
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
+        (window as any).onTurnstileReady = () => {
             const ts = (window as any).turnstile;
             if (ts && turnstileRef.current) {
                 widgetId.current = ts.render(turnstileRef.current, {
-                    sitekey:           turnstileSiteKey,
-                    callback:          (token: string) => setTurnstileToken(token),
+                    sitekey:            turnstileSiteKey,
+                    callback:           (token: string) => setTurnstileToken(token),
                     'expired-callback': () => setTurnstileToken(''),
                 });
             }
         };
+
+        const script = document.createElement('script');
+        script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
+        script.async = true;
         document.head.appendChild(script);
-        return () => { document.head.removeChild(script); };
+
+        return () => {
+            delete (window as any).onTurnstileReady;
+            if (document.head.contains(script)) document.head.removeChild(script);
+        };
     }, []);
 
     const form = useForm({
