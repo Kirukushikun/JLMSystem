@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -15,6 +15,7 @@ function Label({ children }: { children: React.ReactNode }) {
 }
 
 interface PageProps {
+    flash: { success?: string };
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
     turnstileSiteKey: string;
@@ -22,35 +23,20 @@ interface PageProps {
 }
 
 export default function Submit() {
-    const { companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
-    const [successMsg, setSuccessMsg] = useState('');
+    const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
     const turnstileRef = useRef<HTMLDivElement>(null);
 
-    // Show success message that survived the reload
-    useEffect(() => {
-        const msg = sessionStorage.getItem('jl_success');
-        if (msg) {
-            setSuccessMsg(msg);
-            sessionStorage.removeItem('jl_success');
-        }
-    }, []);
-
-    // Load Turnstile after React renders so it finds the div
     useEffect(() => {
         (window as any).onTurnstileReady = () => {
             const ts = (window as any).turnstile;
             if (ts && turnstileRef.current) {
-                ts.render(turnstileRef.current, {
-                    sitekey: turnstileSiteKey,
-                });
+                ts.render(turnstileRef.current, { sitekey: turnstileSiteKey });
             }
         };
-
         const script = document.createElement('script');
         script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
         script.async = true;
         document.head.appendChild(script);
-
         return () => {
             delete (window as any).onTurnstileReady;
             if (document.head.contains(script)) document.head.removeChild(script);
@@ -70,11 +56,7 @@ export default function Submit() {
     function handleSubmit() {
         form.post('/jl', {
             forceFormData: true,
-            onSuccess: (page: any) => {
-                const msg = page.props?.flash?.success ?? 'Form submitted successfully.';
-                sessionStorage.setItem('jl_success', msg);
-                window.location.reload();
-            },
+            onSuccess: () => form.reset(),
         });
     }
 
@@ -102,9 +84,9 @@ export default function Submit() {
                 <p className="mt-1 text-sm text-gray-500">Fill in all required fields and submit for review.</p>
             </div>
 
-            {successMsg && (
+            {flash.success && (
                 <div className="mb-5 rounded-xl border-l-4 border-green-500 bg-green-50 p-5">
-                    <p className="font-semibold text-green-700">✓ {successMsg}</p>
+                    <p className="font-semibold text-green-700">✓ {flash.success}</p>
                     <p className="mt-1 text-sm text-green-800">
                         Your submission is now pending review. A serial number will be assigned after VP approval.
                     </p>
@@ -207,9 +189,7 @@ export default function Submit() {
                             onChange={(e) => form.setData('attachment', e.target.files?.[0] ?? null)}
                             disabled={form.processing}
                         />
-                        <p className="mt-1 text-xs text-gray-400">
-                            PDF, image, or Office document — max 10 MB
-                        </p>
+                        <p className="mt-1 text-xs text-gray-400">PDF, image, or Office document — max 10 MB</p>
                         {form.errors.attachment && (
                             <p className="mt-1 text-xs text-red-500">{form.errors.attachment}</p>
                         )}
@@ -218,7 +198,6 @@ export default function Submit() {
 
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
                     <div ref={turnstileRef} />
-
                     <div className="flex gap-3">
                         <button
                             onClick={() => form.reset()}
