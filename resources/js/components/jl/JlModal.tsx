@@ -24,7 +24,7 @@ const WF_STYLES: Record<WfState, string> = {
 };
 
 function WfStep({ label, state }: { label: string; state: WfState }) {
-    const icons: Record<WfState, string> = { idle: '○', active: '◎', done: '✓' };
+    const icons: Record<WfState, string> = { idle: '○', active: '◎', done: '<i class="fa-solid fa-check"></i>' };
     return (
         <div className="flex flex-1 flex-col items-center gap-1.5">
             <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold ${WF_STYLES[state]}`}>
@@ -95,7 +95,7 @@ export default function JlModal({
                     onClick={onClose}
                     className="absolute top-4 right-4 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-200"
                 >
-                    ✕
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
 
                 <h2 className="mb-5 text-lg font-bold" style={{ color: '#1e3a5f' }}>
@@ -187,7 +187,7 @@ export default function JlModal({
                                     onClick={onRejectClick}
                                     className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    ✕ Reject
+                                    <i class="fa-solid fa-xmark"></i> Reject
                                 </button>
                             )}
                             {canCheck && (
@@ -195,7 +195,7 @@ export default function JlModal({
                                     onClick={() => { onCheck?.(entry.id); onClose(); }}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    ✓ Mark as Reviewed
+                                    <i class="fa-solid fa-check"></i> Mark as Reviewed
                                 </button>
                             )}
                             {canApprove && (
@@ -203,7 +203,7 @@ export default function JlModal({
                                     onClick={() => { onApprove?.(entry.id); onClose(); }}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    ✓ Approve
+                                    <i class="fa-solid fa-check"></i> Approve
                                 </button>
                             )}
                         </>

@@ -33,7 +33,7 @@ export default function HoldModal({ entry, onClose, onConfirm }: Props) {
                     onClick={onClose}
                     className="absolute top-4 right-4 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-200"
                 >
-                    ✕
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
 
                 <h2 className="mb-0.5 text-lg font-bold text-amber-600">Put On Hold</h2>
@@ -64,7 +64,7 @@ export default function HoldModal({ entry, onClose, onConfirm }: Props) {
                         onClick={() => onConfirm(entry.id, reason)}
                         className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                     >
-                        ⏸ Put On Hold
+                        <i class="fa-solid fa-pause"></i> Put On Hold
                     </button>
                 </div>
             </div>

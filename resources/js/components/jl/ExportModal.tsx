@@ -52,7 +52,7 @@ export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
                     onClick={onClose}
                     className="absolute top-4 right-4 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-200"
                 >
-                    ✕
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
 
                 <h2 className="mb-1 text-lg font-bold" style={{ color: '#1e3a5f' }}>Export to CSV</h2>

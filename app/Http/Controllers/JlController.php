@@ -9,6 +9,7 @@ use App\Models\JlAuditLog;
 use App\Models\JlEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -70,7 +71,19 @@ class JlController extends Controller
 
     public function store(StoreJlRequest $request): RedirectResponse
     {
-        $data = $request->safe()->except(['attachment']);
+        $secret = config('services.turnstile.secret');
+        if ($secret) {
+            $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+                'secret'   => $secret,
+                'response' => $request->input('turnstile_token', ''),
+                'remoteip' => $request->ip(),
+            ]);
+            if (! ($verify->json('success') ?? false)) {
+                return back()->withErrors(['turnstile_token' => 'Human verification failed. Please complete the challenge and try again.'])->withInput();
+            }
+        }
+
+        $data = $request->safe()->except(['attachment', 'turnstile_token']);
 
         $path         = null;
         $originalName = null;

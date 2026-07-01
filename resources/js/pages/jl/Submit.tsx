@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -24,13 +24,19 @@ interface PageProps {
 
 export default function Submit() {
     const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
-    const turnstileRef = useRef<HTMLDivElement>(null);
+    const [fileKey, setFileKey]    = useState(0);
+    const turnstileRef             = useRef<HTMLDivElement>(null);
+    const turnstileTokenRef        = useRef('');
 
     useEffect(() => {
         (window as any).onTurnstileReady = () => {
             const ts = (window as any).turnstile;
             if (ts && turnstileRef.current) {
-                ts.render(turnstileRef.current, { sitekey: turnstileSiteKey });
+                ts.render(turnstileRef.current, {
+                    sitekey:            turnstileSiteKey,
+                    callback:           (token: string) => { turnstileTokenRef.current = token; },
+                    'expired-callback': () => { turnstileTokenRef.current = ''; },
+                });
             }
         };
         const script = document.createElement('script');
@@ -44,19 +50,21 @@ export default function Submit() {
     }, []);
 
     const form = useForm({
-        title:      '',
-        date:       new Date().toISOString().slice(0, 10),
-        company:    '',
-        manager:    '',
-        dept:       '',
-        amount:     '',
-        attachment: null as File | null,
+        title:           '',
+        date:            new Date().toISOString().slice(0, 10),
+        company:         '',
+        manager:         '',
+        dept:            '',
+        amount:          '',
+        attachment:      null as File | null,
+        turnstile_token: '',
     });
 
     function handleSubmit() {
+        form.transform((data) => ({ ...data, turnstile_token: turnstileTokenRef.current }));
         form.post('/jl', {
             forceFormData: true,
-            onSuccess: () => form.reset(),
+            onSuccess: () => { form.reset(); setFileKey((k) => k + 1); turnstileTokenRef.current = ''; },
         });
     }
 
@@ -86,7 +94,7 @@ export default function Submit() {
 
             {flash.success && (
                 <div className="mb-5 rounded-xl border-l-4 border-green-500 bg-green-50 p-5">
-                    <p className="font-semibold text-green-700">✓ {flash.success}</p>
+                    <p className="font-semibold text-green-700"><i class="fa-solid fa-check"></i> {flash.success}</p>
                     <p className="mt-1 text-sm text-green-800">
                         Your submission is now pending review. A serial number will be assigned after VP approval.
                     </p>
@@ -183,6 +191,7 @@ export default function Submit() {
                     <div className="col-span-2">
                         <Label>Supporting Document (optional)</Label>
                         <input
+                            key={fileKey}
                             className={INPUT + ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'}
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
@@ -197,7 +206,12 @@ export default function Submit() {
                 </div>
 
                 <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
-                    <div ref={turnstileRef} />
+                    <div>
+                        <div ref={turnstileRef} />
+                        {form.errors.turnstile_token && (
+                            <p className="mt-1 text-xs text-red-500">{form.errors.turnstile_token}</p>
+                        )}
+                    </div>
                     <div className="flex gap-3">
                         <button
                             onClick={() => form.reset()}

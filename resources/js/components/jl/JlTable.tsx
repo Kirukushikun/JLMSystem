@@ -78,7 +78,7 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
         if (!canAct(entry)) {
             return (
                 <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
-                    👁 View Details
+                    <i class="fa-solid fa-eye"></i> View Details
                 </KebabItem>
             );
         }
@@ -89,17 +89,17 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
             return (
                 <>
                     <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
-                        ✓ For Review
+                        <i class="fa-solid fa-check"></i> For Review
                     </KebabItem>
                     <div className="mx-1 h-px bg-gray-100" />
                     <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
-                        ✕ Reject
+                        <i class="fa-solid fa-xmark"></i> Reject
                     </KebabItem>
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
                             <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
-                                ⏸ On Hold
+                                <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
                     )}
@@ -111,17 +111,17 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
             return (
                 <>
                     <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
-                        ✓ For Approval
+                        <i class="fa-solid fa-check"></i> For Approval
                     </KebabItem>
                     <div className="mx-1 h-px bg-gray-100" />
                     <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
-                        ✕ Reject
+                        <i class="fa-solid fa-xmark"></i> Reject
                     </KebabItem>
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
                             <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
-                                ⏸ On Hold
+                                <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
                     )}
@@ -138,22 +138,22 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                     {canProcess && (
                         <>
                             <KebabItem color="green" onClick={() => { onProcess?.(entry); setKebab(null); }}>
-                                ▶ On Process
+                                <i class="fa-solid fa-play"></i> On Process
                             </KebabItem>
                             <div className="mx-1 h-px bg-gray-100" />
                         </>
                     )}
-                    <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
-                        👁 View Details
-                    </KebabItem>
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
                             <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
-                                ⏸ On Hold
+                                <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
                     )}
+                    <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                        <i class="fa-solid fa-eye"></i> View Details
+                    </KebabItem>
                 </>
             );
         }
