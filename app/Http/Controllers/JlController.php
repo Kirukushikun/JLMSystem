@@ -74,10 +74,9 @@ class JlController extends Controller
 
     public function store(StoreJlRequest $request): RedirectResponse
     {
-        $secret = config('services.turnstile.secret');
-        if ($secret) {
+        if (config('services.turnstile.verify')) {
             $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret'   => $secret,
+                'secret'   => config('services.turnstile.secret'),
                 'response' => $request->input('turnstile_token', ''),
                 'remoteip' => $request->ip(),
             ]);

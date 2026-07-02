@@ -51,10 +51,23 @@ export default function NotificationBell({ user }: { user: User }) {
 
     // Subscribe to real-time notifications
     useEffect(() => {
-        const channel = (window as any).Echo
+        (window as any).Echo
             ?.private(`App.Models.User.${user.id}`)
-            .notification((notif: JlNotification) => {
-                setNotifications((prev) => [notif, ...prev]);
+            .notification((notif: any) => {
+                // Broadcast arrives flat; normalize to match the DB format
+                const normalized: JlNotification = {
+                    id:         notif.id ?? crypto.randomUUID(),
+                    read_at:    null,
+                    created_at: notif.created_at ?? new Date().toISOString(),
+                    data: {
+                        entry_id:  notif.data?.entry_id  ?? notif.entry_id,
+                        reference: notif.data?.reference ?? notif.reference,
+                        event:     notif.data?.event     ?? notif.event,
+                        title:     notif.data?.title     ?? notif.title,
+                        body:      notif.data?.body      ?? notif.body,
+                    },
+                };
+                setNotifications((prev) => [normalized, ...prev]);
                 setUnreadCount((c) => c + 1);
             });
 
