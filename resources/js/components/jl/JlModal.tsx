@@ -39,7 +39,7 @@ function WfStep({ label, state }: { label: string; state: WfState }) {
 
 function DetailItem({ label, value, full }: { label: string; value: React.ReactNode; full?: boolean }) {
     return (
-        <div className={full ? 'col-span-2' : ''}>
+        <div className={full ? 'sm:col-span-2' : ''}>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
             <div className="mt-0.5 font-medium text-gray-900">{value}</div>
         </div>
@@ -84,11 +84,11 @@ export default function JlModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-lg rounded-2xl bg-white p-8 shadow-2xl"
+                className="relative w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
@@ -112,7 +112,7 @@ export default function JlModal({
                 </div>
 
                 {/* Detail grid */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <DetailItem label="JL Title" value={entry.title} full />
                     <DetailItem label="Date Prepared" value={entry.date} />
                     <DetailItem label="Status" value={<StatusBadge status={entry.status} />} />
@@ -173,7 +173,7 @@ export default function JlModal({
                 )}
 
                 {/* Action buttons */}
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
                     {!showRejectBox ? (
                         <>
                             <button

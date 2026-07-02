@@ -22,6 +22,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     const user = props.auth?.user ?? null;
     const role = user?.role ?? '';
 
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
     const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,14 +47,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return (
         <div className="min-h-screen bg-[#f0f4f8]">
             <nav
-                className="flex h-14 items-center justify-between px-6 shadow-md"
+                className="relative flex h-14 items-center justify-between px-4 sm:px-6 shadow-md"
                 style={{ background: '#1e3a5f' }}
             >
                 <span className="text-sm font-bold tracking-wide text-white">
                     JL Monitoring System
                 </span>
 
-                <div className="flex items-center gap-1">
+                {/* Desktop nav */}
+                <div className="hidden md:flex items-center gap-1">
                     {visibleItems.map((item) => (
                         <Link
                             key={item.href}
@@ -90,11 +92,76 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                         </Link>
                     )}
                 </div>
+
+                {/* Mobile right side */}
+                <div className="flex items-center gap-1 md:hidden">
+                    {user && <NotificationBell user={user} />}
+                    {!user && (
+                        <Link
+                            href="/login"
+                            className="rounded-md px-3 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                        >
+                            Login
+                        </Link>
+                    )}
+                    {visibleItems.length > 0 && (
+                        <button
+                            onClick={() => setMobileOpen((o) => !o)}
+                            className="rounded-md p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
+                            aria-label="Menu"
+                        >
+                            {mobileOpen ? (
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            )}
+                        </button>
+                    )}
+                </div>
             </nav>
-            <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+
+            {/* Mobile menu dropdown */}
+            {mobileOpen && (
+                <div className="md:hidden shadow-lg" style={{ background: '#1e3a5f' }}>
+                    <div className="flex flex-col px-4 py-2">
+                        {visibleItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setMobileOpen(false)}
+                                className={[
+                                    'rounded-md px-3 py-2.5 text-sm transition',
+                                    pathname === item.href
+                                        ? 'bg-white/20 font-semibold text-white'
+                                        : 'font-medium text-white/70 hover:bg-white/10 hover:text-white',
+                                ].join(' ')}
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                        {user && (
+                            <div className="mt-1 border-t border-white/10 pt-2 pb-1">
+                                <p className="px-3 py-1 text-xs text-white/40">{user.name}</p>
+                                <button
+                                    onClick={() => { setMobileOpen(false); handleLogout(); }}
+                                    className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8">{children}</main>
 
             {toast && (
-                <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg bg-[#1e3a5f] px-5 py-3.5 shadow-xl text-white">
+                <div className="fixed bottom-4 right-4 z-50 max-w-[calc(100vw-2rem)] sm:max-w-sm rounded-lg bg-[#1e3a5f] px-5 py-3.5 shadow-xl text-white">
                     <p className="text-sm font-semibold">{toast.title}</p>
                     <p className="mt-0.5 text-xs text-white/80">{toast.body}</p>
                 </div>

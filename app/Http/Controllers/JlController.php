@@ -383,12 +383,12 @@ class JlController extends Controller
         try {
             $accessToken = $this->getFcmAccessToken($clientEmail, $privateKey);
 
-            foreach (array_chunk($tokens, 500) as $chunk) {
+            foreach ($tokens as $token) {
                 Http::withToken($accessToken)
                     ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
                         'message' => [
+                            'token'        => $token,
                             'notification' => ['title' => $title, 'body' => $body],
-                            'tokens'       => $chunk,
                         ],
                     ]);
             }

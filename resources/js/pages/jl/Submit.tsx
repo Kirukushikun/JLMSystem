@@ -101,7 +101,7 @@ export default function Submit() {
                 </div>
             )}
 
-            <div className="rounded-xl bg-white p-7 shadow-sm">
+            <div className="rounded-xl bg-white p-4 sm:p-7 shadow-sm">
                 {Object.keys(form.errors).length > 0 && (
                     <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
                         {Object.values(form.errors).map((e) => (
@@ -110,8 +110,8 @@ export default function Submit() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-5">
-                    <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="sm:col-span-2">
                         <Label>JL Title *</Label>
                         <input
                             className={INPUT}
@@ -188,7 +188,7 @@ export default function Submit() {
                         />
                     </div>
 
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                         <Label>Supporting Document (optional)</Label>
                         <input
                             key={fileKey}
@@ -205,7 +205,7 @@ export default function Submit() {
                     </div>
                 </div>
 
-                <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+                <div className="mt-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <div ref={turnstileRef} />
                         {form.errors.turnstile_token && (
