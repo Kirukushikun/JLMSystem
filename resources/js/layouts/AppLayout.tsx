@@ -1,7 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { User } from '@/types/auth';
 import NotificationBell from '@/components/NotificationBell';
+import { registerFcmToken, listenForeground } from '@/firebase';
 
 const NAV_ITEMS = [
     { label: 'Submit Form',        href: '/',                    roles: ['reviewer', 'vp', 'admin'] },
@@ -20,6 +21,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     const pathname = url.split('?')[0];
     const user = props.auth?.user ?? null;
     const role = user?.role ?? '';
+
+    const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
+    const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+        registerFcmToken();
+        listenForeground((title, body) => {
+            setToast({ title, body });
+            if (toastTimer.current) clearTimeout(toastTimer.current);
+            toastTimer.current = setTimeout(() => setToast(null), 5000);
+        });
+    }, [user?.id]);
 
     const visibleItems = NAV_ITEMS.filter((item) =>
         (item.roles as readonly string[]).includes(role),
@@ -78,6 +92,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </div>
             </nav>
             <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+
+            {toast && (
+                <div className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg bg-[#1e3a5f] px-5 py-3.5 shadow-xl text-white">
+                    <p className="text-sm font-semibold">{toast.title}</p>
+                    <p className="mt-0.5 text-xs text-white/80">{toast.body}</p>
+                </div>
+            )}
         </div>
     );
 }

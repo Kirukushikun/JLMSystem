@@ -46,6 +46,12 @@ return [
         'key'      => env('USER_API_KEY', ''),
     ],
 
+    'firebase' => [
+        'project_id'   => env('FIREBASE_PROJECT_ID'),
+        'client_email' => env('FIREBASE_CLIENT_EMAIL'),
+        'private_key'  => str_replace('\\n', "\n", env('FIREBASE_PRIVATE_KEY', '')),
+    ],
+
     'turnstile' => [
         'site_key' => env('TURNSTILE_SITE_KEY', ''),
         'secret'   => env('TURNSTILE_SECRET_KEY', ''),

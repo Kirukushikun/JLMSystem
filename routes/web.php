@@ -45,6 +45,9 @@ Route::middleware('auth')->group(function () {
     // Admin: audit trail
     Route::get('/admin/audit-trail', [JlController::class, 'auditTrail'])->middleware('role:admin')->name('jl.audit');
 
+    // FCM device token registration
+    Route::post('/fcm-token', [JlController::class, 'storeFcmToken'])->name('fcm.token');
+
     // Notifications
     Route::get('/notifications',          [JlController::class, 'notifications'])->name('notifications.index');
     Route::post('/notifications/read-all',[JlController::class, 'markAllRead'])->name('notifications.read-all');

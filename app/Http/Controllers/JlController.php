@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\JlAuditLog;
 use App\Models\JlEntry;
+use App\Models\FcmToken;
 use App\Models\User;
 use App\Notifications\JlNotification;
 use Illuminate\Http\RedirectResponse;
@@ -323,6 +324,18 @@ class JlController extends Controller
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    public function storeFcmToken(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate(['token' => 'required|string']);
+
+        FcmToken::updateOrCreate(
+            ['token'   => $request->token],
+            ['user_id' => auth()->id()],
+        );
+
+        return response()->json(['ok' => true]);
+    }
+
     public function notifications(): \Illuminate\Http\JsonResponse
     {
         $user = auth()->user();
@@ -350,6 +363,62 @@ class JlController extends Controller
         if ($users->isNotEmpty()) {
             Notification::send($users, new JlNotification($entry, $event, $title, $body));
         }
+
+        $this->sendFcmToRoles($roles, $title, $body);
+    }
+
+    private function sendFcmToRoles(array $roles, string $title, string $body): void
+    {
+        $userIds = User::whereIn('role', $roles)->pluck('id');
+        $tokens  = FcmToken::whereIn('user_id', $userIds)->pluck('token')->toArray();
+
+        if (empty($tokens)) return;
+
+        $projectId   = config('services.firebase.project_id');
+        $clientEmail = config('services.firebase.client_email');
+        $privateKey  = config('services.firebase.private_key');
+
+        if (! $projectId || ! $clientEmail || ! $privateKey) return;
+
+        try {
+            $accessToken = $this->getFcmAccessToken($clientEmail, $privateKey);
+
+            foreach (array_chunk($tokens, 500) as $chunk) {
+                Http::withToken($accessToken)
+                    ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+                        'message' => [
+                            'notification' => ['title' => $title, 'body' => $body],
+                            'tokens'       => $chunk,
+                        ],
+                    ]);
+            }
+        } catch (\Throwable) {
+            // FCM is best-effort — never block the main workflow
+        }
+    }
+
+    private function getFcmAccessToken(string $clientEmail, string $privateKey): string
+    {
+        $now    = time();
+        $header = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
+        $claim  = base64_encode(json_encode([
+            'iss'   => $clientEmail,
+            'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+            'aud'   => 'https://oauth2.googleapis.com/token',
+            'iat'   => $now,
+            'exp'   => $now + 3600,
+        ]));
+
+        $unsigned = $header . '.' . $claim;
+        openssl_sign($unsigned, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+        $jwt = $unsigned . '.' . base64_encode($signature);
+
+        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion'  => $jwt,
+        ]);
+
+        return $response->json('access_token');
     }
 
     private function allowedExportStatuses(string $role): array
