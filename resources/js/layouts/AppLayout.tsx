@@ -1,6 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import type { User } from '@/types/auth';
+import NotificationBell from '@/components/NotificationBell';
 
 const NAV_ITEMS = [
     { label: 'Submit Form',        href: '/',                    roles: ['reviewer', 'vp', 'admin'] },
@@ -57,7 +58,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     {user ? (
                         <>
                             <div className="mx-2 h-5 w-px bg-white/20" />
-                            <span className="mr-1 text-xs text-white/60">{user.name}</span>
+                            <NotificationBell user={user} />
+                            <span className="ml-1 mr-1 text-xs text-white/60">{user.name}</span>
                             <button
                                 onClick={handleLogout}
                                 className="rounded-md px-3 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"

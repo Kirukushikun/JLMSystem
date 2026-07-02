@@ -7,9 +7,12 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\JlAuditLog;
 use App\Models\JlEntry;
+use App\Models\User;
+use App\Notifications\JlNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -108,6 +111,11 @@ class JlController extends Controller
             'actor'       => null,
         ]);
 
+        $this->notifyRoles(['reviewer', 'admin'], $entry, 'submitted',
+            'New JL Form Submitted',
+            "{$entry->reference} — {$entry->company} ({$entry->dept})"
+        );
+
         return back()->with('success', "Form submitted! Reference: {$entry->reference}");
     }
 
@@ -139,6 +147,11 @@ class JlController extends Controller
             'actor'       => auth()->user()->name,
         ]);
 
+        $this->notifyRoles(['vp', 'admin'], $entry, 'reviewed',
+            'JL Form Ready for VP Approval',
+            "{$entry->reference} has been reviewed and is awaiting your approval"
+        );
+
         return back();
     }
 
@@ -159,6 +172,11 @@ class JlController extends Controller
             'event'       => 'approved',
             'actor'       => auth()->user()->name,
         ]);
+
+        $this->notifyRoles(['purchasing', 'admin'], $entry, 'approved',
+            'JL Form Approved — Ready for Processing',
+            "{$entry->reference} has been approved by VP and is ready for processing"
+        );
 
         return back();
     }
@@ -185,6 +203,13 @@ class JlController extends Controller
             'notes'       => $request->input('reject_reason') ?: null,
         ]);
 
+        if ($isVpReject) {
+            $this->notifyRoles(['reviewer', 'admin'], $entry, 'vp_rejected',
+                'JL Form Rejected by VP',
+                "{$entry->reference} was rejected" . ($reason !== 'No reason provided.' ? ": {$reason}" : '')
+            );
+        }
+
         return back();
     }
 
@@ -206,6 +231,19 @@ class JlController extends Controller
             'notes'       => $request->input('reason') ?: null,
         ]);
 
+        $actorRole = auth()->user()->role;
+        if ($actorRole === 'vp') {
+            $this->notifyRoles(['reviewer', 'admin'], $entry, 'on_hold',
+                'JL Form Put On Hold by VP',
+                "{$entry->reference} has been put on hold"
+            );
+        } elseif ($actorRole === 'purchasing') {
+            $this->notifyRoles(['reviewer', 'vp', 'admin'], $entry, 'on_hold',
+                'JL Form Put On Hold by Purchasing',
+                "{$entry->reference} has been put on hold by Purchasing"
+            );
+        }
+
         return back();
     }
 
@@ -224,6 +262,11 @@ class JlController extends Controller
             'event'       => 'on_process',
             'actor'       => auth()->user()->name,
         ]);
+
+        $this->notifyRoles(['reviewer', 'vp', 'admin'], $entry, 'on_process',
+            'JL Form Now On Process',
+            "{$entry->reference} is currently being processed by Purchasing"
+        );
 
         return back();
     }
@@ -279,6 +322,35 @@ class JlController extends Controller
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function notifications(): \Illuminate\Http\JsonResponse
+    {
+        $user = auth()->user();
+        return response()->json([
+            'notifications' => $user->notifications()->latest()->take(20)->get(),
+            'unread_count'  => $user->unreadNotifications()->count(),
+        ]);
+    }
+
+    public function markRead(string $id): \Illuminate\Http\JsonResponse
+    {
+        auth()->user()->notifications()->where('id', $id)->first()?->markAsRead();
+        return response()->json(['ok' => true]);
+    }
+
+    public function markAllRead(): \Illuminate\Http\JsonResponse
+    {
+        auth()->user()->unreadNotifications()->update(['read_at' => now()]);
+        return response()->json(['ok' => true]);
+    }
+
+    private function notifyRoles(array $roles, JlEntry $entry, string $event, string $title, string $body): void
+    {
+        $users = User::whereIn('role', $roles)->get();
+        if ($users->isNotEmpty()) {
+            Notification::send($users, new JlNotification($entry, $event, $title, $body));
+        }
     }
 
     private function allowedExportStatuses(string $role): array

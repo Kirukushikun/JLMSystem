@@ -45,6 +45,11 @@ Route::middleware('auth')->group(function () {
     // Admin: audit trail
     Route::get('/admin/audit-trail', [JlController::class, 'auditTrail'])->middleware('role:admin')->name('jl.audit');
 
+    // Notifications
+    Route::get('/notifications',          [JlController::class, 'notifications'])->name('notifications.index');
+    Route::post('/notifications/read-all',[JlController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('/notifications/{id}/read',[JlController::class, 'markRead'])->name('notifications.read');
+
     // Admin: maintenance
     Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])->middleware('role:admin')->name('admin.maintenance');
     Route::post('/admin/maintenance/companies', [MaintenanceController::class, 'storeCompany'])->middleware('role:admin')->name('admin.maintenance.companies.store');

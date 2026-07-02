@@ -12,7 +12,10 @@
       "PowerShell(Get-Process mysqld -ErrorAction SilentlyContinue)",
       "Bash(npm run *)",
       "Bash(npm install *)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(composer require *)",
+      "Bash(Start-Process -FilePath \"C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\bin\\\\mysqld.exe\" -ArgumentList \"--defaults-file=C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\my.ini\" -WindowStyle Hidden)",
+      "Bash(Start-Sleep -Seconds 3)"
     ]
   }
 }

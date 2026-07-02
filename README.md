@@ -15,6 +15,7 @@
 - [About](#about)
 - [Tech Stack](#tech-stack)
 - [User Roles](#user-roles)
+- [Workflow](#workflow)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Environment Variables](#environment-variables)
@@ -31,9 +32,14 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 **Key features:**
 
 - Public form submission — anyone with the link can submit a JL form, no account needed
+- Cloudflare Turnstile on the submit form — server-side bot protection
 - Reviewer dashboard — mark submitted forms as checked and forward to VP Approver
 - VP Approver dashboard — final approval with auto-generated serial number (e.g. `BFC-JL-001-2026`)
-- Role-based access control — reviewer, VP, and admin roles with route-level guards
+- Purchasing dashboard — track approved forms through processing
+- On Hold workflow — any role can pause a form at their stage; each role only sees forms held at their own stage
+- CSV data export — role-scoped export with status and date range filtering
+- Real-time in-app notifications via Laravel Reverb (WebSocket) — bell icon with unread count
+- Role-based access control — reviewer, VP, purchasing, and admin roles with route-level guards
 - User Management — grant or revoke system access for any organization user via external API lookup
 - Maintenance — admin can dynamically manage the list of companies and departments shown in the submit form
 - Authentication via the organization's centralized external auth API (no local password validation)
@@ -43,27 +49,55 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 
 ## Tech Stack
 
-| Layer        | Technology                          |
-|--------------|-------------------------------------|
-| Framework    | Laravel 13.x                        |
-| Language     | PHP 8.3+                            |
-| Database     | MySQL 8.0                           |
-| Cache        | Database (Laravel Cache)            |
-| Frontend     | React 19 + Inertia.js v3            |
-| CSS          | Tailwind CSS v4                     |
-| Auth         | External organization Auth API      |
+| Layer         | Technology                          |
+|---------------|-------------------------------------|
+| Framework     | Laravel 13.x                        |
+| Language      | PHP 8.3+                            |
+| Database      | MySQL 8.0                           |
+| Cache         | Database (Laravel Cache)            |
+| Frontend      | React 19 + Inertia.js v3            |
+| CSS           | Tailwind CSS v4                     |
+| WebSockets    | Laravel Reverb (self-hosted)        |
+| Auth          | External organization Auth API      |
 
 ---
 
 ## User Roles
 
-| Role       | Access                                                              |
-|------------|---------------------------------------------------------------------|
-| `reviewer` | Submit Form, Reviewer Dashboard                                     |
-| `vp`       | Submit Form, VP Approver Dashboard                                  |
-| `admin`    | All pages including User Management and Maintenance                 |
+| Role         | Access                                                                        |
+|--------------|-------------------------------------------------------------------------------|
+| `reviewer`   | Submit Form, Reviewer Dashboard (review, reject, hold), CSV export            |
+| `vp`         | Submit Form, VP Approver Dashboard (approve, reject, hold), CSV export        |
+| `purchasing` | Purchasing Dashboard (process, hold), CSV export                              |
+| `admin`      | All pages including User Management, Maintenance, and Audit Trail             |
 
 Roles are assigned by an admin through the User Management page. Authentication is handled by the organization's external API — no local passwords are validated.
+
+---
+
+## Workflow
+
+```
+[Public Submit]
+      │
+      ▼
+  Pending  ──── Reviewer ────► Reviewed ──── VP ────► Approved ──── Purchasing ────► On Process
+      │              │               │          │            │               │
+      │           Reject          VP Reject   Hold         Hold            Hold
+      │              │               │          │            │               │
+      ▼              ▼               ▼          ▼            ▼               ▼
+  (stays)       Rejected        VP Rejected  On Hold      On Hold         On Hold
+```
+
+**Notification triggers:**
+
+| Event                        | Notifies                  |
+|------------------------------|---------------------------|
+| New form submitted           | Reviewers + Admin         |
+| Reviewer approves            | VP + Admin                |
+| VP approves                  | Purchasing + Admin        |
+| VP rejects or holds          | Reviewers + Admin         |
+| Purchasing holds or processes| Reviewers + VP + Admin    |
 
 ---
 
@@ -138,6 +172,25 @@ AUTH_USER_API_KEY=       # API key for /api/v1/users/get-user-id
 # User Listing API — used in the User Management page to fetch all org users
 USER_API_ENDPOINT=https://your-auth-server.com/api/v1/users
 USER_API_KEY=            # API key for the user listing endpoint
+
+# Cloudflare Turnstile — bot protection on the public submit form
+# Get keys from dash.cloudflare.com → Turnstile
+TURNSTILE_SITE_KEY=      # Public site key (shown in the widget)
+TURNSTILE_SECRET_KEY=    # Secret key (used for server-side verification)
+
+# Laravel Reverb — WebSocket server for real-time notifications
+# Auto-generated by: php artisan reverb:install
+REVERB_APP_ID=
+REVERB_APP_KEY=
+REVERB_APP_SECRET=
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ```
 
 > **SSL:** All external API calls use `storage/cacert.pem` for SSL verification. Make sure this file exists before deploying.
@@ -148,12 +201,17 @@ USER_API_KEY=            # API key for the user listing endpoint
 
 ## Running Locally
 
+Three processes need to run simultaneously — each in its own terminal:
+
 ```bash
-# Start the development server
+# Terminal 1 — Laravel dev server
 php artisan serve
 
-# Start Vite for frontend hot reloading (separate terminal)
+# Terminal 2 — Vite frontend hot reload
 npm run dev
+
+# Terminal 3 — Reverb WebSocket server (required for real-time notifications)
+php artisan reverb:start
 ```
 
 The app will be available at `http://localhost:8000`. The submit form at `/` is public; all other pages require login.
@@ -166,22 +224,24 @@ The app will be available at `http://localhost:8000`. The submit form at `/` is 
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   ├── JlController.php            # Submit, reviewer, VP workflow actions
-│   │   ├── LoginController.php         # External API auth + brute-force protection
-│   │   ├── AuthenticationController.php# App-to-app encrypted login
-│   │   ├── UserManagementController.php# Grant/revoke user access (admin)
-│   │   └── MaintenanceController.php   # Companies & departments CRUD (admin)
+│   │   ├── JlController.php             # Submit, all workflow actions, notifications API, export
+│   │   ├── LoginController.php          # External API auth + brute-force protection
+│   │   ├── UserManagementController.php # Grant/revoke user access (admin)
+│   │   └── MaintenanceController.php    # Companies & departments CRUD (admin)
 │   ├── Middleware/
-│   │   ├── CheckRole.php               # Role guard (role:reviewer,admin etc.)
-│   │   └── HandleInertiaRequests.php   # Shares auth + flash data to all pages
+│   │   ├── CheckRole.php                # Role guard (role:reviewer,admin etc.)
+│   │   └── HandleInertiaRequests.php    # Shares auth + flash data to all pages
 │   └── Requests/
-│       └── StoreJlRequest.php          # JL form validation (dynamic via DB)
-└── Models/
-    ├── User.php
-    ├── JlEntry.php
-    ├── AccessLog.php
-    ├── Company.php
-    └── Department.php
+│       └── StoreJlRequest.php           # JL form validation
+├── Models/
+│   ├── User.php
+│   ├── JlEntry.php
+│   ├── JlAuditLog.php
+│   ├── AccessLog.php
+│   ├── Company.php
+│   └── Department.php
+└── Notifications/
+    └── JlNotification.php               # Database + broadcast notification class
 
 database/
 ├── migrations/
@@ -189,25 +249,38 @@ database/
 │   ├── 2026_06_22_000000_create_jl_entries_table.php
 │   ├── 2026_06_22_000002_create_access_logs_table.php
 │   ├── 2026_06_23_000001_create_companies_table.php
-│   └── 2026_06_23_000002_create_departments_table.php
+│   ├── 2026_06_23_000002_create_departments_table.php
+│   ├── 2026_06_30_000001_add_on_hold_on_process_to_jl_entries.php
+│   └── 2026_07_01_xxxxxx_create_notifications_table.php
 └── seeders/
     ├── UserSeeder.php          # Seeds the initial admin user (id=61)
-    ├── CompanySeeder.php       # Seeds default companies (BFC, BDL, PFC, RH, Feedmill)
+    ├── CompanySeeder.php       # Seeds default companies
     └── DepartmentSeeder.php    # Seeds default departments
 
+routes/
+├── web.php                     # All HTTP routes
+├── channels.php                # Reverb private channel authorization
+└── console.php
+
 resources/js/
-├── components/jl/
-│   ├── JlTable.tsx             # Shared table with sticky columns + kebab menu
-│   ├── JlModal.tsx             # Entry detail modal with workflow actions
-│   └── StatusBadge.tsx
+├── components/
+│   ├── jl/
+│   │   ├── JlTable.tsx         # Shared table with kebab action menu
+│   │   ├── JlModal.tsx         # Entry detail modal with workflow actions
+│   │   ├── StatusBadge.tsx     # Color-coded status pill
+│   │   ├── HoldModal.tsx       # On Hold confirmation modal with optional reason
+│   │   └── ExportModal.tsx     # CSV export modal with status + date filters
+│   └── NotificationBell.tsx    # Real-time notification bell (navbar)
 ├── layouts/
-│   └── AppLayout.tsx           # Nav bar with role-aware tabs
+│   └── AppLayout.tsx           # Nav bar with role-aware tabs + notification bell
 ├── pages/
 │   ├── auth/Login.tsx
 │   ├── jl/
-│   │   ├── Submit.tsx          # Public form (no auth)
+│   │   ├── Submit.tsx          # Public form with Cloudflare Turnstile
 │   │   ├── Reviewer.tsx        # Reviewer dashboard
-│   │   └── Vp.tsx              # VP Approver dashboard
+│   │   ├── Vp.tsx              # VP Approver dashboard
+│   │   ├── Purchasing.tsx      # Purchasing dashboard
+│   │   └── AuditTrail.tsx      # Full audit log (admin)
 │   └── admin/
 │       ├── Users.tsx           # User Management page
 │       └── Maintenance.tsx     # Companies & departments management
@@ -231,24 +304,41 @@ git pull origin main
 composer install --no-dev --optimize-autoloader
 npm install && npm run build
 
-# 3. Run any new migrations and seeders
+# 3. Run any new migrations
 php artisan migrate --force
-php artisan db:seed --force
 
 # 4. Clear and re-cache config
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+```
 
-# 5. Ensure cacert.pem is in storage/
-ls storage/cacert.pem
+**Reverb in production** — use a process manager to keep Reverb running:
+
+```ini
+# /etc/supervisor/conf.d/reverb.conf
+[program:reverb]
+command=php /var/www/jlm-system/artisan reverb:start --host=0.0.0.0 --port=8080
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/reverb.log
+```
+
+```bash
+supervisorctl reread && supervisorctl update && supervisorctl start reverb
 ```
 
 **Important checklist before going live:**
 
 - [ ] `APP_DEBUG=false` in `.env`
 - [ ] `APP_ENV=production` in `.env`
-- [ ] All `AUTH_API_*` and `USER_API_*` values set in `.env`
+- [ ] All `AUTH_API_*` and `USER_API_*` values set
+- [ ] `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` set (from dash.cloudflare.com)
+- [ ] `REVERB_*` values set and Reverb running under a process manager
+- [ ] `VITE_REVERB_*` values set before running `npm run build`
 - [ ] `storage/cacert.pem` is present on the server
 - [ ] `php artisan db:seed` has been run (admin user + companies + departments)
 - [ ] File permissions: `storage/` and `bootstrap/cache/` are writable
+- [ ] Reverse proxy (nginx/Apache) configured to forward WebSocket traffic on port 8080
