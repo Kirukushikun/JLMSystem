@@ -138,6 +138,7 @@ class JlController extends Controller
         $entry->update([
             'status'      => 'Reviewed',
             'held_at'     => null,
+            'hold_reason' => null,
             'reviewed_at' => now()->toDateString(),
         ]);
 
@@ -163,6 +164,7 @@ class JlController extends Controller
         $entry->update([
             'status'      => 'Approved',
             'held_at'     => null,
+            'hold_reason' => null,
             'approved_at' => now()->toDateString(),
             'serial'      => $this->generateSerial($entry),
         ]);
@@ -192,6 +194,7 @@ class JlController extends Controller
         $entry->update([
             'status'        => $isVpReject ? 'VP Rejected' : 'Rejected',
             'held_at'       => null,
+            'hold_reason'   => null,
             'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $reason,
         ]);
@@ -220,8 +223,9 @@ class JlController extends Controller
         $previousStatus = $entry->status;
 
         $entry->update([
-            'status'  => 'On Hold',
-            'held_at' => $previousStatus,
+            'status'      => 'On Hold',
+            'held_at'     => $previousStatus,
+            'hold_reason' => $request->input('reason') ?: null,
         ]);
 
         JlAuditLog::create([
@@ -253,8 +257,9 @@ class JlController extends Controller
         abort_if(! in_array($effective, ['Approved', 'On Process']), 422, 'Entry cannot be marked as On Process.');
 
         $entry->update([
-            'status'  => 'On Process',
-            'held_at' => null,
+            'status'      => 'On Process',
+            'held_at'     => null,
+            'hold_reason' => null,
         ]);
 
         JlAuditLog::create([

@@ -103,6 +103,14 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                             </KebabItem>
                         </>
                     )}
+                    {alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                                <i class="fa-solid fa-eye"></i> View Details
+                            </KebabItem>
+                        </>
+                    )}
                 </>
             );
         }
@@ -122,6 +130,14 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                             <div className="mx-1 h-px bg-gray-100" />
                             <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
                                 <i class="fa-solid fa-pause"></i> On Hold
+                            </KebabItem>
+                        </>
+                    )}
+                    {alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                                <i class="fa-solid fa-eye"></i> View Details
                             </KebabItem>
                         </>
                     )}

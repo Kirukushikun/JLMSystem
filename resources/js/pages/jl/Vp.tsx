@@ -97,7 +97,8 @@ export default function Vp({ entries }: Props) {
                     <li><strong>For Approval</strong> — opens the full form details before you confirm approval.</li>
                     <li><strong>Approve</strong> — grants final approval and triggers the auto-generated serial number.</li>
                     <li><strong>Reject</strong> — opens a confirmation with an optional reason; status becomes VP Rejected.</li>
-                    <li>Forms rejected by the Reviewer are also visible here for reference but require no action.</li>
+                    <li><strong>On Hold</strong> — pauses a Reviewed form with an optional reason. Use <strong>View Details</strong> on any held entry to see the hold reason.</li>
+                    <li>Forms marked <strong>Reviewer Rejected</strong> are visible here for reference but require no action.</li>
                 </ul>
             </InfoPanel>
 

@@ -11,6 +11,16 @@ const STYLES: Record<JlStatus, string> = {
     'On Process': 'bg-purple-100 text-purple-700',
 };
 
+const LABELS: Record<JlStatus, string> = {
+    Pending:      'Pending',
+    Reviewed:     'Reviewed',
+    Rejected:     'Reviewer Rejected',
+    Approved:     'Approved',
+    'VP Rejected':'VP Rejected',
+    'On Hold':    'On Hold',
+    'On Process': 'On Process',
+};
+
 export default function StatusBadge({ status }: { status: JlStatus }) {
     return (
         <span
@@ -19,7 +29,7 @@ export default function StatusBadge({ status }: { status: JlStatus }) {
                 STYLES[status],
             )}
         >
-            {status}
+            {LABELS[status]}
         </span>
     );
 }

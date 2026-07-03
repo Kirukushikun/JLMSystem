@@ -136,6 +136,7 @@ export default function Reviewer({ entries }: Props) {
                     <li>Forms with status <strong>Pending</strong> require your action — use the kebab menu (⋮) to act.</li>
                     <li><strong>For Review</strong> — opens the form details for you to inspect before marking as Reviewed.</li>
                     <li><strong>Reject</strong> — opens a quick confirmation where you can enter an optional rejection reason.</li>
+                    <li><strong>On Hold</strong> — pauses the form with an optional reason so you can come back to it later. Use <strong>View Details</strong> on any held entry to see why it was held.</li>
                     <li>Once marked as Reviewed, the form moves to the VP Approver's queue automatically.</li>
                 </ul>
             </InfoPanel>
@@ -174,8 +175,9 @@ export default function Reviewer({ entries }: Props) {
                     <option value="">All Statuses</option>
                     <option>Pending</option>
                     <option>Reviewed</option>
-                    <option>Rejected</option>
+                    <option value="Rejected">Reviewer Rejected</option>
                     <option>Approved</option>
+                    <option value="VP Rejected">VP Rejected</option>
                     <option value="On Hold">On Hold</option>
                     <option value="On Process">On Process</option>
                 </select>

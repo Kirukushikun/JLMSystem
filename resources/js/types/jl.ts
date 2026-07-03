@@ -18,6 +18,7 @@ export interface JlEntry {
     amount: number;
     status: JlStatus;
     held_at: string | null;
+    hold_reason: string | null;
     serial: string | null;
     submitted_at: string;
     reviewed_at: string | null;

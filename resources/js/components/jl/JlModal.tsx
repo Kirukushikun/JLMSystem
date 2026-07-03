@@ -147,6 +147,13 @@ export default function JlModal({
                             full
                         />
                     )}
+                    {entry.status === 'On Hold' && entry.hold_reason && (
+                        <DetailItem
+                            label="Hold Reason"
+                            value={<span className="text-amber-700">{entry.hold_reason}</span>}
+                            full
+                        />
+                    )}
                     {entry.reject_reason && (
                         <DetailItem
                             label="Rejection Reason"
