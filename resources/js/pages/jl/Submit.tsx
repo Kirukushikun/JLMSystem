@@ -76,9 +76,9 @@ export default function Submit() {
                 <p>Fill in all required fields and click <strong>Submit Form</strong> when ready. Your entry will be queued for reviewer approval.</p>
                 <ul className="mt-2 list-disc pl-4">
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
-                    <li><strong>Date</strong> — the date the cost was incurred.</li>
+                    <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
                     <li><strong>Company / Farm</strong> and <strong>Department</strong> — select from the available options.</li>
-                    <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
+                    <li><strong>Manager / Supervisor</strong> — name of the requestor.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
                     <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
                 </ul>
