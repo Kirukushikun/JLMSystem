@@ -43,7 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/admin/users/{id}', [UserManagementController::class, 'revoke'])->middleware('role:admin')->name('admin.users.revoke');
 
     // Admin: audit trail
-    Route::get('/admin/audit-trail', [JlController::class, 'auditTrail'])->middleware('role:admin')->name('jl.audit');
+    Route::get('/admin/audit-trail', [JlController::class, 'auditTrail'])->middleware('role:vp,admin')->name('jl.audit');
 
     // FCM device token registration
     Route::post('/fcm-token', [JlController::class, 'storeFcmToken'])->name('fcm.token');

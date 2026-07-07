@@ -32,7 +32,7 @@ class UserManagementController extends Controller
             'id'    => 'required|integer',
             'name'  => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role'  => 'required|in:reviewer,vp,admin',
+            'role'  => 'required|in:reviewer,vp,purchasing,admin',
         ]);
 
         $user = User::find($data['id']);
@@ -52,9 +52,10 @@ class UserManagementController extends Controller
         }
 
         $label = match ($data['role']) {
-            'vp'    => 'VP Approver',
-            'admin' => 'Admin',
-            default => 'Reviewer',
+            'vp'         => 'VP Approver',
+            'purchasing' => 'Purchasing',
+            'admin'      => 'Admin',
+            default      => 'Reviewer',
         };
 
         return back()->with('success', "{$data['name']} has been granted {$label} access.");

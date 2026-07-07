@@ -5,13 +5,13 @@ import NotificationBell from '@/components/NotificationBell';
 import { registerFcmToken, listenForeground } from '@/firebase';
 
 const NAV_ITEMS = [
-    { label: 'Submit Form',        href: '/',                    roles: ['reviewer', 'vp', 'admin'] },
+    { label: 'Submit Form',        href: '/',                    roles: ['admin'] },
     { label: 'Reviewer Dashboard', href: '/reviewer',            roles: ['reviewer', 'admin'] },
     { label: 'VP Approver',        href: '/vp',                  roles: ['vp', 'admin'] },
     { label: 'Purchasing',         href: '/purchasing',          roles: ['purchasing', 'admin'] },
     { label: 'User Management',    href: '/admin/users',         roles: ['admin'] },
     { label: 'Maintenance',        href: '/admin/maintenance',   roles: ['admin'] },
-    { label: 'Audit Trail',        href: '/admin/audit-trail',   roles: ['admin'] },
+    { label: 'Audit Trail',        href: '/admin/audit-trail',   roles: ['vp', 'admin'] },
 ] as const;
 
 type PageProps = { auth: { user: User | null }; [key: string]: unknown };
@@ -71,7 +71,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                         </Link>
                     ))}
 
-                    {user ? (
+                    {user && (
                         <>
                             <div className="mx-2 h-5 w-px bg-white/20" />
                             <NotificationBell user={user} />
@@ -83,27 +83,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                                 Logout
                             </button>
                         </>
-                    ) : (
-                        <Link
-                            href="/login"
-                            className="rounded-md px-4 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
-                        >
-                            Admin Login
-                        </Link>
                     )}
                 </div>
 
                 {/* Mobile right side */}
                 <div className="flex items-center gap-1 md:hidden">
                     {user && <NotificationBell user={user} />}
-                    {!user && (
-                        <Link
-                            href="/login"
-                            className="rounded-md px-3 py-1.5 text-sm font-medium text-white/70 transition hover:bg-white/10 hover:text-white"
-                        >
-                            Login
-                        </Link>
-                    )}
                     {visibleItems.length > 0 && (
                         <button
                             onClick={() => setMobileOpen((o) => !o)}
