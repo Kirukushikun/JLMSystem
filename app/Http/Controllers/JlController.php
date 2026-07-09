@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreJlRequest;
+use App\Mail\RequestorMail;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\JlAuditLog;
@@ -13,6 +14,7 @@ use App\Notifications\JlNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -152,6 +154,7 @@ class JlController extends Controller
             'JL Form Ready for VP Approval',
             "{$entry->reference} has been reviewed and is awaiting your approval"
         );
+        $this->mailRequestor($entry, 'reviewed');
 
         return back();
     }
@@ -179,6 +182,7 @@ class JlController extends Controller
             'JL Form Approved — Ready for Processing',
             "{$entry->reference} has been approved by VP and is ready for processing"
         );
+        $this->mailRequestor($entry, 'approved');
 
         return back();
     }
@@ -212,6 +216,7 @@ class JlController extends Controller
                 "{$entry->reference} was rejected" . ($reason !== 'No reason provided.' ? ": {$reason}" : '')
             );
         }
+        $this->mailRequestor($entry, $isVpReject ? 'vp_rejected' : 'rejected', $reason);
 
         return back();
     }
@@ -235,7 +240,9 @@ class JlController extends Controller
             'notes'       => $request->input('reason') ?: null,
         ]);
 
-        $actorRole = auth()->user()->role;
+        $actorRole  = auth()->user()->role;
+        $holdReason = $request->input('reason') ?: null;
+
         if ($actorRole === 'vp') {
             $this->notifyRoles(['reviewer', 'admin'], $entry, 'on_hold',
                 'JL Form Put On Hold by VP',
@@ -247,6 +254,7 @@ class JlController extends Controller
                 "{$entry->reference} has been put on hold by Purchasing"
             );
         }
+        $this->mailRequestor($entry, 'on_hold', $holdReason);
 
         return back();
     }
@@ -360,6 +368,13 @@ class JlController extends Controller
     {
         auth()->user()->unreadNotifications()->update(['read_at' => now()]);
         return response()->json(['ok' => true]);
+    }
+
+    private function mailRequestor(JlEntry $entry, string $event, ?string $reason = null): void
+    {
+        if ($entry->requestor_email) {
+            Mail::to($entry->requestor_email)->send(new RequestorMail($entry, $event, $reason));
+        }
     }
 
     private function notifyRoles(array $roles, JlEntry $entry, string $event, string $title, string $body): void

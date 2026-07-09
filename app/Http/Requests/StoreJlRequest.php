@@ -16,7 +16,8 @@ class StoreJlRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title'   => ['required', 'string', 'max:255'],
+            'title'           => ['required', 'string', 'max:255'],
+            'requestor_email' => ['required', 'email', 'max:255'],
             'date'    => ['required', 'date'],
             'company' => ['required', 'string', Rule::exists('companies', 'name')],
             'manager' => ['required', 'string', 'max:255'],

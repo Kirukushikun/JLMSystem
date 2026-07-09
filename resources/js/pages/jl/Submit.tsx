@@ -50,14 +50,15 @@ export default function Submit() {
     }, []);
 
     const form = useForm({
-        title:           '',
-        date:            new Date().toISOString().slice(0, 10),
-        company:         '',
-        manager:         '',
-        dept:            '',
-        amount:          '',
-        attachment:      null as File | null,
-        turnstile_token: '',
+        title:            '',
+        requestor_email:  '',
+        date:             new Date().toISOString().slice(0, 10),
+        company:          '',
+        manager:          '',
+        dept:             '',
+        amount:           '',
+        attachment:       null as File | null,
+        turnstile_token:  '',
     });
 
     function handleSubmit() {
@@ -78,7 +79,8 @@ export default function Submit() {
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
                     <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
                     <li><strong>Company / Farm</strong> and <strong>Department</strong> — select from the available options.</li>
-                    <li><strong>Manager / Supervisor</strong> — name of the requestor.</li>
+                    <li><strong>Requestor Email</strong> — your email address; you'll receive notifications when your form is reviewed, approved, rejected, or put on hold.</li>
+                    <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
                     <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
                 </ul>
@@ -120,6 +122,21 @@ export default function Submit() {
                             placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026"
                             disabled={form.processing}
                         />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <Label>Requestor Email *</Label>
+                        <input
+                            className={INPUT}
+                            type="email"
+                            value={form.data.requestor_email}
+                            onChange={(e) => form.setData('requestor_email', e.target.value)}
+                            placeholder="your@email.com — you'll receive status updates here"
+                            disabled={form.processing}
+                        />
+                        {form.errors.requestor_email && (
+                            <p className="mt-1 text-xs text-red-500">{form.errors.requestor_email}</p>
+                        )}
                     </div>
 
                     <div>

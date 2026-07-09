@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property-read string|null $attachment_url
  */
 #[Fillable([
-    'title', 'date', 'company', 'manager', 'dept', 'amount',
+    'title', 'requestor_email', 'date', 'company', 'manager', 'dept', 'amount',
     'status', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
     'attachment', 'attachment_name',
 ])]

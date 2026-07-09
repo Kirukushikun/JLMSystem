@@ -11,6 +11,7 @@ export interface JlEntry {
     id: number;
     reference: string;
     title: string;
+    requestor_email: string | null;
     date: string;
     company: string;
     manager: string;
