@@ -27,12 +27,12 @@
 
 ## About
 
-The JL Monitoring System is an internal web application for submitting, reviewing, and approving Justification Letter (JL) cost forms across the organization's farms and departments. JL forms are submitted publicly (no login required) and routed through a two-step approval workflow before a system-generated serial number is assigned.
+The JL Monitoring System is an internal web application for submitting, reviewing, and approving Justification Letter (JL) cost forms across the organization's farms and departments. Requestors log in to submit a JL form and track its status, which is then routed through a two-step approval workflow before a system-generated serial number is assigned.
 
 **Key features:**
 
-- Public form submission — anyone with the link can submit a JL form, no account needed
-- Cloudflare Turnstile on the submit form — server-side bot protection
+- Requestor login required to submit a form and view its status — no more public/anonymous submissions
+- My Requests — requestors can see the status of every JL form they've submitted
 - Reviewer dashboard — mark submitted forms as checked and forward to VP Approver
 - VP Approver dashboard — final approval with auto-generated serial number (e.g. `BFC-JL-001-2026`)
 - Purchasing dashboard — track approved forms through processing
@@ -40,7 +40,6 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 - CSV data export — role-scoped export with status and date range filtering
 - Real-time in-app notifications via Laravel Reverb (WebSocket) — bell icon with unread count
 - OS-level web push notifications via Firebase Cloud Messaging (FCM) — alerts even when the tab is closed
-- Requestor email notifications — status update emails sent automatically on review, approval, rejection, and hold
 - Role-based access control — reviewer, VP, purchasing, and admin roles with route-level guards
 - User Management — grant or revoke system access for any organization user via external API lookup
 - Maintenance — admin can dynamically manage the list of companies and departments shown in the submit form
@@ -61,7 +60,6 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 | CSS           | Tailwind CSS v4                     |
 | WebSockets    | Laravel Reverb (self-hosted)        |
 | Push (FCM)    | Firebase Cloud Messaging            |
-| Email         | Laravel Mail (SMTP)                 |
 | Bot protection| Cloudflare Turnstile                |
 | Auth          | External organization Auth API      |
 
@@ -71,6 +69,7 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 
 | Role         | Access                                                                        |
 |--------------|-------------------------------------------------------------------------------|
+| `requestor`  | Submit Form, My Requests (view own submission status)                        |
 | `reviewer`   | Submit Form, Reviewer Dashboard (review, reject, hold), CSV export            |
 | `vp`         | Submit Form, VP Approver Dashboard (approve, reject, hold), CSV export        |
 | `purchasing` | Purchasing Dashboard (process, hold), CSV export                              |
@@ -96,15 +95,15 @@ Roles are assigned by an admin through the User Management page. Authentication 
 
 **Notification triggers:**
 
-| Event                        | Notifies (in-app + FCM)   | Requestor email |
-|------------------------------|---------------------------|-----------------|
-| New form submitted           | Reviewers + Admin         | —               |
-| Reviewer approves            | VP + Admin                | ✅ Reviewed      |
-| VP approves                  | Purchasing + Admin        | ✅ Approved      |
-| Reviewer rejects             | —                         | ✅ Rejected      |
-| VP rejects                   | Reviewers + Admin         | ✅ VP Rejected   |
-| Any role puts on hold        | Reviewers / VP / Admin    | ✅ On Hold       |
-| Purchasing marks On Process  | Reviewers + VP + Admin    | —               |
+| Event                        | Notifies (in-app + FCM)   |
+|------------------------------|---------------------------|
+| New form submitted           | Reviewers + Admin         |
+| Reviewer approves            | VP + Admin                |
+| VP approves                  | Purchasing + Admin        |
+| Reviewer rejects             | —                         |
+| VP rejects                   | Reviewers + Admin         |
+| Any role puts on hold        | Reviewers / VP / Admin    |
+| Purchasing marks On Process  | Reviewers + VP + Admin    |
 
 ---
 
@@ -180,7 +179,7 @@ AUTH_USER_API_KEY=       # API key for /api/v1/users/get-user-id
 USER_API_ENDPOINT=https://your-auth-server.com/api/v1/users
 USER_API_KEY=            # API key for the user listing endpoint
 
-# Cloudflare Turnstile — bot protection on the public submit form
+# Cloudflare Turnstile — bot protection on the login form
 # Get keys from dash.cloudflare.com → Turnstile
 # Set TURNSTILE_VERIFY=false in local dev (Cloudflare blocks localhost)
 TURNSTILE_VERIFY=true
@@ -217,17 +216,6 @@ VITE_FIREBASE_APP_ID=
 
 # VAPID key: Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
 VITE_FIREBASE_VAPID_KEY=
-
-# Mail — SMTP credentials for requestor status update emails
-# Use MAIL_MAILER=log in local dev to write emails to the log file instead of sending
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.yourprovider.com
-MAIL_PORT=587
-MAIL_USERNAME=your@email.com
-MAIL_PASSWORD=yourpassword
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=noreply@yourdomain.com
-MAIL_FROM_NAME="JL Monitoring System"
 ```
 
 > **SSL:** All external API calls use `storage/cacert.pem` for SSL verification. Make sure this file exists before deploying.
@@ -278,8 +266,6 @@ app/
 │   ├── Company.php
 │   ├── Department.php
 │   └── FcmToken.php                     # Stores per-device FCM push tokens
-├── Mail/
-│   └── RequestorMail.php                # Mailable for requestor status update emails
 └── Notifications/
     └── JlNotification.php               # Database + broadcast notification class
 
@@ -294,8 +280,7 @@ database/
 │   ├── 2026_07_01_070922_create_notifications_table.php
 │   ├── 2026_07_02_040804_create_fcm_tokens_table.php
 │   ├── 2026_07_03_000001_add_hold_reason_to_jl_entries.php
-│   ├── 2026_07_07_000001_add_purchasing_to_users_role_enum.php
-│   └── 2026_07_09_000001_add_requestor_email_to_jl_entries.php
+│   └── 2026_07_07_000001_add_purchasing_to_users_role_enum.php
 └── seeders/
     ├── UserSeeder.php          # Seeds the initial admin user (id=61)
     ├── CompanySeeder.php       # Seeds default companies
@@ -320,7 +305,8 @@ resources/js/
 ├── pages/
 │   ├── auth/Login.tsx
 │   ├── jl/
-│   │   ├── Submit.tsx          # Public form with Cloudflare Turnstile and requestor email field
+│   │   ├── Submit.tsx          # JL submission form (requestor login required)
+│   │   ├── MyRequests.tsx      # Requestor's own submissions and their status
 │   │   ├── Reviewer.tsx        # Reviewer dashboard
 │   │   ├── Vp.tsx              # VP Approver dashboard
 │   │   ├── Purchasing.tsx      # Purchasing dashboard
@@ -332,10 +318,6 @@ resources/js/
 └── types/
     ├── auth.ts
     └── jl.ts
-
-resources/views/
-└── mail/
-    └── requestor.blade.php     # HTML email template for requestor status notifications
 
 public/
 └── firebase-messaging-sw.js    # Service worker for background FCM push notifications
@@ -393,7 +375,6 @@ supervisorctl reread && supervisorctl update && supervisorctl start reverb
 - [ ] `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` set (backend FCM)
 - [ ] All `VITE_FIREBASE_*` values set before running `npm run build` (frontend FCM)
 - [ ] `VITE_FIREBASE_VAPID_KEY` set (required for push permission in browser)
-- [ ] `MAIL_MAILER`, `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` set for requestor emails
 - [ ] `storage/cacert.pem` is present on the server
 - [ ] `php artisan db:seed` has been run (admin user + companies + departments)
 - [ ] File permissions: `storage/` and `bootstrap/cache/` are writable

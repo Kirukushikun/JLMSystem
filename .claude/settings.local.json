@@ -15,7 +15,10 @@
       "Bash(npm uninstall *)",
       "Bash(composer require *)",
       "Bash(Start-Process -FilePath \"C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\bin\\\\mysqld.exe\" -ArgumentList \"--defaults-file=C:\\\\laragon\\\\bin\\\\mysql\\\\mysql-8.0.30-winx64\\\\my.ini\" -WindowStyle Hidden)",
-      "Bash(Start-Sleep -Seconds 3)"
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

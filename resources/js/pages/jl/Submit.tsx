@@ -1,7 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -18,54 +18,27 @@ interface PageProps {
     flash: { success?: string };
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
-    turnstileSiteKey: string;
     [key: string]: unknown;
 }
 
 export default function Submit() {
-    const { flash, companies, departments, turnstileSiteKey } = usePage<PageProps>().props;
-    const [fileKey, setFileKey]    = useState(0);
-    const turnstileRef             = useRef<HTMLDivElement>(null);
-    const turnstileTokenRef        = useRef('');
-
-    useEffect(() => {
-        (window as any).onTurnstileReady = () => {
-            const ts = (window as any).turnstile;
-            if (ts && turnstileRef.current) {
-                ts.render(turnstileRef.current, {
-                    sitekey:            turnstileSiteKey,
-                    callback:           (token: string) => { turnstileTokenRef.current = token; },
-                    'expired-callback': () => { turnstileTokenRef.current = ''; },
-                });
-            }
-        };
-        const script = document.createElement('script');
-        script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
-        script.async = true;
-        document.head.appendChild(script);
-        return () => {
-            delete (window as any).onTurnstileReady;
-            if (document.head.contains(script)) document.head.removeChild(script);
-        };
-    }, []);
+    const { flash, companies, departments } = usePage<PageProps>().props;
+    const [fileKey, setFileKey] = useState(0);
 
     const form = useForm({
-        title:            '',
-        requestor_email:  '',
-        date:             new Date().toISOString().slice(0, 10),
-        company:          '',
-        manager:          '',
-        dept:             '',
-        amount:           '',
-        attachment:       null as File | null,
-        turnstile_token:  '',
+        title:      '',
+        date:       new Date().toISOString().slice(0, 10),
+        company:    '',
+        manager:    '',
+        dept:       '',
+        amount:     '',
+        attachment: null as File | null,
     });
 
     function handleSubmit() {
-        form.transform((data) => ({ ...data, turnstile_token: turnstileTokenRef.current }));
         form.post('/jl', {
             forceFormData: true,
-            onSuccess: () => { form.reset(); setFileKey((k) => k + 1); turnstileTokenRef.current = ''; },
+            onSuccess: () => { form.reset(); setFileKey((k) => k + 1); },
         });
     }
 
@@ -79,7 +52,6 @@ export default function Submit() {
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
                     <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
                     <li><strong>Company / Farm</strong> and <strong>Department</strong> — select from the available options.</li>
-                    <li><strong>Requestor Email</strong> — your email address; you'll receive notifications when your form is reviewed, approved, rejected, or put on hold.</li>
                     <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
                     <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
@@ -122,21 +94,6 @@ export default function Submit() {
                             placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026"
                             disabled={form.processing}
                         />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                        <Label>Requestor Email *</Label>
-                        <input
-                            className={INPUT}
-                            type="email"
-                            value={form.data.requestor_email}
-                            onChange={(e) => form.setData('requestor_email', e.target.value)}
-                            placeholder="your@email.com — you'll receive status updates here"
-                            disabled={form.processing}
-                        />
-                        {form.errors.requestor_email && (
-                            <p className="mt-1 text-xs text-red-500">{form.errors.requestor_email}</p>
-                        )}
                     </div>
 
                     <div>
@@ -222,13 +179,7 @@ export default function Submit() {
                     </div>
                 </div>
 
-                <div className="mt-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                        <div ref={turnstileRef} />
-                        {form.errors.turnstile_token && (
-                            <p className="mt-1 text-xs text-red-500">{form.errors.turnstile_token}</p>
-                        )}
-                    </div>
+                <div className="mt-7 flex justify-end gap-4">
                     <div className="flex gap-3">
                         <button
                             onClick={() => form.reset()}

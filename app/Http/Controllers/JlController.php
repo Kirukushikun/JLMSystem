@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreJlRequest;
-use App\Mail\RequestorMail;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\JlAuditLog;
@@ -14,7 +13,6 @@ use App\Notifications\JlNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -26,9 +24,8 @@ class JlController extends Controller
     public function submit(): Response
     {
         return Inertia::render('jl/Submit', [
-            'companies'      => Company::orderBy('name')->get(['id', 'name']),
-            'departments'    => Department::orderBy('name')->get(['id', 'name']),
-            'turnstileSiteKey' => config('services.turnstile.site_key'),
+            'companies'   => Company::orderBy('name')->get(['id', 'name']),
+            'departments' => Department::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -75,20 +72,16 @@ class JlController extends Controller
         return Inertia::render('jl/AuditTrail', ['logs' => $logs]);
     }
 
+    public function myRequests(): Response
+    {
+        $entries = JlEntry::where('user_id', auth()->id())->latest()->get();
+
+        return Inertia::render('jl/MyRequests', ['entries' => $entries]);
+    }
+
     public function store(StoreJlRequest $request): RedirectResponse
     {
-        if (config('services.turnstile.verify')) {
-            $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
-                'secret'   => config('services.turnstile.secret'),
-                'response' => $request->input('turnstile_token', ''),
-                'remoteip' => $request->ip(),
-            ]);
-            if (! ($verify->json('success') ?? false)) {
-                return back()->withErrors(['turnstile_token' => 'Human verification failed. Please complete the challenge and try again.'])->withInput();
-            }
-        }
-
-        $data = $request->safe()->except(['attachment', 'turnstile_token']);
+        $data = $request->safe()->except(['attachment']);
 
         $path         = null;
         $originalName = null;
@@ -101,6 +94,7 @@ class JlController extends Controller
 
         $entry = JlEntry::create([
             ...$data,
+            'user_id'         => auth()->id(),
             'attachment'      => $path,
             'attachment_name' => $originalName,
             'status'          => 'Pending',
@@ -154,7 +148,6 @@ class JlController extends Controller
             'JL Form Ready for VP Approval',
             "{$entry->reference} has been reviewed and is awaiting your approval"
         );
-        $this->mailRequestor($entry, 'reviewed');
 
         return back();
     }
@@ -182,7 +175,6 @@ class JlController extends Controller
             'JL Form Approved — Ready for Processing',
             "{$entry->reference} has been approved by VP and is ready for processing"
         );
-        $this->mailRequestor($entry, 'approved');
 
         return back();
     }
@@ -216,7 +208,6 @@ class JlController extends Controller
                 "{$entry->reference} was rejected" . ($reason !== 'No reason provided.' ? ": {$reason}" : '')
             );
         }
-        $this->mailRequestor($entry, $isVpReject ? 'vp_rejected' : 'rejected', $reason);
 
         return back();
     }
@@ -240,8 +231,7 @@ class JlController extends Controller
             'notes'       => $request->input('reason') ?: null,
         ]);
 
-        $actorRole  = auth()->user()->role;
-        $holdReason = $request->input('reason') ?: null;
+        $actorRole = auth()->user()->role;
 
         if ($actorRole === 'vp') {
             $this->notifyRoles(['reviewer', 'admin'], $entry, 'on_hold',
@@ -254,7 +244,6 @@ class JlController extends Controller
                 "{$entry->reference} has been put on hold by Purchasing"
             );
         }
-        $this->mailRequestor($entry, 'on_hold', $holdReason);
 
         return back();
     }
@@ -368,13 +357,6 @@ class JlController extends Controller
     {
         auth()->user()->unreadNotifications()->update(['read_at' => now()]);
         return response()->json(['ok' => true]);
-    }
-
-    private function mailRequestor(JlEntry $entry, string $event, ?string $reason = null): void
-    {
-        if ($entry->requestor_email) {
-            Mail::to($entry->requestor_email)->send(new RequestorMail($entry, $event, $reason));
-        }
     }
 
     private function notifyRoles(array $roles, JlEntry $entry, string $event, string $title, string $body): void

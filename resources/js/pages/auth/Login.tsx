@@ -1,19 +1,50 @@
-import { Head, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { useEffect, useRef, useState } from 'react';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
 
+interface PageProps {
+    turnstileSiteKey: string;
+    [key: string]: unknown;
+}
+
 export default function Login() {
+    const { turnstileSiteKey } = usePage<PageProps>().props;
     const [showPassword, setShowPassword] = useState(false);
+    const turnstileRef      = useRef<HTMLDivElement>(null);
+    const turnstileTokenRef = useRef('');
+
+    useEffect(() => {
+        (window as any).onTurnstileReady = () => {
+            const ts = (window as any).turnstile;
+            if (ts && turnstileRef.current) {
+                ts.render(turnstileRef.current, {
+                    sitekey:            turnstileSiteKey,
+                    callback:           (token: string) => { turnstileTokenRef.current = token; },
+                    'expired-callback': () => { turnstileTokenRef.current = ''; },
+                });
+            }
+        };
+        const script = document.createElement('script');
+        script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
+        script.async = true;
+        document.head.appendChild(script);
+        return () => {
+            delete (window as any).onTurnstileReady;
+            if (document.head.contains(script)) document.head.removeChild(script);
+        };
+    }, []);
 
     const form = useForm({
-        email:    '',
-        password: '',
+        email:           '',
+        password:        '',
+        turnstile_token: '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        form.transform((data) => ({ ...data, turnstile_token: turnstileTokenRef.current }));
         form.post('/login');
     }
 
@@ -103,6 +134,13 @@ export default function Login() {
                                     )}
                                 </button>
                             </div>
+                        </div>
+
+                        <div class="flex items-center justify-center">
+                            <div ref={turnstileRef} />
+                            {form.errors.turnstile_token && (
+                                <p className="mt-1 text-xs text-red-500">{form.errors.turnstile_token}</p>
+                            )}
                         </div>
 
                         <button

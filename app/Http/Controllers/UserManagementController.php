@@ -32,7 +32,7 @@ class UserManagementController extends Controller
             'id'    => 'required|integer',
             'name'  => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role'  => 'required|in:reviewer,vp,purchasing,admin',
+            'role'  => 'required|in:reviewer,vp,purchasing,admin,requestor',
         ]);
 
         $user = User::find($data['id']);
@@ -55,6 +55,7 @@ class UserManagementController extends Controller
             'vp'         => 'VP Approver',
             'purchasing' => 'Purchasing',
             'admin'      => 'Admin',
+            'requestor'  => 'Requestor',
             default      => 'Reviewer',
         };
 

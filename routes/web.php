@@ -10,14 +10,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
 Route::post('/login', [LoginController::class, 'postLogin'])->name('login.post');
 
-// ── Public: submit form (anyone with the link can submit) ───────────────────
-Route::get('/', [JlController::class, 'submit'])->name('jl.submit');
-Route::post('/jl', [JlController::class, 'store'])->name('jl.store');
-
 // ── Protected ───────────────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Requestor: submit form + view own requests
+    Route::get('/', [JlController::class, 'submit'])->middleware('role:requestor,admin')->name('jl.submit');
+    Route::post('/jl', [JlController::class, 'store'])->middleware('role:requestor,admin')->name('jl.store');
+    Route::get('/my-requests', [JlController::class, 'myRequests'])->middleware('role:requestor,admin')->name('jl.myRequests');
 
     // Dashboards
     Route::get('/reviewer',   [JlController::class, 'reviewer'])->middleware('role:reviewer,admin')->name('jl.reviewer');

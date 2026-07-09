@@ -23,6 +23,7 @@ const ROLE_LABELS: Record<string, string> = {
     vp:         'VP Approver',
     purchasing: 'Purchasing',
     admin:      'Admin',
+    requestor:  'Requestor',
     '':         'No Access',
 };
 
@@ -31,6 +32,7 @@ const BADGE: Record<string, string> = {
     vp:         'bg-purple-100 text-purple-700',
     purchasing: 'bg-amber-100 text-amber-700',
     admin:      'bg-red-100 text-red-700',
+    requestor:  'bg-teal-100 text-teal-700',
     '':         'bg-gray-100 text-gray-400',
 };
 
@@ -88,6 +90,7 @@ function UserRow({
                     className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400 disabled:opacity-50"
                 >
                     <option value="">No Access</option>
+                    <option value="requestor">Requestor</option>
                     <option value="reviewer">Reviewer</option>
                     <option value="vp">VP Approver</option>
                     <option value="purchasing">Purchasing</option>
@@ -148,6 +151,7 @@ export default function Users({ apiUsers, localUsers }: Props) {
             <InfoPanel type="about" title="User Management">
                 <p>Control who has access to the JL Monitoring System and what they can do. All organization employees are loaded from the central HR system.</p>
                 <ul className="mt-2 list-disc pl-4">
+                    <li><strong>Requestor</strong> — can submit JL forms and view the status of their own requests.</li>
                     <li><strong>Reviewer</strong> — can view all submitted forms, mark as Reviewed, reject, or put on hold.</li>
                     <li><strong>VP Approver</strong> — sees Reviewed forms; can give final approval, reject, or put on hold.</li>
                     <li><strong>Purchasing</strong> — sees VP-approved forms; can mark as On Process or put on hold.</li>

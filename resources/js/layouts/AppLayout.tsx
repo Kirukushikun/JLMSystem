@@ -5,7 +5,8 @@ import NotificationBell from '@/components/NotificationBell';
 import { registerFcmToken, listenForeground } from '@/firebase';
 
 const NAV_ITEMS = [
-    { label: 'Submit Form',        href: '/',                    roles: ['admin'] },
+    { label: 'Submit Form',        href: '/',                    roles: ['requestor', 'admin'] },
+    { label: 'My Requests',        href: '/my-requests',         roles: ['requestor', 'admin'] },
     { label: 'Reviewer Dashboard', href: '/reviewer',            roles: ['reviewer', 'admin'] },
     { label: 'VP Approver',        href: '/vp',                  roles: ['vp', 'admin'] },
     { label: 'Purchasing',         href: '/purchasing',          roles: ['purchasing', 'admin'] },

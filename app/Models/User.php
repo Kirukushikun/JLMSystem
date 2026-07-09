@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int    $id
  * @property string $name
  * @property string $email
- * @property string $role  reviewer | vp | admin
+ * @property string $role  reviewer | vp | purchasing | requestor | admin
  * @property string $password
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

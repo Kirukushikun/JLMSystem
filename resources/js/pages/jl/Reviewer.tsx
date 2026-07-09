@@ -9,45 +9,6 @@ import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import type { JlEntry } from '@/types/jl';
 
-function ShareLinkCard() {
-    const [copied, setCopied] = useState(false);
-    const url = window.location.origin + '/';
-
-    function copy() {
-        navigator.clipboard.writeText(url).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2500);
-        });
-    }
-
-    return (
-        <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                    <h3 className="text-sm font-semibold" style={{ color: '#1e3a5f' }}>
-                        Submit Form Link
-                    </h3>
-                    <p className="mt-0.5 text-xs text-gray-400">
-                        Share this link with farm managers so they can submit a JL form — no login required.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <code className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs text-gray-600 select-all">
-                        {url}
-                    </code>
-                    <button
-                        onClick={copy}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition"
-                        style={{ background: copied ? '#16a34a' : '#1e3a5f' }}
-                    >
-                        {copied ? 'Copied!' : 'Copy Link'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 interface Props {
     entries: JlEntry[];
 }
@@ -198,8 +159,6 @@ export default function Reviewer({ entries }: Props) {
                     onHold={setHoldEntry}
                 />
             </div>
-
-            <ShareLinkCard />
 
             <JlModal
                 entry={modal}

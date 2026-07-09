@@ -19,12 +19,25 @@ class LoginController extends Controller
 
     public function showLogin(): Response
     {
-        return Inertia::render('auth/Login');
+        return Inertia::render('auth/Login', [
+            'turnstileSiteKey' => config('services.turnstile.site_key'),
+        ]);
     }
 
     public function postLogin(Request $request): RedirectResponse
     {
         $email = $request->input('email');
+
+        if (config('services.turnstile.verify')) {
+            $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+                'secret'   => config('services.turnstile.secret'),
+                'response' => $request->input('turnstile_token', ''),
+                'remoteip' => $request->ip(),
+            ]);
+            if (! ($verify->json('success') ?? false)) {
+                return back()->withErrors(['turnstile_token' => 'Human verification failed. Please complete the challenge and try again.'])->withInput();
+            }
+        }
 
         // Brute-force guard
         if ($this->isLocked($email)) {
@@ -106,6 +119,7 @@ class LoginController extends Controller
             return match ($user->role) {
                 'vp'         => redirect()->route('jl.vp'),
                 'purchasing' => redirect()->route('jl.purchasing'),
+                'requestor'  => redirect()->route('jl.submit'),
                 default      => redirect()->route('jl.reviewer'), // reviewer + admin
             };
 
