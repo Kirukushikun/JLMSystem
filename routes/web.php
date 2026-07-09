@@ -58,6 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/maintenance', [MaintenanceController::class, 'index'])->middleware('role:admin')->name('admin.maintenance');
     Route::post('/admin/maintenance/companies', [MaintenanceController::class, 'storeCompany'])->middleware('role:admin')->name('admin.maintenance.companies.store');
     Route::delete('/admin/maintenance/companies/{company}', [MaintenanceController::class, 'destroyCompany'])->middleware('role:admin')->name('admin.maintenance.companies.destroy');
+    Route::get('/admin/maintenance/companies/export', [MaintenanceController::class, 'exportCompanies'])->middleware('role:admin')->name('admin.maintenance.companies.export');
+    Route::post('/admin/maintenance/companies/import', [MaintenanceController::class, 'importCompanies'])->middleware('role:admin')->name('admin.maintenance.companies.import');
     Route::post('/admin/maintenance/departments', [MaintenanceController::class, 'storeDepartment'])->middleware('role:admin')->name('admin.maintenance.departments.store');
     Route::delete('/admin/maintenance/departments/{department}', [MaintenanceController::class, 'destroyDepartment'])->middleware('role:admin')->name('admin.maintenance.departments.destroy');
+    Route::get('/admin/maintenance/departments/export', [MaintenanceController::class, 'exportDepartments'])->middleware('role:admin')->name('admin.maintenance.departments.export');
+    Route::post('/admin/maintenance/departments/import', [MaintenanceController::class, 'importDepartments'])->middleware('role:admin')->name('admin.maintenance.departments.import');
+    Route::post('/admin/maintenance/jl-entries/import', [MaintenanceController::class, 'importJlEntries'])->middleware('role:admin')->name('admin.maintenance.jlEntries.import');
 });

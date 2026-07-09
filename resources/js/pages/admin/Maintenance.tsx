@@ -1,6 +1,7 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface Company {
     id: number;
@@ -23,11 +24,74 @@ interface PageProps {
 const INPUT =
     'rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
 
+const FILE_INPUT =
+    'flex-1 rounded-lg border border-gray-200 bg-white text-xs text-gray-600 outline-none file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200 disabled:opacity-60';
+
+function ImportExportRow({
+    label,
+    exportHref,
+    file,
+    onFileChange,
+    onImport,
+    processing,
+    error,
+    fileKey,
+}: {
+    label: string;
+    exportHref: string;
+    file: File | null;
+    onFileChange: (f: File | null) => void;
+    onImport: () => void;
+    processing: boolean;
+    error?: string;
+    fileKey: number;
+}) {
+    return (
+        <div className="mt-4 border-t border-gray-100 pt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                Import / Export
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+                <a
+                    href={exportHref}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                    ⬇ Export CSV
+                </a>
+                <input
+                    key={fileKey}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className={FILE_INPUT}
+                    disabled={processing}
+                    onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                />
+                <button
+                    onClick={onImport}
+                    disabled={processing || !file}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                >
+                    ⬆ Import {label}
+                </button>
+            </div>
+            {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+        </div>
+    );
+}
+
 export default function Maintenance() {
     const { companies, departments, flash } = usePage<PageProps>().props;
 
     const companyForm = useForm({ name: '', code: '' });
     const deptForm    = useForm({ name: '' });
+
+    const companyImportForm = useForm<{ file: File | null }>({ file: null });
+    const deptImportForm    = useForm<{ file: File | null }>({ file: null });
+    const jlImportForm      = useForm<{ file: File | null }>({ file: null });
+
+    const [companyFileKey, setCompanyFileKey] = useState(0);
+    const [deptFileKey, setDeptFileKey]        = useState(0);
+    const [jlFileKey, setJlFileKey]            = useState(0);
 
     function addCompany() {
         companyForm.post('/admin/maintenance/companies', {
@@ -39,6 +103,14 @@ export default function Maintenance() {
     function removeCompany(id: number, name: string) {
         if (!confirm(`Remove "${name}"? This cannot be undone.`)) return;
         router.delete(`/admin/maintenance/companies/${id}`, { preserveScroll: true });
+    }
+
+    function importCompanies() {
+        companyImportForm.post('/admin/maintenance/companies/import', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { companyImportForm.reset(); setCompanyFileKey((k) => k + 1); },
+        });
     }
 
     function addDept() {
@@ -53,6 +125,22 @@ export default function Maintenance() {
         router.delete(`/admin/maintenance/departments/${id}`, { preserveScroll: true });
     }
 
+    function importDepartments() {
+        deptImportForm.post('/admin/maintenance/departments/import', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { deptImportForm.reset(); setDeptFileKey((k) => k + 1); },
+        });
+    }
+
+    function importJlEntries() {
+        jlImportForm.post('/admin/maintenance/jl-entries/import', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { jlImportForm.reset(); setJlFileKey((k) => k + 1); },
+        });
+    }
+
     return (
         <AppLayout>
             <Head title="Maintenance" />
@@ -63,6 +151,7 @@ export default function Maintenance() {
                     <li><strong>Companies / Farms</strong> — each entry has a name and a short serial code (e.g. BFC) used when generating JL serial numbers on approval.</li>
                     <li><strong>Departments</strong> — the list of departments selectable on the submission form.</li>
                     <li>Entries that are already referenced by existing JL forms cannot be deleted to protect data integrity.</li>
+                    <li><strong>Import / Export</strong> — each section can export its data as CSV and re-import it, useful when redeploying the system to a new server. See <strong>JL Entries — Redeployment Import</strong> below for bulk-loading historical records.</li>
                 </ul>
             </InfoPanel>
 
@@ -169,6 +258,17 @@ export default function Maintenance() {
                                 </p>
                             )}
                         </div>
+
+                        <ImportExportRow
+                            label="Companies"
+                            exportHref="/admin/maintenance/companies/export"
+                            file={companyImportForm.data.file}
+                            onFileChange={(f) => companyImportForm.setData('file', f)}
+                            onImport={importCompanies}
+                            processing={companyImportForm.processing}
+                            error={companyImportForm.errors.file}
+                            fileKey={companyFileKey}
+                        />
                     </div>
                 </div>
 
@@ -238,7 +338,58 @@ export default function Maintenance() {
                                 <p className="mt-1.5 text-xs text-red-500">{deptForm.errors.name}</p>
                             )}
                         </div>
+
+                        <ImportExportRow
+                            label="Departments"
+                            exportHref="/admin/maintenance/departments/export"
+                            file={deptImportForm.data.file}
+                            onFileChange={(f) => deptImportForm.setData('file', f)}
+                            onImport={importDepartments}
+                            processing={deptImportForm.processing}
+                            error={deptImportForm.errors.file}
+                            fileKey={deptFileKey}
+                        />
                     </div>
+                </div>
+            </div>
+
+            {/* ── JL Entries (historical data / redeployment) ── */}
+            <div className="mt-6 rounded-xl bg-white shadow-sm">
+                <div className="border-b border-gray-100 px-6 py-4">
+                    <h2 className="font-semibold" style={{ color: '#1e3a5f' }}>JL Entries — Redeployment Import</h2>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                        Bulk-import historical JL records when setting up this system on a new server. Uses the same CSV
+                        layout as the dashboard's <strong>Export</strong> button — export from the old deployment, then
+                        import here. Make sure every Company and Department referenced in the file already exists above.
+                    </p>
+                </div>
+
+                <div className="p-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <input
+                            key={jlFileKey}
+                            type="file"
+                            accept=".csv,text/csv"
+                            className={FILE_INPUT}
+                            disabled={jlImportForm.processing}
+                            onChange={(e) => jlImportForm.setData('file', e.target.files?.[0] ?? null)}
+                        />
+                        <button
+                            onClick={importJlEntries}
+                            disabled={jlImportForm.processing || !jlImportForm.data.file}
+                            className="rounded-lg px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                            style={{ background: '#1e3a5f' }}
+                        >
+                            {jlImportForm.processing ? 'Importing…' : '⬆ Import JL Entries'}
+                        </button>
+                    </div>
+                    {jlImportForm.errors.file && (
+                        <p className="mt-1.5 text-xs text-red-500">{jlImportForm.errors.file}</p>
+                    )}
+                    <p className="mt-3 text-xs text-gray-400">
+                        Only run this on a fresh deployment — importing the same file twice will create duplicate entries.
+                        Reference numbers are regenerated from the new row IDs; assigned Serial Numbers are preserved as-is.
+                    </p>
                 </div>
             </div>
         </AppLayout>
