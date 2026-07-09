@@ -4,9 +4,11 @@ import ExportModal from '@/components/jl/ExportModal';
 import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
+import Pagination from '@/components/Pagination';
 import RejectModal from '@/components/jl/RejectModal';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -79,6 +81,8 @@ export default function Vp({ entries }: Props) {
         );
     });
 
+    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(filtered);
+
     const forwarded        = entries.filter((e) => e.status !== 'Rejected').length;
     const pending          = entries.filter((e) => e.status === 'Reviewed' || (e.status === 'On Hold' && e.held_at === 'Reviewed')).length;
     const approved         = entries.filter((e) => e.status === 'Approved').length;
@@ -150,11 +154,19 @@ export default function Vp({ entries }: Props) {
 
             <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
                 <JlTable
-                    entries={filtered}
+                    entries={pageItems}
                     context="vp"
                     onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
+                />
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
                 />
             </div>
 

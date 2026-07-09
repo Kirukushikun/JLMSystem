@@ -1,7 +1,9 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import Pagination from '@/components/Pagination';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 import type { UserRole } from '@/types/auth';
 
 type ApiUser = {
@@ -142,6 +144,8 @@ export default function Users({ apiUsers, localUsers }: Props) {
         return ! q || `${first_name} ${last_name} ${email}`.toLowerCase().includes(q);
     });
 
+    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(filtered);
+
     const grantedCount = Object.keys(localUsers).length;
 
     return (
@@ -221,7 +225,7 @@ export default function Users({ apiUsers, localUsers }: Props) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((user) => (
+                                {pageItems.map((user) => (
                                     <UserRow
                                         key={user.id}
                                         user={user}
@@ -239,6 +243,14 @@ export default function Users({ apiUsers, localUsers }: Props) {
                         </table>
                     </div>
                 )}
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
         </AppLayout>
     );

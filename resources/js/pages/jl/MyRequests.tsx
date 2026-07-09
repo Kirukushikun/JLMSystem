@@ -1,9 +1,11 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import JlModal from '@/components/jl/JlModal';
+import Pagination from '@/components/Pagination';
 import StatusBadge from '@/components/jl/StatusBadge';
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -16,6 +18,7 @@ function fmtAmt(n: number) {
 
 export default function MyRequests({ entries }: Props) {
     const [modal, setModal] = useState<JlEntry | null>(null);
+    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(entries);
 
     return (
         <AppLayout>
@@ -57,7 +60,7 @@ export default function MyRequests({ entries }: Props) {
                                     </td>
                                 </tr>
                             )}
-                            {entries.map((e) => (
+                            {pageItems.map((e) => (
                                 <tr key={e.id} className="border-b border-gray-100 transition hover:bg-gray-50">
                                     <td className="whitespace-nowrap px-3.5 py-3 font-mono text-xs text-gray-500">{e.reference}</td>
                                     <td className="max-w-xs truncate whitespace-nowrap px-3.5 py-3 font-medium">{e.title}</td>
@@ -89,6 +92,14 @@ export default function MyRequests({ entries }: Props) {
                         </tbody>
                     </table>
                 </div>
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
 
             <JlModal entry={modal} context="purchasing" onClose={() => setModal(null)} />

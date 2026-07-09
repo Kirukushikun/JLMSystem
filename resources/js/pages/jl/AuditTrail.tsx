@@ -1,7 +1,9 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import Pagination from '@/components/Pagination';
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 
 interface AuditLog {
     id: number;
@@ -70,6 +72,8 @@ export default function AuditTrail({ logs }: Props) {
             (!eventFilter || log.event === eventFilter)
         );
     });
+
+    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(filtered);
 
     const total      = logs.length;
     const todayStr   = new Date().toLocaleDateString('en-CA');
@@ -176,7 +180,7 @@ export default function AuditTrail({ logs }: Props) {
                                     </td>
                                 </tr>
                             )}
-                            {filtered.map((log) => (
+                            {pageItems.map((log) => (
                                 <tr
                                     key={log.id}
                                     className="border-b border-gray-100 hover:bg-gray-50"
@@ -215,12 +219,14 @@ export default function AuditTrail({ logs }: Props) {
                         </tbody>
                     </table>
                 </div>
-
-                {filtered.length > 0 && (
-                    <div className="border-t border-gray-100 px-4 py-2.5 text-right text-xs text-gray-400">
-                        Showing {filtered.length} of {total} events
-                    </div>
-                )}
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                />
             </div>
         </AppLayout>
     );

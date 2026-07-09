@@ -4,8 +4,10 @@ import ExportModal from '@/components/jl/ExportModal';
 import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
+import Pagination from '@/components/Pagination';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { usePagination } from '@/hooks/usePagination';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -55,6 +57,8 @@ export default function Purchasing({ entries }: Props) {
             (!statusFilter || e.status === statusFilter)
         );
     });
+
+    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(filtered);
 
     const approved   = entries.filter((e) => e.status === 'Approved').length;
     const onProcess  = entries.filter((e) => e.status === 'On Process').length;
@@ -114,11 +118,19 @@ export default function Purchasing({ entries }: Props) {
 
             <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
                 <JlTable
-                    entries={filtered}
+                    entries={pageItems}
                     context="purchasing"
                     onView={setViewEntry}
                     onHold={setHoldEntry}
                     onProcess={handleProcess}
+                />
+                <Pagination
+                    page={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
                 />
             </div>
 
