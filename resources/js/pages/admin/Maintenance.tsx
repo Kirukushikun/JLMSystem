@@ -188,35 +188,37 @@ export default function Maintenance() {
                         {companies.length === 0 ? (
                             <p className="py-4 text-center text-sm text-gray-400">No companies added yet.</p>
                         ) : (
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Name
-                                        </th>
-                                        <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Serial Code
-                                        </th>
-                                        <th />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {companies.map((c) => (
-                                        <tr key={c.id} className="border-b border-gray-50 last:border-0">
-                                            <td className="py-2.5 font-medium">{c.name}</td>
-                                            <td className="py-2.5 font-mono text-xs text-gray-500">{c.code}</td>
-                                            <td className="py-2.5 text-right">
-                                                <button
-                                                    onClick={() => removeCompany(c.id, c.name)}
-                                                    className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </td>
+                            <div className="max-h-72 overflow-y-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                                Name
+                                            </th>
+                                            <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                                Serial Code
+                                            </th>
+                                            <th />
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {companies.map((c) => (
+                                            <tr key={c.id} className="border-b border-gray-50 last:border-0">
+                                                <td className="py-2.5 font-medium">{c.name}</td>
+                                                <td className="py-2.5 font-mono text-xs text-gray-500">{c.code}</td>
+                                                <td className="py-2.5 text-right">
+                                                    <button
+                                                        onClick={() => removeCompany(c.id, c.name)}
+                                                        className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
 
                         <div className="mt-4 border-t border-gray-100 pt-4">
@@ -285,31 +287,33 @@ export default function Maintenance() {
                         {departments.length === 0 ? (
                             <p className="py-4 text-center text-sm text-gray-400">No departments added yet.</p>
                         ) : (
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                                            Name
-                                        </th>
-                                        <th />
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {departments.map((d) => (
-                                        <tr key={d.id} className="border-b border-gray-50 last:border-0">
-                                            <td className="py-2.5 font-medium">{d.name}</td>
-                                            <td className="py-2.5 text-right">
-                                                <button
-                                                    onClick={() => removeDept(d.id, d.name)}
-                                                    className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </td>
+                            <div className="max-h-72 overflow-y-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                                Name
+                                            </th>
+                                            <th />
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {departments.map((d) => (
+                                            <tr key={d.id} className="border-b border-gray-50 last:border-0">
+                                                <td className="py-2.5 font-medium">{d.name}</td>
+                                                <td className="py-2.5 text-right">
+                                                    <button
+                                                        onClick={() => removeDept(d.id, d.name)}
+                                                        className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
 
                         <div className="mt-4 border-t border-gray-100 pt-4">
@@ -356,16 +360,22 @@ export default function Maintenance() {
             {/* ── JL Entries (historical data / redeployment) ── */}
             <div className="mt-6 rounded-xl bg-white shadow-sm">
                 <div className="border-b border-gray-100 px-6 py-4">
-                    <h2 className="font-semibold" style={{ color: '#1e3a5f' }}>JL Entries — Redeployment Import</h2>
+                    <h2 className="font-semibold" style={{ color: '#1e3a5f' }}>JL Entries — Redeployment Import / Export</h2>
                     <p className="mt-0.5 text-xs text-gray-400">
-                        Bulk-import historical JL records when setting up this system on a new server. Uses the same CSV
-                        layout as the dashboard's <strong>Export</strong> button — export from the old deployment, then
-                        import here. Make sure every Company and Department referenced in the file already exists above.
+                        Export every JL entry as CSV (all statuses, no filtering) to seed a new deployment, or bulk-import
+                        that same CSV here when setting up this system on a new server. Make sure every Company and
+                        Department referenced in the file already exists above before importing.
                     </p>
                 </div>
 
                 <div className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
+                        <a
+                            href="/jl/export"
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                        >
+                            ⬇ Export CSV
+                        </a>
                         <input
                             key={jlFileKey}
                             type="file"
@@ -387,8 +397,9 @@ export default function Maintenance() {
                         <p className="mt-1.5 text-xs text-red-500">{jlImportForm.errors.file}</p>
                     )}
                     <p className="mt-3 text-xs text-gray-400">
-                        Only run this on a fresh deployment — importing the same file twice will create duplicate entries.
-                        Reference numbers are regenerated from the new row IDs; assigned Serial Numbers are preserved as-is.
+                        Only run the import on a fresh deployment — importing the same file twice will create duplicate
+                        entries. Reference numbers are regenerated from the new row IDs; assigned Serial Numbers are
+                        preserved as-is.
                     </p>
                 </div>
             </div>

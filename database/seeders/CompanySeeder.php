@@ -10,11 +10,13 @@ class CompanySeeder extends Seeder
     public function run(): void
     {
         $companies = [
-            ['name' => 'BFC',      'code' => 'BFC'],
-            ['name' => 'BDL',      'code' => 'BDL'],
-            ['name' => 'PFC',      'code' => 'PFC'],
-            ['name' => 'RH/BBGC',  'code' => 'RH/BBGC'],
-            ['name' => 'Feedmill', 'code' => 'FML'],
+            ['name' => 'BFC',       'code' => 'BFC'],
+            ['name' => 'BFC-IRAQ',  'code' => 'IRAQ'],
+            ['name' => 'BROOKDALE', 'code' => 'BDL'],
+            ['name' => 'FEEDMILL',  'code' => 'FEEDMILL'],
+            ['name' => 'HATCHERY',  'code' => 'HAT'],
+            ['name' => 'PFC',       'code' => 'PFC'],
+            ['name' => 'RH/BBGC',   'code' => 'RH/BBGC'],
         ];
 
         foreach ($companies as $data) {
