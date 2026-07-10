@@ -136,7 +136,7 @@ export default function Login() {
                             </div>
                         </div>
 
-                        <div class="flex items-center justify-center">
+                        <div class="flex flex-col items-center justify-center ">
                             <div ref={turnstileRef} />
                             {form.errors.turnstile_token && (
                                 <p className="mt-1 text-xs text-red-500">{form.errors.turnstile_token}</p>
