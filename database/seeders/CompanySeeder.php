@@ -13,7 +13,7 @@ class CompanySeeder extends Seeder
             ['name' => 'BFC',      'code' => 'BFC'],
             ['name' => 'BDL',      'code' => 'BDL'],
             ['name' => 'PFC',      'code' => 'PFC'],
-            ['name' => 'RH',       'code' => 'RH'],
+            ['name' => 'RH/BBGC',  'code' => 'RH/BBGC'],
             ['name' => 'Feedmill', 'code' => 'FML'],
         ];
 

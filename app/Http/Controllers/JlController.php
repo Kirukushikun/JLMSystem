@@ -82,6 +82,15 @@ class JlController extends Controller
     public function store(StoreJlRequest $request): RedirectResponse
     {
         $data = $request->safe()->except(['attachment']);
+        $user = auth()->user();
+
+        // Requestors submit for their own assigned farm/department only — the
+        // fields are disabled client-side, but that's not a security boundary,
+        // so the account's values always win over whatever was posted.
+        if ($user->role === 'requestor') {
+            $data['company'] = $user->company;
+            $data['dept']    = $user->dept;
+        }
 
         $path         = null;
         $originalName = null;
@@ -94,7 +103,7 @@ class JlController extends Controller
 
         $entry = JlEntry::create([
             ...$data,
-            'user_id'         => auth()->id(),
+            'user_id'         => $user->id,
             'attachment'      => $path,
             'attachment_name' => $originalName,
             'status'          => 'Pending',

@@ -13,11 +13,13 @@ type ApiUser = {
     email: string;
 };
 
-type LocalUsers = Record<string, { role: UserRole }>;
+type LocalUsers = Record<string, { role: UserRole; company: string | null; dept: string | null }>;
 
 interface Props {
     apiUsers: ApiUser[];
     localUsers: LocalUsers;
+    companies: string[];
+    departments: string[];
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -41,19 +43,33 @@ const BADGE: Record<string, string> = {
 function UserRow({
     user,
     localRole,
+    localCompany,
+    localDept,
+    companies,
+    departments,
 }: {
     user: ApiUser;
     localRole: string;
+    localCompany: string | null;
+    localDept: string | null;
+    companies: string[];
+    departments: string[];
 }) {
     const [selected, setSelected] = useState(localRole);
+    const [company, setCompany]   = useState(localCompany ?? '');
+    const [dept, setDept]         = useState(localDept ?? '');
     const [busy, setBusy]         = useState(false);
 
     // Sync when parent data refreshes after Inertia visit
     useEffect(() => {
         setSelected(localRole);
-    }, [localRole]);
+        setCompany(localCompany ?? '');
+        setDept(localDept ?? '');
+    }, [localRole, localCompany, localDept]);
 
-    const changed  = selected !== localRole;
+    const isRequestor = selected === 'requestor';
+    const changed = selected !== localRole
+        || (isRequestor && (company !== (localCompany ?? '') || dept !== (localDept ?? '')));
     const hasAccess = localRole !== '';
     const fullName  = `${user.first_name} ${user.last_name}`;
 
@@ -61,7 +77,14 @@ function UserRow({
         if (!selected) return; // treat empty as revoke
         router.post(
             '/admin/users/assign',
-            { id: user.id, name: fullName, email: user.email, role: selected },
+            {
+                id: user.id,
+                name: fullName,
+                email: user.email,
+                role: selected,
+                company: isRequestor ? company : null,
+                dept: isRequestor ? dept : null,
+            },
             { preserveScroll: true, onStart: () => setBusy(true), onFinish: () => setBusy(false) },
         );
     }
@@ -85,26 +108,54 @@ function UserRow({
                 </span>
             </td>
             <td className="px-4 py-3">
-                <select
-                    value={selected}
-                    onChange={(e) => setSelected(e.target.value)}
-                    disabled={busy}
-                    className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400 disabled:opacity-50"
-                >
-                    <option value="">No Access</option>
-                    <option value="requestor">Requestor</option>
-                    <option value="reviewer">Reviewer</option>
-                    <option value="vp">VP Approver</option>
-                    <option value="purchasing">Purchasing</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <div className="flex flex-col gap-1.5">
+                    <select
+                        value={selected}
+                        onChange={(e) => setSelected(e.target.value)}
+                        disabled={busy}
+                        className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400 disabled:opacity-50"
+                    >
+                        <option value="">No Access</option>
+                        <option value="requestor">Requestor</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="vp">VP Approver</option>
+                        <option value="purchasing">Purchasing</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    {isRequestor && (
+                        <>
+                            <select
+                                value={company}
+                                onChange={(e) => setCompany(e.target.value)}
+                                disabled={busy}
+                                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
+                            >
+                                <option value="">— Farm —</option>
+                                {companies.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={dept}
+                                onChange={(e) => setDept(e.target.value)}
+                                disabled={busy}
+                                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
+                            >
+                                <option value="">— Department —</option>
+                                {departments.map((d) => (
+                                    <option key={d} value={d}>{d}</option>
+                                ))}
+                            </select>
+                        </>
+                    )}
+                </div>
             </td>
             <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                     {changed && selected !== '' && (
                         <button
                             onClick={save}
-                            disabled={busy}
+                            disabled={busy || (isRequestor && (!company || !dept))}
                             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-50"
                             style={{ background: '#1e3a5f' }}
                         >
@@ -135,7 +186,7 @@ function UserRow({
     );
 }
 
-export default function Users({ apiUsers, localUsers }: Props) {
+export default function Users({ apiUsers, localUsers, companies, departments }: Props) {
     const { props } = usePage<{ flash: { success?: string; error?: string }; [key: string]: unknown }>();
     const [search, setSearch] = useState('');
 
@@ -155,7 +206,7 @@ export default function Users({ apiUsers, localUsers }: Props) {
             <InfoPanel type="about" title="User Management">
                 <p>Control who has access to the JL Monitoring System and what they can do. All organization employees are loaded from the central HR system.</p>
                 <ul className="mt-2 list-disc pl-4">
-                    <li><strong>Requestor</strong> — can submit JL forms and view the status of their own requests.</li>
+                    <li><strong>Requestor</strong> — can submit JL forms and view the status of their own requests. Requires a Farm and Department, which get locked into their submit form automatically.</li>
                     <li><strong>Reviewer</strong> — can view all submitted forms, mark as Reviewed, reject, or put on hold.</li>
                     <li><strong>VP Approver</strong> — sees Reviewed forms; can give final approval, reject, or put on hold.</li>
                     <li><strong>Purchasing</strong> — sees VP-approved forms; can mark as On Process or put on hold.</li>
@@ -230,6 +281,10 @@ export default function Users({ apiUsers, localUsers }: Props) {
                                         key={user.id}
                                         user={user}
                                         localRole={localUsers[user.id]?.role ?? ''}
+                                        localCompany={localUsers[user.id]?.company ?? null}
+                                        localDept={localUsers[user.id]?.dept ?? null}
+                                        companies={companies}
+                                        departments={departments}
                                     />
                                 ))}
                                 {filtered.length === 0 && (

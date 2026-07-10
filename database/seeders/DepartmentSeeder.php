@@ -10,8 +10,9 @@ class DepartmentSeeder extends Seeder
     public function run(): void
     {
         $departments = [
+            'Accounting',
+            'Audit',
             'Feedmill',
-            'FOC',
             'General Services',
             'Human Resources',
             'IT and Security Services',
@@ -19,6 +20,7 @@ class DepartmentSeeder extends Seeder
             'Purchasing',
             'Sales & Marketing',
             'Swine',
+            'Treasury',
         ];
 
         foreach ($departments as $name) {

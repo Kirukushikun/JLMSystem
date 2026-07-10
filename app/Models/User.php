@@ -15,11 +15,13 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $email
  * @property string $role  reviewer | vp | purchasing | requestor | admin
+ * @property string|null $company
+ * @property string|null $dept
  * @property string $password
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'email', 'password', 'role', 'company', 'dept'])]
 #[Hidden(['password'])]
 class User extends Authenticatable
 {

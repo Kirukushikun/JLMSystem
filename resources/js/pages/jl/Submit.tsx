@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import type { Auth } from '@/types/auth';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -18,19 +19,22 @@ interface PageProps {
     flash: { success?: string };
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
+    auth: Auth;
     [key: string]: unknown;
 }
 
 export default function Submit() {
-    const { flash, companies, departments } = usePage<PageProps>().props;
+    const { flash, companies, departments, auth } = usePage<PageProps>().props;
     const [fileKey, setFileKey] = useState(0);
+
+    const isRequestor = auth.user.role === 'requestor';
 
     const form = useForm({
         title:      '',
         date:       new Date().toISOString().slice(0, 10),
-        company:    '',
+        company:    isRequestor ? (auth.user.company ?? '') : '',
         manager:    '',
-        dept:       '',
+        dept:       isRequestor ? (auth.user.dept ?? '') : '',
         amount:     '',
         attachment: null as File | null,
     });
@@ -51,7 +55,10 @@ export default function Submit() {
                 <ul className="mt-2 list-disc pl-4">
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
                     <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
-                    <li><strong>Company / Farm</strong> and <strong>Department</strong> — select from the available options.</li>
+                    <li>
+                        <strong>Company / Farm</strong> and <strong>Department</strong> —{' '}
+                        {isRequestor ? 'pre-filled from your account and locked to prevent mistakes.' : 'select from the available options.'}
+                    </li>
                     <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
                     <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
@@ -109,17 +116,21 @@ export default function Submit() {
 
                     <div>
                         <Label>Company / Farm *</Label>
-                        <select
-                            className={INPUT}
-                            value={form.data.company}
-                            onChange={(e) => form.setData('company', e.target.value)}
-                            disabled={form.processing}
-                        >
-                            <option value="">— Select company —</option>
-                            {companies.map((c) => (
-                                <option key={c.id} value={c.name}>{c.name}</option>
-                            ))}
-                        </select>
+                        {isRequestor ? (
+                            <input className={INPUT} value={form.data.company} disabled />
+                        ) : (
+                            <select
+                                className={INPUT}
+                                value={form.data.company}
+                                onChange={(e) => form.setData('company', e.target.value)}
+                                disabled={form.processing}
+                            >
+                                <option value="">— Select company —</option>
+                                {companies.map((c) => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     <div>
@@ -135,17 +146,21 @@ export default function Submit() {
 
                     <div>
                         <Label>Department *</Label>
-                        <select
-                            className={INPUT}
-                            value={form.data.dept}
-                            onChange={(e) => form.setData('dept', e.target.value)}
-                            disabled={form.processing}
-                        >
-                            <option value="">— Select department —</option>
-                            {departments.map((d) => (
-                                <option key={d.id} value={d.name}>{d.name}</option>
-                            ))}
-                        </select>
+                        {isRequestor ? (
+                            <input className={INPUT} value={form.data.dept} disabled />
+                        ) : (
+                            <select
+                                className={INPUT}
+                                value={form.data.dept}
+                                onChange={(e) => form.setData('dept', e.target.value)}
+                                disabled={form.processing}
+                            >
+                                <option value="">— Select department —</option>
+                                {departments.map((d) => (
+                                    <option key={d.id} value={d.name}>{d.name}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     <div>

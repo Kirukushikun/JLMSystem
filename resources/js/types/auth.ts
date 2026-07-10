@@ -5,6 +5,8 @@ export type User = {
     name: string;
     email: string;
     role: UserRole;
+    company: string | null;
+    dept: string | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;
