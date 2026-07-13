@@ -9,6 +9,7 @@ const STYLES: Record<JlStatus, string> = {
     'VP Rejected':'bg-red-100 text-red-700',
     'On Hold':    'bg-amber-100 text-amber-700',
     'On Process': 'bg-purple-100 text-purple-700',
+    Cancelled:    'bg-gray-200 text-gray-600',
 };
 
 const LABELS: Record<JlStatus, string> = {
@@ -19,6 +20,7 @@ const LABELS: Record<JlStatus, string> = {
     'VP Rejected':'VP Rejected',
     'On Hold':    'On Hold',
     'On Process': 'On Process',
+    Cancelled:    'Cancelled',
 };
 
 export default function StatusBadge({ status }: { status: JlStatus }) {

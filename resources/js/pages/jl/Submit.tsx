@@ -1,8 +1,10 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import SubmitSummaryModal from '@/components/jl/SubmitSummaryModal';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { Auth } from '@/types/auth';
+import type { JlEntry } from '@/types/jl';
 
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
@@ -20,38 +22,55 @@ interface PageProps {
     companies: Array<{ id: number; name: string }>;
     departments: Array<{ id: number; name: string }>;
     auth: Auth;
+    editEntry?: JlEntry;
     [key: string]: unknown;
 }
 
 export default function Submit() {
-    const { flash, companies, departments, auth } = usePage<PageProps>().props;
-    const [fileKey, setFileKey] = useState(0);
+    const { flash, companies, departments, auth, editEntry } = usePage<PageProps>().props;
+    const [fileKey, setFileKey]       = useState(0);
+    const [showSummary, setShowSummary] = useState(false);
 
     const isRequestor = auth.user.role === 'requestor';
+    const isEdit       = !!editEntry;
 
     const form = useForm({
-        title:      '',
-        date:       new Date().toISOString().slice(0, 10),
-        company:    isRequestor ? (auth.user.company ?? '') : '',
-        manager:    '',
-        dept:       isRequestor ? (auth.user.dept ?? '') : '',
-        amount:     '',
+        title:      editEntry?.title ?? '',
+        date:       editEntry?.date ?? new Date().toISOString().slice(0, 10),
+        company:    editEntry?.company ?? (isRequestor ? (auth.user.company ?? '') : ''),
+        manager:    editEntry?.manager ?? '',
+        dept:       editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
+        amount:     editEntry ? String(editEntry.amount) : '',
         attachment: null as File | null,
     });
 
-    function handleSubmit() {
-        form.post('/jl', {
-            forceFormData: true,
-            onSuccess: () => { form.reset(); setFileKey((k) => k + 1); },
-        });
+    function doSubmit() {
+        if (isEdit) {
+            form.patch(`/jl/${editEntry!.id}/resubmit`, {
+                forceFormData: true,
+                onSuccess: () => setShowSummary(false),
+            });
+        } else {
+            form.post('/jl', {
+                forceFormData: true,
+                onSuccess: () => { form.reset(); setFileKey((k) => k + 1); setShowSummary(false); },
+            });
+        }
     }
 
     return (
         <AppLayout>
-            <Head title="Submit Form" />
+            <Head title={isEdit ? 'Edit & Resubmit' : 'Submit Form'} />
 
-            <InfoPanel type="help" title="Submitting a JL Form">
-                <p>Fill in all required fields and click <strong>Submit Form</strong> when ready. Your entry will be queued for reviewer approval.</p>
+            <InfoPanel type="help" title={isEdit ? 'Editing a Cancelled Request' : 'Submitting a JL Form'}>
+                {isEdit ? (
+                    <p>
+                        You're correcting <strong>{editEntry!.reference}</strong>. Fix whatever was wrong and resubmit —
+                        it keeps the same reference number and goes back into the review queue as Pending.
+                    </p>
+                ) : (
+                    <p>Fill in all required fields and click <strong>Submit Form</strong> when ready. Your entry will be queued for reviewer approval.</p>
+                )}
                 <ul className="mt-2 list-disc pl-4">
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
                     <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
@@ -62,15 +81,20 @@ export default function Submit() {
                     <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
                     <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
+                    <li>Before submitting you'll see a quick summary to review — catch mistakes there before they go out.</li>
                 </ul>
-                <p className="mt-2">After submission you will receive a reference number. A serial number is only assigned once the VP approves.</p>
+                {!isEdit && (
+                    <p className="mt-2">After submission you will receive a reference number. A serial number is only assigned once the VP approves.</p>
+                )}
             </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
-                    JL Monitoring Form
+                    {isEdit ? `Edit & Resubmit — ${editEntry!.reference}` : 'JL Monitoring Form'}
                 </h1>
-                <p className="mt-1 text-sm text-gray-500">Fill in all required fields and submit for review.</p>
+                <p className="mt-1 text-sm text-gray-500">
+                    {isEdit ? 'Fix the mistake and resubmit for review.' : 'Fill in all required fields and submit for review.'}
+                </p>
             </div>
 
             {flash.success && (
@@ -178,7 +202,12 @@ export default function Submit() {
                     </div>
 
                     <div className="sm:col-span-2">
-                        <Label>Supporting Document (optional)</Label>
+                        <Label>Supporting Document {isEdit ? '' : '(optional)'}</Label>
+                        {isEdit && editEntry!.attachment_name && (
+                            <p className="mb-1.5 text-xs text-gray-400">
+                                Current: <span className="font-medium text-gray-600">{editEntry!.attachment_name}</span> — choose a new file below to replace it, or leave blank to keep it.
+                            </p>
+                        )}
                         <input
                             key={fileKey}
                             className={INPUT + ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'}
@@ -204,16 +233,24 @@ export default function Submit() {
                             ↺ Clear
                         </button>
                         <button
-                            onClick={handleSubmit}
+                            onClick={() => setShowSummary(true)}
                             disabled={form.processing}
                             className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                             style={{ background: '#1e3a5f' }}
                         >
-                            {form.processing ? 'Submitting…' : '➤ Submit Form'}
+                            {form.processing ? 'Submitting…' : isEdit ? '➤ Review & Resubmit' : '➤ Submit Form'}
                         </button>
                     </div>
                 </div>
             </div>
+
+            <SubmitSummaryModal
+                open={showSummary}
+                data={form.data}
+                processing={form.processing}
+                onClose={() => setShowSummary(false)}
+                onConfirm={doSubmit}
+            />
         </AppLayout>
     );
 }

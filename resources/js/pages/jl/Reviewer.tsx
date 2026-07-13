@@ -145,6 +145,7 @@ export default function Reviewer({ entries }: Props) {
                     <option value="VP Rejected">VP Rejected</option>
                     <option value="On Hold">On Hold</option>
                     <option value="On Process">On Process</option>
+                    <option value="Cancelled">Cancelled</option>
                 </select>
                 <button
                     onClick={() => setShowExport(true)}
@@ -199,7 +200,7 @@ export default function Reviewer({ entries }: Props) {
             <ExportModal
                 open={showExport}
                 onClose={() => setShowExport(false)}
-                allowedStatuses={['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process']}
+                allowedStatuses={['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled']}
             />
 
             {toast && (

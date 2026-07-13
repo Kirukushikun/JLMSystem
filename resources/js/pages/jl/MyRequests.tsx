@@ -1,9 +1,10 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import CancelModal from '@/components/jl/CancelModal';
 import JlModal from '@/components/jl/JlModal';
 import Pagination from '@/components/Pagination';
 import StatusBadge from '@/components/jl/StatusBadge';
-import { Head } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { usePagination } from '@/hooks/usePagination';
 import type { JlEntry } from '@/types/jl';
@@ -17,8 +18,17 @@ function fmtAmt(n: number) {
 }
 
 export default function MyRequests({ entries }: Props) {
-    const [modal, setModal] = useState<JlEntry | null>(null);
+    const { props } = usePage<{ flash: { success?: string }; [key: string]: unknown }>();
+    const [modal, setModal]             = useState<JlEntry | null>(null);
+    const [cancelEntry, setCancelEntry] = useState<JlEntry | null>(null);
     const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(entries);
+
+    function handleCancel(id: number) {
+        router.patch(`/jl/${id}/cancel`, {}, {
+            preserveScroll: true,
+            onSuccess: () => setCancelEntry(null),
+        });
+    }
 
     return (
         <AppLayout>
@@ -28,6 +38,8 @@ export default function MyRequests({ entries }: Props) {
                 <p>This is a list of every JL form you've submitted, along with its current status.</p>
                 <ul className="mt-2 list-disc pl-4">
                     <li>Click <strong>View</strong> on any row to see full details, including the assigned serial number once approved.</li>
+                    <li><strong>Cancel</strong> — pull back a request while it's still Pending, before a reviewer has acted on it.</li>
+                    <li><strong>Edit &amp; Resubmit</strong> — fix a cancelled request and send it back for review, keeping the same reference number.</li>
                     <li>Statuses update automatically as your form moves through review, approval, and processing.</li>
                 </ul>
             </InfoPanel>
@@ -36,6 +48,12 @@ export default function MyRequests({ entries }: Props) {
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>My Requests</h1>
                 <p className="mt-1 text-sm text-gray-500">Track the status of the JL forms you've submitted.</p>
             </div>
+
+            {props.flash?.success && (
+                <div className="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+                    {props.flash.success}
+                </div>
+            )}
 
             <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
                 <div className="overflow-x-auto">
@@ -80,12 +98,30 @@ export default function MyRequests({ entries }: Props) {
                                         )}
                                     </td>
                                     <td className="whitespace-nowrap px-3.5 py-3 text-right">
-                                        <button
-                                            onClick={() => setModal(e)}
-                                            className="rounded-md border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-                                        >
-                                            View
-                                        </button>
+                                        <div className="flex justify-end gap-2">
+                                            {e.status === 'Pending' && (
+                                                <button
+                                                    onClick={() => setCancelEntry(e)}
+                                                    className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            {e.status === 'Cancelled' && (
+                                                <Link
+                                                    href={`/jl/${e.id}/edit`}
+                                                    className="rounded-md border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                                >
+                                                    Edit &amp; Resubmit
+                                                </Link>
+                                            )}
+                                            <button
+                                                onClick={() => setModal(e)}
+                                                className="rounded-md border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                            >
+                                                View
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -103,6 +139,12 @@ export default function MyRequests({ entries }: Props) {
             </div>
 
             <JlModal entry={modal} context="purchasing" onClose={() => setModal(null)} />
+
+            <CancelModal
+                entry={cancelEntry}
+                onClose={() => setCancelEntry(null)}
+                onConfirm={handleCancel}
+            />
         </AppLayout>
     );
 }

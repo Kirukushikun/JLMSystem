@@ -124,6 +124,76 @@ class JlController extends Controller
         return back()->with('success', "Form submitted! Reference: {$entry->reference}");
     }
 
+    public function cancel(JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->user_id !== auth()->id(), 403);
+        abort_if($entry->status !== 'Pending', 422, 'Only pending requests can be cancelled.');
+
+        $entry->update(['status' => 'Cancelled']);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'cancelled',
+            'actor'       => auth()->user()->name,
+        ]);
+
+        return back()->with('success', "{$entry->reference} has been cancelled. Edit and resubmit it anytime from My Requests.");
+    }
+
+    public function edit(JlEntry $entry): Response
+    {
+        abort_if($entry->user_id !== auth()->id(), 403);
+        abort_if($entry->status !== 'Cancelled', 422, 'Only cancelled requests can be edited.');
+
+        return Inertia::render('jl/Submit', [
+            'companies'   => Company::orderBy('name')->get(['id', 'name']),
+            'departments' => Department::orderBy('name')->get(['id', 'name']),
+            'editEntry'   => $entry,
+        ]);
+    }
+
+    public function resubmit(StoreJlRequest $request, JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->user_id !== auth()->id(), 403);
+        abort_if($entry->status !== 'Cancelled', 422, 'Only cancelled requests can be resubmitted.');
+
+        $data = $request->safe()->except(['attachment']);
+        $user = auth()->user();
+
+        if ($user->role === 'requestor') {
+            $data['company'] = $user->company;
+            $data['dept']    = $user->dept;
+        }
+
+        if ($request->hasFile('attachment')) {
+            if ($entry->attachment) {
+                Storage::disk('local')->delete($entry->attachment);
+            }
+            $file                    = $request->file('attachment');
+            $data['attachment']      = $file->store('jl-attachments', 'local');
+            $data['attachment_name'] = $file->getClientOriginalName();
+        }
+
+        $entry->update([
+            ...$data,
+            'status'       => 'Pending',
+            'submitted_at' => now()->toDateString(),
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'resubmitted',
+            'actor'       => null,
+        ]);
+
+        $this->notifyRoles(['reviewer', 'admin'], $entry, 'submitted',
+            'JL Form Resubmitted',
+            "{$entry->reference} — {$entry->company} ({$entry->dept})"
+        );
+
+        return redirect()->route('jl.myRequests')->with('success', "Corrected and resubmitted! Reference: {$entry->reference}");
+    }
+
     public function attachment(JlEntry $entry): StreamedResponse
     {
         abort_if(! $entry->attachment, 404);
@@ -435,10 +505,10 @@ class JlController extends Controller
     private function allowedExportStatuses(string $role): array
     {
         return match ($role) {
-            'reviewer'   => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
+            'reviewer'   => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
             'vp'         => ['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
             'purchasing' => ['Approved', 'On Process', 'On Hold'],
-            'admin'      => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
+            'admin'      => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
             default      => [],
         };
     }

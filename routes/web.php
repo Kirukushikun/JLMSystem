@@ -19,6 +19,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/', [JlController::class, 'submit'])->middleware('role:requestor,admin')->name('jl.submit');
     Route::post('/jl', [JlController::class, 'store'])->middleware('role:requestor,admin')->name('jl.store');
     Route::get('/my-requests', [JlController::class, 'myRequests'])->middleware('role:requestor,admin')->name('jl.myRequests');
+    Route::patch('/jl/{entry}/cancel', [JlController::class, 'cancel'])->middleware('role:requestor,admin')->name('jl.cancel');
+    Route::get('/jl/{entry}/edit', [JlController::class, 'edit'])->middleware('role:requestor,admin')->name('jl.edit');
+    Route::patch('/jl/{entry}/resubmit', [JlController::class, 'resubmit'])->middleware('role:requestor,admin')->name('jl.resubmit');
 
     // Dashboards
     Route::get('/reviewer',   [JlController::class, 'reviewer'])->middleware('role:reviewer,admin')->name('jl.reviewer');

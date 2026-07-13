@@ -5,7 +5,8 @@ export type JlStatus =
     | 'Approved'
     | 'VP Rejected'
     | 'On Hold'
-    | 'On Process';
+    | 'On Process'
+    | 'Cancelled';
 
 export interface JlEntry {
     id: number;

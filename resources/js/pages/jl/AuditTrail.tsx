@@ -8,7 +8,7 @@ import { usePagination } from '@/hooks/usePagination';
 interface AuditLog {
     id: number;
     jl_entry_id: number;
-    event: 'submitted' | 'reviewed' | 'approved' | 'rejected' | 'vp_rejected' | 'on_hold' | 'on_process';
+    event: 'submitted' | 'reviewed' | 'approved' | 'rejected' | 'vp_rejected' | 'on_hold' | 'on_process' | 'cancelled' | 'resubmitted';
     actor: string | null;
     notes: string | null;
     created_at: string;
@@ -31,6 +31,8 @@ const EVENT_META: Record<AuditLog['event'], { label: string; bg: string; color: 
     vp_rejected: { label: 'Rejected by VP',  bg: '#fce7f3', color: '#9d174d' },
     on_hold:     { label: 'On Hold',         bg: '#fef3c7', color: '#92400e' },
     on_process:  { label: 'On Process',      bg: '#ede9fe', color: '#5b21b6' },
+    cancelled:   { label: 'Cancelled',       bg: '#f3f4f6', color: '#4b5563' },
+    resubmitted: { label: 'Resubmitted',     bg: '#fef3c7', color: '#92400e' },
 };
 
 function EventBadge({ event }: { event: AuditLog['event'] }) {
@@ -146,6 +148,8 @@ export default function AuditTrail({ logs }: Props) {
                     <option value="vp_rejected">Rejected by VP</option>
                     <option value="on_hold">On Hold</option>
                     <option value="on_process">On Process</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="resubmitted">Resubmitted</option>
                 </select>
                 {(search || eventFilter) && (
                     <button
