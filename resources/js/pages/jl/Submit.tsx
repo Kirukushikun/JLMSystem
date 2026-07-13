@@ -46,7 +46,12 @@ export default function Submit() {
 
     function doSubmit() {
         if (isEdit) {
-            form.patch(`/jl/${editEntry!.id}/resubmit`, {
+            // PHP never parses multipart/form-data bodies on PATCH/PUT/DELETE — only
+            // on POST. So this must go out as a real POST with a _method override
+            // field; Laravel then routes it to the PATCH handler while still parsing
+            // the file upload correctly.
+            form.transform((data) => ({ ...data, _method: 'patch' }));
+            form.post(`/jl/${editEntry!.id}/resubmit`, {
                 forceFormData: true,
                 onSuccess: () => setShowSummary(false),
             });

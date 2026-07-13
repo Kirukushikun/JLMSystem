@@ -60,7 +60,7 @@ export default function MyRequests({ entries }: Props) {
                     <table className="w-full border-collapse text-sm">
                         <thead>
                             <tr className="border-b-2 border-gray-200 bg-gray-50">
-                                {['Reference', 'JL Title', 'Date', 'Company / Farm', 'Est. Amount', 'Status', 'Serial No.', ''].map((h) => (
+                                {['Serial No.', 'JL Title', 'Status', 'Company / Farm', 'Department', 'Manager', 'Cost', 'Date', ''].map((h) => (
                                     <th
                                         key={h}
                                         className="whitespace-nowrap px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400"
@@ -73,30 +73,31 @@ export default function MyRequests({ entries }: Props) {
                         <tbody>
                             {entries.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
+                                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
                                         You haven't submitted any JL forms yet.
                                     </td>
                                 </tr>
                             )}
                             {pageItems.map((e) => (
                                 <tr key={e.id} className="border-b border-gray-100 transition hover:bg-gray-50">
-                                    <td className="whitespace-nowrap px-3.5 py-3 font-mono text-xs text-gray-500">{e.reference}</td>
-                                    <td className="max-w-xs truncate whitespace-nowrap px-3.5 py-3 font-medium">{e.title}</td>
-                                    <td className="whitespace-nowrap px-3.5 py-3 text-gray-500">{e.date}</td>
-                                    <td className="whitespace-nowrap px-3.5 py-3">{e.company}</td>
-                                    <td className="whitespace-nowrap px-3.5 py-3 tabular-nums">{fmtAmt(e.amount)}</td>
-                                    <td className="whitespace-nowrap px-3.5 py-3">
-                                        <StatusBadge status={e.status} />
-                                    </td>
                                     <td className="whitespace-nowrap px-3.5 py-3">
                                         {e.serial ? (
                                             <span className="font-mono text-xs font-bold" style={{ color: '#1e3a5f' }}>
                                                 {e.serial}
                                             </span>
                                         ) : (
-                                            <span className="text-xs italic text-gray-400">—</span>
+                                            <span className="text-xs italic text-gray-400">Pending approval</span>
                                         )}
                                     </td>
+                                    <td className="max-w-xs truncate whitespace-nowrap px-3.5 py-3 font-medium">{e.title}</td>
+                                    <td className="whitespace-nowrap px-3.5 py-3">
+                                        <StatusBadge status={e.status} />
+                                    </td>
+                                    <td className="whitespace-nowrap px-3.5 py-3">{e.company}</td>
+                                    <td className="whitespace-nowrap px-3.5 py-3">{e.dept}</td>
+                                    <td className="whitespace-nowrap px-3.5 py-3">{e.manager}</td>
+                                    <td className="whitespace-nowrap px-3.5 py-3 tabular-nums">{fmtAmt(e.amount)}</td>
+                                    <td className="whitespace-nowrap px-3.5 py-3 text-gray-500">{e.date}</td>
                                     <td className="whitespace-nowrap px-3.5 py-3 text-right">
                                         <div className="flex justify-end gap-2">
                                             {e.status === 'Pending' && (

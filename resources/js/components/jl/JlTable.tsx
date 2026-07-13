@@ -24,12 +24,12 @@ function fmtAmt(n: number) {
 const HEADERS = [
     'Serial No.',
     'JL Title',
-    'Date',
-    'Company / Farm',
-    'Manager / Supervisor',
-    'Department',
-    'Est. Amount',
     'Status',
+    'Company / Farm',
+    'Department',
+    'Manager',
+    'Cost',
+    'Date',
     'Action',
 ];
 
@@ -237,16 +237,16 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                                 <td className="max-w-xs truncate whitespace-nowrap px-3.5 py-3 font-medium">
                                     {e.title}
                                 </td>
-                                <td className="whitespace-nowrap px-3.5 py-3 text-gray-500">{e.date}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.company}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.manager}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.dept}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3 tabular-nums">
-                                    {fmtAmt(e.amount)}
-                                </td>
                                 <td className="whitespace-nowrap px-3.5 py-3">
                                     <StatusBadge status={e.status} />
                                 </td>
+                                <td className="whitespace-nowrap px-3.5 py-3">{e.company}</td>
+                                <td className="whitespace-nowrap px-3.5 py-3">{e.dept}</td>
+                                <td className="whitespace-nowrap px-3.5 py-3">{e.manager}</td>
+                                <td className="whitespace-nowrap px-3.5 py-3 tabular-nums">
+                                    {fmtAmt(e.amount)}
+                                </td>
+                                <td className="whitespace-nowrap px-3.5 py-3 text-gray-500">{e.date}</td>
 
                                 {/* ── STICKY LAST: Action ── */}
                                 <td
