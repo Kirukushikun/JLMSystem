@@ -84,12 +84,11 @@ class JlController extends Controller
         $data = $request->safe()->except(['attachment']);
         $user = auth()->user();
 
-        // Requestors submit for their own assigned farm/department only — the
-        // fields are disabled client-side, but that's not a security boundary,
-        // so the account's values always win over whatever was posted.
+        // Requestors can pick a different farm than their account's default, but
+        // department stays locked to the account — the field is disabled client-side,
+        // which isn't a security boundary, so the account's value always wins here.
         if ($user->role === 'requestor') {
-            $data['company'] = $user->company;
-            $data['dept']    = $user->dept;
+            $data['dept'] = $user->dept;
         }
 
         $path         = null;
@@ -161,8 +160,7 @@ class JlController extends Controller
         $user = auth()->user();
 
         if ($user->role === 'requestor') {
-            $data['company'] = $user->company;
-            $data['dept']    = $user->dept;
+            $data['dept'] = $user->dept;
         }
 
         if ($request->hasFile('attachment')) {
@@ -192,6 +190,36 @@ class JlController extends Controller
         );
 
         return redirect()->route('jl.myRequests')->with('success', "Corrected and resubmitted! Reference: {$entry->reference}");
+    }
+
+    /**
+     * Stopgap: lets a requestor attach a supporting file to their own request
+     * regardless of its current status, as long as it doesn't already have one.
+     * For entries that reached this system via migration/import without a file.
+     */
+    public function uploadAttachment(Request $request, JlEntry $entry): RedirectResponse
+    {
+        abort_if($entry->user_id !== auth()->id(), 403);
+        abort_if($entry->attachment, 422, 'This request already has an attachment.');
+
+        $request->validate([
+            'attachment' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
+        ]);
+
+        $file = $request->file('attachment');
+
+        $entry->update([
+            'attachment'      => $file->store('jl-attachments', 'local'),
+            'attachment_name' => $file->getClientOriginalName(),
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event'       => 'attachment_added',
+            'actor'       => auth()->user()->name,
+        ]);
+
+        return back()->with('success', "Attachment added to {$entry->reference}.");
     }
 
     public function attachment(JlEntry $entry): StreamedResponse

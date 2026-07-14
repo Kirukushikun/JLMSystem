@@ -80,8 +80,10 @@ export default function Submit() {
                     <li><strong>Title</strong> — brief description of the job labor cost.</li>
                     <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
                     <li>
-                        <strong>Company / Farm</strong> and <strong>Department</strong> —{' '}
-                        {isRequestor ? 'pre-filled from your account and locked to prevent mistakes.' : 'select from the available options.'}
+                        <strong>Company / Farm</strong> — {isRequestor ? "pre-filled from your account, but you can pick a different farm if this request is for one." : 'select from the available options.'}
+                    </li>
+                    <li>
+                        <strong>Department</strong> — {isRequestor ? 'pre-filled from your account and locked to prevent mistakes.' : 'select from the available options.'}
                     </li>
                     <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
                     <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
@@ -145,21 +147,17 @@ export default function Submit() {
 
                     <div>
                         <Label>Company / Farm *</Label>
-                        {isRequestor ? (
-                            <input className={INPUT} value={form.data.company} disabled />
-                        ) : (
-                            <select
-                                className={INPUT}
-                                value={form.data.company}
-                                onChange={(e) => form.setData('company', e.target.value)}
-                                disabled={form.processing}
-                            >
-                                <option value="">— Select company —</option>
-                                {companies.map((c) => (
-                                    <option key={c.id} value={c.name}>{c.name}</option>
-                                ))}
-                            </select>
-                        )}
+                        <select
+                            className={INPUT}
+                            value={form.data.company}
+                            onChange={(e) => form.setData('company', e.target.value)}
+                            disabled={form.processing}
+                        >
+                            <option value="">— Select company —</option>
+                            {companies.map((c) => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>

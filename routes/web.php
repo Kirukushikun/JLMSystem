@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/jl/{entry}/cancel', [JlController::class, 'cancel'])->middleware('role:requestor,admin')->name('jl.cancel');
     Route::get('/jl/{entry}/edit', [JlController::class, 'edit'])->middleware('role:requestor,admin')->name('jl.edit');
     Route::patch('/jl/{entry}/resubmit', [JlController::class, 'resubmit'])->middleware('role:requestor,admin')->name('jl.resubmit');
+    Route::post('/jl/{entry}/upload-attachment', [JlController::class, 'uploadAttachment'])->middleware('role:requestor,admin')->name('jl.uploadAttachment');
 
     // Dashboards
     Route::get('/reviewer',   [JlController::class, 'reviewer'])->middleware('role:reviewer,admin')->name('jl.reviewer');

@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/AppLayout';
 import InfoPanel from '@/components/InfoPanel';
+import AttachmentUploadModal from '@/components/jl/AttachmentUploadModal';
 import CancelModal from '@/components/jl/CancelModal';
 import JlModal from '@/components/jl/JlModal';
 import Pagination from '@/components/Pagination';
@@ -21,6 +22,7 @@ export default function MyRequests({ entries }: Props) {
     const { props } = usePage<{ flash: { success?: string }; [key: string]: unknown }>();
     const [modal, setModal]             = useState<JlEntry | null>(null);
     const [cancelEntry, setCancelEntry] = useState<JlEntry | null>(null);
+    const [attachEntry, setAttachEntry] = useState<JlEntry | null>(null);
     const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(entries);
 
     function handleCancel(id: number) {
@@ -40,6 +42,7 @@ export default function MyRequests({ entries }: Props) {
                     <li>Click <strong>View</strong> on any row to see full details, including the assigned serial number once approved.</li>
                     <li><strong>Cancel</strong> — pull back a request while it's still Pending, before a reviewer has acted on it.</li>
                     <li><strong>Edit &amp; Resubmit</strong> — fix a cancelled request and send it back for review, keeping the same reference number.</li>
+                    <li><strong>Add Attachment</strong> — available on any request that doesn't have a file yet, regardless of its status.</li>
                     <li>Statuses update automatically as your form moves through review, approval, and processing.</li>
                 </ul>
             </InfoPanel>
@@ -116,6 +119,14 @@ export default function MyRequests({ entries }: Props) {
                                                     Edit &amp; Resubmit
                                                 </Link>
                                             )}
+                                            {!e.attachment && (
+                                                <button
+                                                    onClick={() => setAttachEntry(e)}
+                                                    className="rounded-md border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                                >
+                                                    Add Attachment
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => setModal(e)}
                                                 className="rounded-md border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
@@ -145,6 +156,11 @@ export default function MyRequests({ entries }: Props) {
                 entry={cancelEntry}
                 onClose={() => setCancelEntry(null)}
                 onConfirm={handleCancel}
+            />
+
+            <AttachmentUploadModal
+                entry={attachEntry}
+                onClose={() => setAttachEntry(null)}
             />
         </AppLayout>
     );
