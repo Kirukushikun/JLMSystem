@@ -89,10 +89,15 @@ export default function AuditTrail({ logs }: Props) {
             <InfoPanel type="overview" title="Audit Trail">
                 <p>A complete, chronological log of every action taken on JL forms across the entire system.</p>
                 <ul className="mt-2 list-disc pl-4">
-                    <li><strong>Submitted</strong> — recorded when a form is submitted via the public link (no actor).</li>
+                    <li><strong>Submitted</strong> — recorded when a requestor submits a new form (no actor for the initial submission).</li>
                     <li><strong>Reviewed</strong> — recorded when a Reviewer marks a form as Reviewed.</li>
                     <li><strong>Approved</strong> — recorded when the VP Approver gives final approval.</li>
                     <li><strong>Rejected / Rejected by VP</strong> — recorded with the actor and rejection reason (if provided).</li>
+                    <li><strong>On Hold</strong> — recorded when any role pauses a form, with an optional reason.</li>
+                    <li><strong>On Process</strong> — recorded when Purchasing marks an approved form as being processed.</li>
+                    <li><strong>Cancelled</strong> — recorded when a requestor pulls back their own Pending request before it's reviewed.</li>
+                    <li><strong>Resubmitted</strong> — recorded when a requestor corrects and resends a cancelled request; it keeps the same reference number.</li>
+                    <li><strong>Attachment Added</strong> — recorded when a requestor uploads a supporting file to a request that didn't have one.</li>
                 </ul>
                 <p className="mt-2">Use the search and filter to narrow down by reference, company, actor, or event type.</p>
             </InfoPanel>
@@ -100,7 +105,7 @@ export default function AuditTrail({ logs }: Props) {
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>Audit Trail</h1>
                 <p className="mt-1 text-sm text-gray-500">
-                    Complete log of all actions taken on JL forms — submissions, reviews, approvals, and rejections.
+                    Complete log of all actions taken on JL forms — submissions, reviews, approvals, rejections, holds, cancellations, resubmissions, and attachment uploads.
                 </p>
             </div>
 
