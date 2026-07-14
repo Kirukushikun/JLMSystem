@@ -221,12 +221,15 @@ return [
      */
     'notifications' => [
         'notifications' => [
-            BackupHasFailedNotification::class => ['mail'],
-            UnhealthyBackupWasFoundNotification::class => ['mail'],
-            CleanupHasFailedNotification::class => ['mail'],
-            BackupWasSuccessfulNotification::class => ['mail'],
-            HealthyBackupWasFoundNotification::class => ['mail'],
-            CleanupWasSuccessfulNotification::class => ['mail'],
+            // Mail notifications disabled for now: Mailtrap sandbox rate-limits emails
+            // and was masking successful backups as failures. Re-enable once a real
+            // mail provider (or a higher Mailtrap plan) is in place.
+            BackupHasFailedNotification::class => [],
+            UnhealthyBackupWasFoundNotification::class => [],
+            CleanupHasFailedNotification::class => [],
+            BackupWasSuccessfulNotification::class => [],
+            HealthyBackupWasFoundNotification::class => [],
+            CleanupWasSuccessfulNotification::class => [],
         ],
 
         /*

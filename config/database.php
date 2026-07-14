@@ -66,8 +66,7 @@ return [
                 'dump_binary_path' => env('DB_DUMP_BINARY_PATH', '/usr/bin'),
                 'use_single_transaction' => true,
                 'timeout' => 60,
-                'add_extra_option' => '--no-tablespaces', // avoids needing PROCESS privilege
-                'skip_ssl' => true, // mysqldump connects within the same docker network; avoids self-signed cert verification failure (MySQL error 2026)
+                'add_extra_option' => '--skip-ssl', 
             ],
 
         ],
