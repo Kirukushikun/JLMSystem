@@ -8,11 +8,17 @@ interface Props {
     onClose: () => void;
     onCheck?: (id: number) => void;
     onApprove?: (id: number) => void;
+    onProcess?: (id: number) => void;
     onRejectClick?: () => void;
     showRejectBox?: boolean;
     rejectReason?: string;
     onRejectReasonChange?: (v: string) => void;
     onConfirmReject?: () => void;
+    onHoldClick?: () => void;
+    showHoldBox?: boolean;
+    holdReason?: string;
+    onHoldReasonChange?: (v: string) => void;
+    onConfirmHold?: () => void;
 }
 
 type WfState = 'idle' | 'active' | 'done';
@@ -56,11 +62,17 @@ export default function JlModal({
     onClose,
     onCheck,
     onApprove,
+    onProcess,
     onRejectClick,
     showRejectBox,
     rejectReason,
     onRejectReasonChange,
     onConfirmReject,
+    onHoldClick,
+    showHoldBox,
+    holdReason,
+    onHoldReasonChange,
+    onConfirmHold,
 }: Props) {
     useEffect(() => {
         function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -78,9 +90,24 @@ export default function JlModal({
     const approvedState: WfState = ['Approved', 'On Process'].includes(effective)
         ? 'done' : effective === 'Reviewed' ? 'active' : 'idle';
 
-    const canCheck   = context === 'reviewer' && (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
-    const canApprove = context === 'vp' && (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
-    const canReject  = canCheck || canApprove;
+    const canCheck          = context === 'reviewer' && (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
+    const canApprove        = context === 'vp' && (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
+    const canReapprove      = context === 'vp' && s === 'VP Rejected';
+    const canRejectApproved = context === 'vp' && s === 'Approved';
+    const canProcess        = context === 'purchasing'
+        && (s === 'Approved' || (s === 'On Hold' && (entry.held_at === 'Approved' || entry.held_at === 'On Process')));
+
+    const canReject = canCheck || canApprove || canRejectApproved;
+    const canHold   = canCheck || canApprove || canRejectApproved
+        || (context === 'purchasing' && (s === 'Approved' || s === 'On Process'));
+
+    // VP viewing something that was on the approved track but has since moved past
+    // the reject-eligible window — the instant literal status leaves 'Approved'
+    // (On Process, or held at either stage), that window is closed for good.
+    const wasApprovedTrack   = effective === 'Approved' || effective === 'On Process';
+    const rejectWindowClosed = context === 'vp' && wasApprovedTrack && s !== 'Approved';
+
+    const showingBox = showRejectBox || showHoldBox;
 
     return (
         <div
@@ -163,6 +190,12 @@ export default function JlModal({
                     )}
                 </div>
 
+                {rejectWindowClosed && (
+                    <div className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        ⚠ This request has already moved on with Purchasing and can no longer be rejected.
+                    </div>
+                )}
+
                 {/* Reject reason textarea */}
                 {showRejectBox && (
                     <div className="mt-4">
@@ -179,9 +212,25 @@ export default function JlModal({
                     </div>
                 )}
 
+                {/* Hold reason textarea */}
+                {showHoldBox && (
+                    <div className="mt-4">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Reason for Hold (optional)
+                        </label>
+                        <textarea
+                            rows={3}
+                            value={holdReason}
+                            onChange={(e) => onHoldReasonChange?.(e.target.value)}
+                            placeholder="Note why this is being held…"
+                            className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                        />
+                    </div>
+                )}
+
                 {/* Action buttons */}
                 <div className="mt-6 flex flex-wrap justify-end gap-2">
-                    {!showRejectBox ? (
+                    {!showingBox ? (
                         <>
                             <button
                                 onClick={onClose}
@@ -189,6 +238,14 @@ export default function JlModal({
                             >
                                 Close
                             </button>
+                            {canHold && (
+                                <button
+                                    onClick={onHoldClick}
+                                    className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                                >
+                                    <i class="fa-solid fa-pause"></i> On Hold
+                                </button>
+                            )}
                             {canReject && (
                                 <button
                                     onClick={onRejectClick}
@@ -205,16 +262,24 @@ export default function JlModal({
                                     <i class="fa-solid fa-check"></i> Mark as Reviewed
                                 </button>
                             )}
-                            {canApprove && (
+                            {(canApprove || canReapprove) && (
                                 <button
                                     onClick={() => { onApprove?.(entry.id); onClose(); }}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    <i class="fa-solid fa-check"></i> Approve
+                                    <i class="fa-solid fa-check"></i> {canReapprove ? 'Re-Approve' : 'Approve'}
+                                </button>
+                            )}
+                            {canProcess && (
+                                <button
+                                    onClick={() => { onProcess?.(entry.id); onClose(); }}
+                                    className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                                >
+                                    <i class="fa-solid fa-play"></i> On Process
                                 </button>
                             )}
                         </>
-                    ) : (
+                    ) : showRejectBox ? (
                         <>
                             <button
                                 onClick={onClose}
@@ -227,6 +292,21 @@ export default function JlModal({
                                 className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
                                 ⚠ Confirm Rejection
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmHold}
+                                className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                <i class="fa-solid fa-pause"></i> Confirm On Hold
                             </button>
                         </>
                     )}

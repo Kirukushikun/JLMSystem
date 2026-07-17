@@ -32,6 +32,8 @@ export default function Vp({ entries }: Props) {
     const [rejectReason, setRejectReason]   = useState('');
     const [rejectEntry, setRejectEntry]     = useState<JlEntry | null>(null);
     const [holdEntry, setHoldEntry]         = useState<JlEntry | null>(null);
+    const [showHoldBox, setShowHoldBox]     = useState(false);
+    const [holdReasonModal, setHoldReasonModal] = useState('');
     const [showExport, setShowExport]       = useState(false);
     const [toast, setToast]                 = useState('');
 
@@ -41,7 +43,7 @@ export default function Vp({ entries }: Props) {
     }
 
     function closeModal() {
-        setModal(null); setShowRejectBox(false); setRejectReason('');
+        setModal(null); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
     }
 
     function handleApprove(id: number) {
@@ -56,6 +58,14 @@ export default function Vp({ entries }: Props) {
         router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
             preserveScroll: true,
             onSuccess: () => { closeModal(); showToast('Form rejected by VP.'); },
+        });
+    }
+
+    function handleConfirmHoldModal() {
+        if (!modal) return;
+        router.patch(`/jl/${modal.id}/hold`, { reason: holdReasonModal }, {
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); showToast('Entry put on hold.'); },
         });
     }
 
@@ -102,6 +112,8 @@ export default function Vp({ entries }: Props) {
                     <li><strong>Approve</strong> — grants final approval and triggers the auto-generated serial number.</li>
                     <li><strong>Reject</strong> — opens a confirmation with an optional reason; status becomes VP Rejected.</li>
                     <li><strong>On Hold</strong> — pauses a Reviewed form with an optional reason. Use <strong>View Details</strong> on any held entry to see the hold reason.</li>
+                    <li><strong>Re-Approve</strong> — a form you previously rejected (VP Rejected) can be approved after all; it gets a fresh serial number.</li>
+                    <li><strong>Reject after approval</strong> — you can still reject a form you already approved, but only while Purchasing hasn't acted on it yet. The moment it moves On Process (or gets held at that stage), that window closes — the request detail view will tell you if it's too late.</li>
                     <li>Forms marked <strong>Reviewer Rejected</strong> are visible here for reference but require no action.</li>
                 </ul>
             </InfoPanel>
@@ -156,7 +168,7 @@ export default function Vp({ entries }: Props) {
                 <JlTable
                     entries={pageItems}
                     context="vp"
-                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
+                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
                 />
@@ -180,6 +192,11 @@ export default function Vp({ entries }: Props) {
                 rejectReason={rejectReason}
                 onRejectReasonChange={setRejectReason}
                 onConfirmReject={handleConfirmReject}
+                onHoldClick={() => setShowHoldBox(true)}
+                showHoldBox={showHoldBox}
+                holdReason={holdReasonModal}
+                onHoldReasonChange={setHoldReasonModal}
+                onConfirmHold={handleConfirmHoldModal}
             />
 
             <RejectModal

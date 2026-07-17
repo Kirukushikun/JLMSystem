@@ -262,20 +262,27 @@ class JlController extends Controller
     public function approve(JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
-        abort_if($effective !== 'Reviewed', 422, 'Entry is not reviewed.');
+
+        // VP Rejected is included so the VP can re-approve their own past rejection —
+        // this is the only re-entry point into Approved besides the normal Reviewed path.
+        abort_if(! in_array($effective, ['Reviewed', 'VP Rejected']), 422, 'Entry is not reviewed.');
+
+        $isReapproval = $effective === 'VP Rejected';
 
         $entry->update([
-            'status'      => 'Approved',
-            'held_at'     => null,
-            'hold_reason' => null,
-            'approved_at' => now()->toDateString(),
-            'serial'      => $this->generateSerial($entry),
+            'status'        => 'Approved',
+            'held_at'       => null,
+            'hold_reason'   => null,
+            'reject_reason' => null,
+            'approved_at'   => now()->toDateString(),
+            'serial'        => $this->generateSerial($entry),
         ]);
 
         JlAuditLog::create([
             'jl_entry_id' => $entry->id,
             'event'       => 'approved',
             'actor'       => auth()->user()->name,
+            'notes'       => $isReapproval ? 'Re-approved after a previous VP rejection.' : null,
         ]);
 
         $this->notifyRoles(['purchasing', 'admin'], $entry, 'approved',
@@ -288,25 +295,49 @@ class JlController extends Controller
 
     public function reject(Request $request, JlEntry $entry): RedirectResponse
     {
-        $effective  = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
-        abort_if(! in_array($effective, ['Pending', 'Reviewed']), 422, 'Entry cannot be rejected.');
+        $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+        $user      = auth()->user();
 
-        $isVpReject = $effective === 'Reviewed';
+        // VP can walk back their own approval, but only while it's still plainly
+        // Approved — the instant Purchasing does anything to it (On Process, On Hold,
+        // whatever), that window closes. This is a separate, VP-only reject path,
+        // distinct from the normal Pending/Reviewed rejection every role above can do.
+        $canRejectApproved = in_array($user->role, ['vp', 'admin'], true) && $entry->status === 'Approved';
+
+        abort_if(
+            ! in_array($effective, ['Pending', 'Reviewed'], true) && ! $canRejectApproved,
+            422,
+            'Entry cannot be rejected.'
+        );
+
+        $isVpReject = $canRejectApproved || $effective === 'Reviewed';
         $reason     = $request->input('reject_reason') ?: 'No reason provided.';
 
-        $entry->update([
+        $updateData = [
             'status'        => $isVpReject ? 'VP Rejected' : 'Rejected',
             'held_at'       => null,
             'hold_reason'   => null,
             'reviewed_at'   => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $reason,
-        ]);
+        ];
+
+        if ($canRejectApproved) {
+            // Undoing a finalized approval — the serial slot and approval date go
+            // with it, so generateSerial()'s per-company count doesn't keep counting
+            // an approval that no longer stands.
+            $updateData['serial']      = null;
+            $updateData['approved_at'] = null;
+        }
+
+        $entry->update($updateData);
 
         JlAuditLog::create([
             'jl_entry_id' => $entry->id,
             'event'       => $isVpReject ? 'vp_rejected' : 'rejected',
             'actor'       => auth()->user()->name,
-            'notes'       => $request->input('reject_reason') ?: null,
+            'notes'       => $canRejectApproved
+                ? 'Rejected after approval, before Purchasing action.' . ($request->input('reject_reason') ? ' ' . $request->input('reject_reason') : '')
+                : ($request->input('reject_reason') ?: null),
         ]);
 
         if ($isVpReject) {

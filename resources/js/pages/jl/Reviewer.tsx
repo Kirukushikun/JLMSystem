@@ -32,6 +32,8 @@ export default function Reviewer({ entries }: Props) {
     const [rejectReason, setRejectReason] = useState('');
     const [rejectEntry, setRejectEntry]   = useState<JlEntry | null>(null);
     const [holdEntry, setHoldEntry]       = useState<JlEntry | null>(null);
+    const [showHoldBox, setShowHoldBox]   = useState(false);
+    const [holdReasonModal, setHoldReasonModal] = useState('');
     const [showExport, setShowExport]     = useState(false);
     const [toast, setToast]               = useState('');
 
@@ -41,7 +43,7 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function closeModal() {
-        setModal(null); setShowRejectBox(false); setRejectReason('');
+        setModal(null); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
     }
 
     function handleCheck(id: number) {
@@ -56,6 +58,14 @@ export default function Reviewer({ entries }: Props) {
         router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
             preserveScroll: true,
             onSuccess: () => { closeModal(); showToast('Form rejected.'); },
+        });
+    }
+
+    function handleConfirmHoldModal() {
+        if (!modal) return;
+        router.patch(`/jl/${modal.id}/hold`, { reason: holdReasonModal }, {
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); showToast('Entry put on hold.'); },
         });
     }
 
@@ -159,7 +169,7 @@ export default function Reviewer({ entries }: Props) {
                 <JlTable
                     entries={pageItems}
                     context="reviewer"
-                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); }}
+                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
                 />
@@ -183,6 +193,11 @@ export default function Reviewer({ entries }: Props) {
                 rejectReason={rejectReason}
                 onRejectReasonChange={setRejectReason}
                 onConfirmReject={handleConfirmReject}
+                onHoldClick={() => setShowHoldBox(true)}
+                showHoldBox={showHoldBox}
+                holdReason={holdReasonModal}
+                onHoldReasonChange={setHoldReasonModal}
+                onConfirmHold={handleConfirmHoldModal}
             />
 
             <RejectModal

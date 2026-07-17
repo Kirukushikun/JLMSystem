@@ -30,14 +30,20 @@ export default function Purchasing({ entries }: Props) {
     const [holdEntry, setHoldEntry]     = useState<JlEntry | null>(null);
     const [showExport, setShowExport]   = useState(false);
     const [toast, setToast]             = useState('');
+    const [showHoldBox, setShowHoldBox] = useState(false);
+    const [holdReasonModal, setHoldReasonModal] = useState('');
 
     function showToast(msg: string) {
         setToast(msg);
         setTimeout(() => setToast(''), 3000);
     }
 
-    function handleProcess(entry: JlEntry) {
-        router.patch(`/jl/${entry.id}/process`, {}, {
+    function closeModal() {
+        setViewEntry(null); setShowHoldBox(false); setHoldReasonModal('');
+    }
+
+    function handleProcess(id: number) {
+        router.patch(`/jl/${id}/process`, {}, {
             preserveScroll: true,
             onSuccess: () => showToast('Marked as On Process.'),
         });
@@ -47,6 +53,14 @@ export default function Purchasing({ entries }: Props) {
         router.patch(`/jl/${id}/hold`, { reason }, {
             preserveScroll: true,
             onSuccess: () => { setHoldEntry(null); showToast('Entry put on hold.'); },
+        });
+    }
+
+    function handleConfirmHoldModal() {
+        if (!viewEntry) return;
+        router.patch(`/jl/${viewEntry.id}/hold`, { reason: holdReasonModal }, {
+            preserveScroll: true,
+            onSuccess: () => { closeModal(); showToast('Entry put on hold.'); },
         });
     }
 
@@ -120,9 +134,9 @@ export default function Purchasing({ entries }: Props) {
                 <JlTable
                     entries={pageItems}
                     context="purchasing"
-                    onView={setViewEntry}
+                    onView={(e) => { setViewEntry(e); setShowHoldBox(false); setHoldReasonModal(''); }}
                     onHold={setHoldEntry}
-                    onProcess={handleProcess}
+                    onProcess={(entry) => handleProcess(entry.id)}
                 />
                 <Pagination
                     page={page}
@@ -137,7 +151,13 @@ export default function Purchasing({ entries }: Props) {
             <JlModal
                 entry={viewEntry}
                 context="purchasing"
-                onClose={() => setViewEntry(null)}
+                onClose={closeModal}
+                onProcess={handleProcess}
+                onHoldClick={() => setShowHoldBox(true)}
+                showHoldBox={showHoldBox}
+                holdReason={holdReasonModal}
+                onHoldReasonChange={setHoldReasonModal}
+                onConfirmHold={handleConfirmHoldModal}
             />
 
             <HoldModal
