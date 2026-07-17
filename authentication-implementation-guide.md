@@ -31,9 +31,11 @@ A reusable reference for implementing the organization's standard login system i
 ```
 [Browser]
     │
-    │  POST /login (email + password)
+    │  POST /login (email + password [+ turnstile_token if enabled])
     ▼
 [LoginController]
+    │
+    ├──► [Optional] Verify Turnstile token (skip entirely if not using it)
     │
     ├──► [Cache] Check lockout (3 strikes → 15-min ban)
     │
@@ -98,6 +100,12 @@ AUTH_USER_API_KEY=your_user_lookup_api_key_here
 # External User Listing API (for User Management panel)
 USER_API_ENDPOINT=https://your-auth-server.com/api/v1/users
 USER_API_KEY=your_user_listing_api_key_here
+
+# Optional — Cloudflare Turnstile bot protection on the login form.
+# Omit entirely (or set TURNSTILE_VERIFY=false) if you don't want this.
+TURNSTILE_VERIFY=false
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
 ```
 
 ---
@@ -251,6 +259,39 @@ form.post('/login'); // on submit
 {form.errors.email && <p className="text-red-500">{form.errors.email}</p>}
 ```
 
+**Optional — Cloudflare Turnstile widget.** Skip this entirely if you're not using Turnstile. If you are, load the widget script, render its target div, and capture the token into the form before submitting:
+
+```tsx
+const turnstileRef      = useRef<HTMLDivElement>(null);
+const turnstileTokenRef = useRef('');
+
+useEffect(() => {
+    (window as any).onTurnstileReady = () => {
+        (window as any).turnstile?.render(turnstileRef.current, {
+            sitekey:  turnstileSiteKey, // passed as an Inertia prop from showLogin()
+            callback: (token: string) => { turnstileTokenRef.current = token; },
+        });
+    };
+    const script = document.createElement('script');
+    script.src   = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
+    script.async = true;
+    document.head.appendChild(script);
+    return () => document.head.removeChild(script);
+}, []);
+
+const form = useForm({ email: '', password: '', turnstile_token: '' });
+
+function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    form.transform((data) => ({ ...data, turnstile_token: turnstileTokenRef.current }));
+    form.post('/login');
+}
+
+// In the JSX, somewhere in the form:
+<div ref={turnstileRef} />
+{form.errors.turnstile_token && <p className="text-red-500">{form.errors.turnstile_token}</p>}
+```
+
 **Blade example:**
 ```blade
 @if ($errors->has('email'))
@@ -315,13 +356,29 @@ class LoginController extends Controller
 
     public function showLogin(): Response
     {
-        return Inertia::render('auth/Login');
+        return Inertia::render('auth/Login', [
+            // Optional — omit this prop entirely if not using Turnstile.
+            'turnstileSiteKey' => config('services.turnstile.site_key'),
+        ]);
         // Blade: return view('auth.login');
     }
 
     public function postLogin(Request $request): RedirectResponse
     {
         $email = $request->input('email');
+
+        // Optional — delete this whole block if not using Turnstile. Gated behind
+        // config so it's a no-op (and costs nothing) when TURNSTILE_VERIFY=false.
+        if (config('services.turnstile.verify')) {
+            $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+                'secret'   => config('services.turnstile.secret'),
+                'response' => $request->input('turnstile_token', ''),
+                'remoteip' => $request->ip(),
+            ]);
+            if (! ($verify->json('success') ?? false)) {
+                return back()->withErrors(['turnstile_token' => 'Human verification failed. Please complete the challenge and try again.'])->withInput();
+            }
+        }
 
         if ($this->isLocked($email)) {
             return back()->withErrors([
@@ -667,6 +724,13 @@ protected $routeMiddleware = [
     'endpoint' => env('USER_API_ENDPOINT', ''),
     'key'      => env('USER_API_KEY', ''),
 ],
+
+// Optional — omit this block entirely if not using Turnstile.
+'turnstile' => [
+    'site_key' => env('TURNSTILE_SITE_KEY', ''),
+    'secret'   => env('TURNSTILE_SECRET_KEY', ''),
+    'verify'   => env('TURNSTILE_VERIFY', false),
+],
 ```
 
 ---
@@ -685,6 +749,7 @@ protected $routeMiddleware = [
 | **SSL verification** | All HTTP calls use `->withOptions(['verify' => storage_path('cacert.pem')])` — copy `cacert.pem` from any existing system's `storage/` folder |
 | **App-to-app login** | `Crypt::encryptString` / `Crypt::decryptString`; both systems must share `APP_KEY` |
 | **CSRF** | All POST forms protected by Laravel's CSRF middleware |
+| **Bot protection (optional)** | Cloudflare Turnstile on the login form, gated behind `TURNSTILE_VERIFY`; entirely skippable for systems that don't need it |
 
 ---
 
@@ -874,3 +939,10 @@ class UserManagementController extends Controller
 - [ ] Create the management view (Blade or Inertia/React)
 - [ ] Add `USER_API_ENDPOINT` and `USER_API_KEY` to `.env`
 - [ ] Seed at least one admin user manually for first login
+
+**Bot protection (optional — skip this whole section if not needed):**
+- [ ] Add `TURNSTILE_VERIFY`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` to `.env`
+- [ ] Add `turnstile` block to `config/services.php`
+- [ ] Pass `turnstileSiteKey` prop from `showLogin()`
+- [ ] Render the Turnstile widget in the login view + capture the token
+- [ ] Add the `siteverify` check at the top of `postLogin()`, gated behind `config('services.turnstile.verify')`
