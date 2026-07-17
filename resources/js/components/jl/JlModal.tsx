@@ -92,13 +92,13 @@ export default function JlModal({
 
     const canCheck          = context === 'reviewer' && (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
     const canApprove        = context === 'vp' && (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
-    const canReapprove      = context === 'vp' && s === 'VP Rejected';
+    const canReapprove      = context === 'vp' && (s === 'VP Rejected' || (s === 'On Hold' && entry.held_at === 'VP Rejected'));
     const canRejectApproved = context === 'vp' && s === 'Approved';
     const canProcess        = context === 'purchasing'
         && (s === 'Approved' || (s === 'On Hold' && (entry.held_at === 'Approved' || entry.held_at === 'On Process')));
 
     const canReject = canCheck || canApprove || canRejectApproved;
-    const canHold   = canCheck || canApprove || canRejectApproved
+    const canHold   = canCheck || canApprove || canRejectApproved || canReapprove
         || (context === 'purchasing' && (s === 'Approved' || s === 'On Process'));
 
     // VP viewing something that was on the approved track but has since moved past
