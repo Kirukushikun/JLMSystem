@@ -256,6 +256,8 @@ class JlController extends Controller
             "{$entry->reference} has been reviewed and is awaiting your approval"
         );
 
+        $this->notifyVpApprovalWebhook($entry);
+
         return back();
     }
 
@@ -495,6 +497,28 @@ class JlController extends Controller
     {
         auth()->user()->unreadNotifications()->update(['read_at' => now()]);
         return response()->json(['ok' => true]);
+    }
+
+    private function notifyVpApprovalWebhook(JlEntry $entry): void
+    {
+        $url = config('services.vp_approval_webhook.url');
+        if (! $url) return;
+
+        $vpEmail = User::where('role', 'vp')->value('email');
+        if (! $vpEmail) return;
+
+        try {
+            Http::withHeaders([
+                'x-api-key' => config('services.vp_approval_webhook.api_key'),
+                'Accept'    => 'application/json',
+            ])->post($url, [
+                'email'    => $vpEmail,
+                'platform' => 'JL Monitoring',
+                'url'      => route('jl.vp'),
+            ]);
+        } catch (\Exception $e) {
+            // Webhook failures must never block the actual review action.
+        }
     }
 
     private function notifyRoles(array $roles, JlEntry $entry, string $event, string $title, string $body): void

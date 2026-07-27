@@ -58,4 +58,9 @@ return [
         'verify'   => env('TURNSTILE_VERIFY', true),
     ],
 
+    'vp_approval_webhook' => [
+        'url'     => env('VP_APPROVAL_WEBHOOK_URL', ''),
+        'api_key' => env('VP_APPROVAL_WEBHOOK_API_KEY', ''),
+    ],
+
 ];

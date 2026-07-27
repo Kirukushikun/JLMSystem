@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JL Monitoring System</title>
+  <title>JL Monitoring System — Mockup</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,21 +24,28 @@
       justify-content: space-between;
       height: 56px;
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      flex-wrap: wrap;
     }
     .nav-brand { font-size: 1rem; font-weight: 700; letter-spacing: .5px; }
-    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
     .nav-tab {
-      padding: 6px 16px;
+      padding: 6px 14px;
       border: none;
       background: transparent;
       color: rgba(255,255,255,.7);
       cursor: pointer;
-      font-size: .875rem;
+      font-size: .85rem;
       border-radius: 6px;
       transition: background .2s, color .2s;
     }
     .nav-tab:hover { background: rgba(255,255,255,.1); color: #fff; }
     .nav-tab.active { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+    .nav-role {
+      font-size: .7rem;
+      color: rgba(255,255,255,.55);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
 
     /* ── VIEWS ── */
     .view { display: none; padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
@@ -57,11 +64,27 @@
       padding: 28px;
     }
 
+    /* ── INFO PANEL ── */
+    .info-panel {
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 24px;
+      font-size: .85rem;
+      color: #1e40af;
+    }
+    .info-panel strong { color: #1e3a8a; }
+    .info-panel summary { cursor: pointer; font-weight: 600; color: #1e3a8a; }
+    .info-panel ul { margin: 8px 0 0 18px; }
+    .info-panel li { margin-top: 4px; }
+
     /* ── FORM ── */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .form-group { display: flex; flex-direction: column; gap: 6px; }
     .form-group.full { grid-column: 1 / -1; }
     label { font-size: .8rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: .4px; }
+    .field-note { font-size: .72rem; color: #94a3b8; text-transform: none; letter-spacing: 0; font-weight: 500; }
     input, select, textarea {
       border: 1.5px solid #e2e8f0;
       border-radius: 8px;
@@ -71,11 +94,13 @@
       outline: none;
       transition: border-color .2s, box-shadow .2s;
       background: #fff;
+      font-family: inherit;
     }
     input:focus, select:focus, textarea:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59,130,246,.15);
     }
+    input:disabled, select:disabled { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
     textarea { resize: vertical; min-height: 80px; }
 
     .btn {
@@ -110,7 +135,7 @@
     .kebab-menu {
       display: none; position: fixed;
       background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 160px; z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12); min-width: 170px; z-index: 9999;
       overflow: hidden;
     }
     .kebab-menu.open { display: block; }
@@ -119,12 +144,15 @@
       padding: 9px 14px; font-size: .85rem; cursor: pointer;
       color: #374151; transition: background .15s;
       border: none; background: none; width: 100%; text-align: left;
+      font-family: inherit;
     }
     .kebab-item:hover { background: #f8fafc; }
     .kebab-item.danger { color: #dc2626; }
     .kebab-item.danger:hover { background: #fff5f5; }
     .kebab-item.success { color: #16a34a; }
     .kebab-item.success:hover { background: #f0fdf4; }
+    .kebab-item.warning { color: #d97706; }
+    .kebab-item.warning:hover { background: #fffbeb; }
     .kebab-divider { height: 1px; background: #f1f5f9; margin: 2px 0; }
 
     .form-actions { margin-top: 28px; display: flex; justify-content: flex-end; gap: 12px; }
@@ -134,18 +162,22 @@
       display: inline-block;
       padding: 3px 10px;
       border-radius: 99px;
-      font-size: .75rem;
+      font-size: .72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .4px;
+      white-space: nowrap;
     }
     .badge-pending    { background: #fef9c3; color: #854d0e; }
     .badge-reviewed   { background: #dbeafe; color: #1d4ed8; }
     .badge-rejected   { background: #fee2e2; color: #991b1b; }
     .badge-approved   { background: #dcfce7; color: #15803d; }
+    .badge-onhold     { background: #fef3c7; color: #b45309; }
+    .badge-onprocess  { background: #f3e8ff; color: #7e22ce; }
+    .badge-cancelled  { background: #e5e7eb; color: #4b5563; }
 
     /* ── TABLE ── */
-    .table-wrap { overflow-x: auto; margin-top: 24px; }
+    .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: .875rem; }
     thead th {
       background: #f8fafc;
@@ -163,26 +195,28 @@
     tbody td { padding: 12px 14px; vertical-align: middle; white-space: nowrap; }
     .serial-cell { font-family: monospace; font-weight: 700; color: #1e3a5f; font-size: .85rem; }
     .serial-pending { color: #94a3b8; font-style: italic; font-size: .8rem; }
+    .ref-cell { font-family: monospace; font-size: .8rem; color: #64748b; }
 
-    /* ── STICKY FIRST + LAST COLUMNS ── */
-    thead th:first-child, tbody td:first-child {
+    /* ── STICKY FIRST + LAST COLUMNS (dashboards) ── */
+    table.sticky-cols thead th:first-child, table.sticky-cols tbody td:first-child {
       position: sticky; left: 0; z-index: 3;
       background: #f8fafc;
       box-shadow: 2px 0 5px rgba(0,0,0,.06);
     }
-    tbody td:first-child { background: #fff; }
-    tbody tr:hover td:first-child { background: #f8fafc; }
-
-    thead th:last-child, tbody td:last-child {
+    table.sticky-cols tbody td:first-child { background: #fff; }
+    table.sticky-cols tbody tr:hover td:first-child { background: #f8fafc; }
+    table.sticky-cols thead th:last-child, table.sticky-cols tbody td:last-child {
       position: sticky; right: 0; z-index: 3;
       background: #f8fafc;
       box-shadow: -2px 0 5px rgba(0,0,0,.06);
     }
-    tbody td:last-child { background: #fff; }
-    tbody tr:hover td:last-child { background: #f8fafc; }
+    table.sticky-cols tbody td:last-child { background: #fff; }
+    table.sticky-cols tbody tr:hover td:last-child { background: #f8fafc; }
 
     /* ── STATS ROW ── */
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+    .stats.cols-3 { grid-template-columns: repeat(3, 1fr); margin-bottom: 28px; }
+    .stats.cols-2 { grid-template-columns: repeat(2, 1fr); margin-bottom: 28px; }
     .stat-card {
       background: #fff;
       border-radius: 10px;
@@ -190,10 +224,6 @@
       box-shadow: 0 1px 4px rgba(0,0,0,.07);
       border-left: 4px solid transparent;
     }
-    .stat-card.total   { border-color: #1e3a5f; }
-    .stat-card.pending { border-color: #d97706; }
-    .stat-card.review  { border-color: #2563eb; }
-    .stat-card.done    { border-color: #16a34a; }
     .stat-num  { font-size: 2rem; font-weight: 800; color: #1a202c; }
     .stat-label{ font-size: .78rem; color: #64748b; margin-top: 2px; }
 
@@ -227,8 +257,10 @@
       background: #fff;
       border-radius: 14px;
       padding: 32px;
-      width: 540px;
+      width: 580px;
       max-width: 95vw;
+      max-height: 92vh;
+      overflow-y: auto;
       box-shadow: 0 20px 60px rgba(0,0,0,.3);
       position: relative;
     }
@@ -237,7 +269,7 @@
     .detail-item label { display: block; font-size: .75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; }
     .detail-item span  { font-size: .95rem; color: #1a202c; font-weight: 500; }
     .detail-item.full  { grid-column: 1 / -1; }
-    .modal-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
     .modal-close {
       position: absolute; top: 16px; right: 16px;
       background: #f1f5f9; border: none; border-radius: 6px;
@@ -245,10 +277,10 @@
     }
     .modal-close:hover { background: #e2e8f0; }
 
-    /* ── REJECT REASON ── */
-    .reject-box { margin-top: 14px; display: none; }
-    .reject-box.open { display: block; }
-    .reject-box textarea { width: 100%; }
+    /* ── REASON BOXES ── */
+    .reason-box { margin-top: 14px; display: none; }
+    .reason-box.open { display: block; }
+    .reason-box textarea { width: 100%; margin-top: 6px; }
 
     /* ── SUCCESS TOAST ── */
     .toast {
@@ -260,6 +292,7 @@
       transform: translateY(80px); opacity: 0;
       transition: transform .35s, opacity .35s;
       z-index: 200;
+      max-width: 380px;
     }
     .toast.show { transform: translateY(0); opacity: 1; }
 
@@ -268,11 +301,10 @@
       display: flex;
       align-items: center;
       gap: 0;
-      margin-bottom: 32px;
-      background: #fff;
+      margin-bottom: 24px;
+      background: #f8fafc;
       border-radius: 12px;
-      padding: 20px 28px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      padding: 18px 20px;
     }
     .wf-step {
       display: flex;
@@ -297,18 +329,55 @@
       display: flex; align-items: center; justify-content: center;
       font-size: 1rem;
       border: 2px solid #e2e8f0;
-      background: #f8fafc;
+      background: #fff;
       color: #94a3b8;
       position: relative;
       z-index: 1;
     }
     .wf-icon.done   { background: #dcfce7; border-color: #16a34a; color: #16a34a; }
     .wf-icon.active { background: #dbeafe; border-color: #2563eb; color: #2563eb; }
-    .wf-label { font-size: .72rem; color: #64748b; font-weight: 600; text-align: center; }
+    .wf-icon.halted { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+    .wf-icon.held   { background: #fef3c7; border-color: #d97706; color: #d97706; }
+    .wf-label { font-size: .7rem; color: #64748b; font-weight: 600; text-align: center; }
+    .wf-note {
+      margin: -12px 0 20px;
+      font-size: .8rem;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .wf-note.red   { background: #fef2f2; color: #b91c1c; }
+    .wf-note.amber { background: #fffbeb; color: #b45309; }
+    .wf-note.gray  { background: #f1f5f9; color: #475569; }
 
-    @media (max-width: 640px) {
+    /* ── LOGIN VIEW ── */
+    .login-wrap { max-width: 420px; margin: 40px auto 0; }
+    .login-brand {
+      text-align: center; margin-bottom: 24px;
+    }
+    .login-brand h1 { color: #1e3a5f; font-size: 1.35rem; }
+    .login-brand p  { color: #64748b; font-size: .85rem; margin-top: 4px; }
+    .turnstile-mock {
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      background: #f8fafc; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: .82rem; color: #475569;
+    }
+    .turnstile-mock .ts-check {
+      width: 22px; height: 22px; border-radius: 4px;
+      border: 2px solid #16a34a; background: #dcfce7;
+      color: #16a34a; display: flex; align-items: center; justify-content: center;
+      font-size: .75rem;
+    }
+
+    /* ── AUDIT TRAIL ── */
+    .event-chip {
+      display: inline-block; padding: 2px 9px; border-radius: 99px;
+      font-size: .72rem; font-weight: 600; letter-spacing: .3px;
+    }
+
+    @media (max-width: 700px) {
       .form-grid { grid-template-columns: 1fr; }
-      .stats { grid-template-columns: 1fr 1fr; }
+      .stats, .stats.cols-3 { grid-template-columns: 1fr 1fr; }
       .detail-grid { grid-template-columns: 1fr; }
     }
   </style>
@@ -319,23 +388,70 @@
 </head>
 <body>
 
-<!-- ── NAVIGATION ── -->
+<!-- ── NAVIGATION ──
+     One tab per role/page of the real app. In production each of these is a
+     separate Inertia page guarded by role: middleware; here they are tabs so
+     the whole workflow can be walked through in one static file. -->
 <nav class="nav">
-  <div class="nav-brand">JL Monitoring System</div>
+  <div class="nav-brand">JL Monitoring System <span class="nav-role">· mockup — all roles</span></div>
   <div class="nav-tabs">
+    <button class="nav-tab" onclick="switchView('login-view', this)">Login</button>
     <button class="nav-tab active" onclick="switchView('form-view', this)">Submit Form</button>
-    <button class="nav-tab" onclick="switchView('reviewer-view', this)">Reviewer Dashboard</button>
+    <button class="nav-tab" onclick="switchView('my-view', this)">My Requests</button>
+    <button class="nav-tab" onclick="switchView('reviewer-view', this)">Reviewer</button>
     <button class="nav-tab" onclick="switchView('vp-view', this)">VP Approver</button>
+    <button class="nav-tab" onclick="switchView('purch-view', this)">Purchasing</button>
+    <button class="nav-tab" onclick="switchView('audit-view', this)">Audit Trail</button>
   </div>
 </nav>
 
+
 <!-- ═══════════════════════════════════════
-     VIEW 1 — PUBLIC SUBMISSION FORM
+     VIEW 0 — LOGIN
+     Real app: credentials are validated against the org's external Auth API
+     (no local passwords, no self-registration) + Cloudflare Turnstile.
+═══════════════════════════════════════ -->
+<div id="login-view" class="view">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <h1><i class="fa-solid fa-file-signature"></i> JL Monitoring System</h1>
+      <p>Sign in with your organization account</p>
+    </div>
+    <div class="card">
+      <div class="form-grid" style="grid-template-columns:1fr;">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" placeholder="Organization username" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" placeholder="••••••••" />
+        </div>
+        <div class="turnstile-mock">
+          <div class="ts-check"><i class="fa-solid fa-check"></i></div>
+          <span>Success! &nbsp;<em style="color:#94a3b8;">Cloudflare Turnstile</em></span>
+        </div>
+        <button class="btn btn-primary" style="justify-content:center;" onclick="showToast('Mockup only — credentials are checked against the external Auth API in the real app.')">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
+        </button>
+      </div>
+    </div>
+    <div class="info-panel" style="margin-top:18px;">
+      <strong>How access works:</strong> credentials are verified by the company's central Auth API — this system stores no passwords.
+      Even with valid org credentials, login fails unless an admin has granted access on the <strong>User Management</strong> page
+      (which assigns the role: requestor, reviewer, vp, purchasing, or admin).
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 1 — SUBMIT FORM (role: requestor)
 ═══════════════════════════════════════ -->
 <div id="form-view" class="view active">
   <div class="page-header">
-    <h1>JL Monitoring Form</h1>
-    <p>Fill in all required fields and submit for review.</p>
+    <h1 id="form-title-h1">JL Monitoring Form</h1>
+    <p>Fill in all required fields and submit for review. You'll get a permanent <strong>Reference No.</strong> immediately; the <strong>Serial No.</strong> is assigned only at VP approval.</p>
   </div>
 
   <div class="card">
@@ -352,14 +468,7 @@
 
       <div class="form-group">
         <label>Company / Farm *</label>
-        <select id="f-company">
-          <option value="">— Select company —</option>
-          <option>BFC</option>
-          <option>BDL</option>
-          <option>PFC</option>
-          <option>RH</option>
-          <option>Feedmill</option>
-        </select>
+        <select id="f-company"></select>
       </div>
 
       <div class="form-group">
@@ -368,16 +477,9 @@
       </div>
 
       <div class="form-group">
-        <label>Department *</label>
-        <select id="f-dept">
-          <option value="">— Select department —</option>
-          <option>Operations</option>
-          <option>Finance</option>
-          <option>Human Resources</option>
-          <option>Maintenance</option>
-          <option>Logistics</option>
-          <option>Harvesting</option>
-          <option>Other</option>
+        <label>Department * <span class="field-note">— locked to your account</span></label>
+        <select id="f-dept" disabled>
+          <option>Information Technology</option>
         </select>
       </div>
 
@@ -385,11 +487,16 @@
         <label>Estimated Amount (JL) *</label>
         <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" />
       </div>
+
+      <div class="form-group">
+        <label>Attachment <span class="field-note">— optional · pdf, images, doc, xls · max 10 MB</span></label>
+        <input type="file" id="f-attachment" />
+      </div>
     </div>
 
     <div class="form-actions">
       <button class="btn btn-outline" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Clear</button>
-      <button class="btn btn-primary" onclick="submitForm()"><i class="fa-solid fa-paper-plane"></i> Submit Form</button>
+      <button class="btn btn-primary" id="f-submit-btn" onclick="submitForm()"><i class="fa-solid fa-paper-plane"></i> Submit Form</button>
     </div>
   </div>
 
@@ -405,63 +512,91 @@
 
 
 <!-- ═══════════════════════════════════════
-     VIEW 2 — REVIEWER DASHBOARD
-     (Manager / Supervisor — first user)
+     VIEW 2 — MY REQUESTS (role: requestor)
 ═══════════════════════════════════════ -->
-<div id="reviewer-view" class="view">
+<div id="my-view" class="view">
   <div class="page-header">
-    <h1>Reviewer Dashboard</h1>
-    <p>Review submitted JL forms, mark as checked or reject before forwarding to VP Approver.</p>
+    <h1>My Requests</h1>
+    <p>Track the status of the JL forms you've submitted.</p>
   </div>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat-card total">
-      <div class="stat-num" id="stat-total">5</div>
-      <div class="stat-label">Total Submissions</div>
-    </div>
-    <div class="stat-card pending">
-      <div class="stat-num" id="stat-pending">2</div>
-      <div class="stat-label">Pending Review</div>
-    </div>
-    <div class="stat-card review">
-      <div class="stat-num" id="stat-checked">2</div>
-      <div class="stat-label">Checked / Forwarded</div>
-    </div>
-    <div class="stat-card done">
-      <div class="stat-num" id="stat-approved">1</div>
-      <div class="stat-label">VP Approved</div>
-    </div>
-  </div>
-
-  <!-- Filters -->
-  <div class="filter-row">
-    <input type="text" placeholder="Search by title, company, manager…" oninput="filterTable('rev-table', this.value, 'rev-status-filter')" id="rev-search" />
-    <select id="rev-status-filter" onchange="filterTable('rev-table', document.getElementById('rev-search').value, this.value)">
-      <option value="">All Statuses</option>
-      <option value="Pending">Pending</option>
-      <option value="Checked">Checked</option>
-      <option value="Rejected">Rejected</option>
-      <option value="Approved">Approved</option>
-    </select>
+  <div class="info-panel">
+    <details>
+      <summary>What can I do here?</summary>
+      <ul>
+        <li><strong>Cancel</strong> — pull back a request while it's still Pending, before a reviewer acts on it.</li>
+        <li><strong>Edit &amp; Resubmit</strong> — fix a cancelled request and send it back for review, keeping the same reference number.</li>
+        <li><strong>Add Attachment</strong> — available on any request that doesn't have a file yet, regardless of status.</li>
+        <li>Statuses update automatically as the form moves through review, approval, and processing.</li>
+      </ul>
+    </details>
   </div>
 
   <div class="card" style="padding:0; overflow:clip;">
     <div class="table-wrap">
-      <table id="rev-table">
+      <table>
         <thead>
           <tr>
             <th>Serial No.</th>
+            <th>Reference</th>
             <th>JL Title</th>
-            <th>Date Prepared</th>
-            <th>Company / Farm</th>
-            <th>Manager / Supervisor</th>
-            <th>Department</th>
-            <th>Est. Amount</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Company / Farm</th>
+            <th>Department</th>
+            <th>Manager</th>
+            <th>Cost</th>
+            <th>Date</th>
+            <th></th>
           </tr>
         </thead>
+        <tbody id="my-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 3 — REVIEWER DASHBOARD (role: reviewer)
+═══════════════════════════════════════ -->
+<div id="reviewer-view" class="view">
+  <div class="page-header">
+    <h1>Reviewer Dashboard</h1>
+    <p>First approval step. Mark Pending forms as Reviewed, reject them, or put them On Hold before they reach the VP Approver.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card" style="border-color:#1e3a5f;"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total Submissions</div></div>
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" id="stat-pending">0</div><div class="stat-label">Pending Review</div></div>
+    <div class="stat-card" style="border-color:#2563eb;"><div class="stat-num" id="stat-reviewed">0</div><div class="stat-label">Reviewed / Forwarded</div></div>
+    <div class="stat-card" style="border-color:#16a34a;"><div class="stat-num" id="stat-approved">0</div><div class="stat-label">VP Approved</div></div>
+  </div>
+  <div class="stats cols-3">
+    <div class="stat-card" style="border-color:#dc2626;"><div class="stat-num" id="stat-rej-rev">0</div><div class="stat-label">Rejected by Reviewer</div></div>
+    <div class="stat-card" style="border-color:#dc2626;"><div class="stat-num" id="stat-rej-vp">0</div><div class="stat-label">Rejected by VP</div></div>
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" id="stat-onhold">0</div><div class="stat-label">On Hold</div></div>
+  </div>
+
+  <div class="filter-row">
+    <input type="text" placeholder="Search by title, company, manager…" id="rev-search" oninput="renderTables()" />
+    <select id="rev-status-filter" onchange="renderTables()">
+      <option value="">All Statuses</option>
+      <option value="Pending">Pending</option>
+      <option value="Reviewed">Reviewed</option>
+      <option value="Rejected">Reviewer Rejected</option>
+      <option value="Approved">Approved</option>
+      <option value="VP Rejected">VP Rejected</option>
+      <option value="On Hold">On Hold</option>
+      <option value="On Process">On Process</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+    <button class="btn btn-outline btn-sm" onclick="showToast('Export downloads a CSV filtered by status + date range (allowed statuses depend on your role).')"><i class="fa-solid fa-download"></i> Export</button>
+  </div>
+
+  <div class="card" style="padding:0; overflow:clip;">
+    <div class="table-wrap">
+      <table class="sticky-cols">
+        <thead><tr id="rev-head"></tr></thead>
         <tbody id="rev-tbody"></tbody>
       </table>
     </div>
@@ -470,61 +605,110 @@
 
 
 <!-- ═══════════════════════════════════════
-     VIEW 3 — VP APPROVER DASHBOARD
+     VIEW 4 — VP APPROVER DASHBOARD (role: vp)
 ═══════════════════════════════════════ -->
 <div id="vp-view" class="view">
   <div class="page-header">
     <h1>VP Approver Dashboard</h1>
-    <p>Review checked forms and approve or reject. Approved entries receive a serial number.</p>
+    <p>Final approval. Approving assigns the serial number. A VP-Rejected form can be re-approved, and an Approved form can still be rejected — until Purchasing acts on it.</p>
   </div>
 
-  <!-- Stats -->
   <div class="stats">
-    <div class="stat-card total">
-      <div class="stat-num" id="vp-stat-total">2</div>
-      <div class="stat-label">Forwarded to VP</div>
-    </div>
-    <div class="stat-card pending">
-      <div class="stat-num" id="vp-stat-pending">1</div>
-      <div class="stat-label">Awaiting Approval</div>
-    </div>
-    <div class="stat-card done">
-      <div class="stat-num" id="vp-stat-approved">1</div>
-      <div class="stat-label">Approved</div>
-    </div>
-    <div class="stat-card review" style="border-color:#dc2626;">
-      <div class="stat-num" id="vp-stat-rejected">0</div>
-      <div class="stat-label">Rejected by VP</div>
-    </div>
+    <div class="stat-card" style="border-color:#1e3a5f;"><div class="stat-num" id="vp-stat-total">0</div><div class="stat-label">Forwarded to VP</div></div>
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" id="vp-stat-pending">0</div><div class="stat-label">Awaiting Approval</div></div>
+    <div class="stat-card" style="border-color:#16a34a;"><div class="stat-num" id="vp-stat-approved">0</div><div class="stat-label">Approved</div></div>
+    <div class="stat-card" style="border-color:#dc2626;"><div class="stat-num" id="vp-stat-rejected">0</div><div class="stat-label">Rejected by VP</div></div>
+  </div>
+  <div class="stats cols-2">
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" id="vp-stat-onhold">0</div><div class="stat-label">On Hold</div></div>
+    <div class="stat-card" style="border-color:#94a3b8;"><div class="stat-num" id="vp-stat-rev-rej">0</div><div class="stat-label">Rejected by Reviewer (reference only — no action required)</div></div>
   </div>
 
   <div class="filter-row">
-    <input type="text" placeholder="Search…" oninput="filterTable('vp-table', this.value, 'vp-status-filter')" id="vp-search" />
-    <select id="vp-status-filter" onchange="filterTable('vp-table', document.getElementById('vp-search').value, this.value)">
+    <input type="text" placeholder="Search…" id="vp-search" oninput="renderTables()" />
+    <select id="vp-status-filter" onchange="renderTables()">
       <option value="">All Statuses</option>
-      <option value="Checked">Checked (Pending VP)</option>
+      <option value="Reviewed">Reviewed (Pending VP)</option>
       <option value="Approved">Approved</option>
       <option value="VP Rejected">VP Rejected</option>
+      <option value="Rejected">Rejected by Reviewer</option>
+      <option value="On Hold">On Hold</option>
+      <option value="On Process">On Process</option>
     </select>
+    <button class="btn btn-outline btn-sm" onclick="showToast('Export downloads a CSV filtered by status + date range (allowed statuses depend on your role).')"><i class="fa-solid fa-download"></i> Export</button>
   </div>
 
   <div class="card" style="padding:0; overflow:clip;">
     <div class="table-wrap">
-      <table id="vp-table">
+      <table class="sticky-cols">
+        <thead><tr id="vp-head"></tr></thead>
+        <tbody id="vp-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 5 — PURCHASING DASHBOARD (role: purchasing)
+═══════════════════════════════════════ -->
+<div id="purch-view" class="view">
+  <div class="page-header">
+    <h1>Purchasing Dashboard</h1>
+    <p>Manage VP-approved JL forms — mark them as On Process or put them On Hold.</p>
+  </div>
+
+  <div class="stats cols-3">
+    <div class="stat-card" style="border-color:#16a34a;"><div class="stat-num" id="pu-stat-approved">0</div><div class="stat-label">Approved (Queued)</div></div>
+    <div class="stat-card" style="border-color:#7c3aed;"><div class="stat-num" id="pu-stat-process">0</div><div class="stat-label">On Process</div></div>
+    <div class="stat-card" style="border-color:#d97706;"><div class="stat-num" id="pu-stat-onhold">0</div><div class="stat-label">On Hold</div></div>
+  </div>
+
+  <div class="filter-row">
+    <input type="text" placeholder="Search by title, company, manager…" id="pu-search" oninput="renderTables()" />
+    <select id="pu-status-filter" onchange="renderTables()">
+      <option value="">All Statuses</option>
+      <option value="Approved">Approved</option>
+      <option value="On Process">On Process</option>
+      <option value="On Hold">On Hold</option>
+    </select>
+    <button class="btn btn-outline btn-sm" onclick="showToast('Export downloads a CSV filtered by status + date range (allowed statuses depend on your role).')"><i class="fa-solid fa-download"></i> Export</button>
+  </div>
+
+  <div class="card" style="padding:0; overflow:clip;">
+    <div class="table-wrap">
+      <table class="sticky-cols">
+        <thead><tr id="pu-head"></tr></thead>
+        <tbody id="pu-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW 6 — AUDIT TRAIL (role: vp / admin)
+═══════════════════════════════════════ -->
+<div id="audit-view" class="view">
+  <div class="page-header">
+    <h1>Audit Trail</h1>
+    <p>Every workflow transition is logged: who did what, to which entry, and when. (Visible to VP and Admin in the real app.)</p>
+  </div>
+
+  <div class="card" style="padding:0; overflow:clip;">
+    <div class="table-wrap">
+      <table>
         <thead>
           <tr>
-            <th>Serial No.</th>
+            <th>When</th>
+            <th>Reference</th>
             <th>JL Title</th>
-            <th>Date Prepared</th>
-            <th>Company / Farm</th>
-            <th>Manager / Supervisor</th>
-            <th>Department</th>
-            <th>Est. Amount</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>Event</th>
+            <th>Actor</th>
+            <th>Notes</th>
           </tr>
         </thead>
-        <tbody id="vp-tbody"></tbody>
+        <tbody id="audit-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -539,7 +723,7 @@
     <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
     <h2 id="modal-title">Form Details</h2>
 
-    <!-- Workflow indicator inside modal -->
+    <!-- Workflow indicator: Submitted → Reviewed → VP Approved → On Process -->
     <div class="workflow" id="modal-workflow">
       <div class="wf-step">
         <div class="wf-icon done" id="wf-submitted"><i class="fa-solid fa-check"></i></div>
@@ -553,14 +737,25 @@
         <div class="wf-icon" id="wf-approved"><i class="fa-solid fa-star"></i></div>
         <span class="wf-label">VP Approved</span>
       </div>
+      <div class="wf-step">
+        <div class="wf-icon" id="wf-process"><i class="fa-solid fa-gears"></i></div>
+        <span class="wf-label">On Process</span>
+      </div>
     </div>
+    <div class="wf-note" id="wf-note" style="display:none;"></div>
 
     <div class="detail-grid" id="modal-details"></div>
 
-    <!-- Reject reason box (reviewer) -->
-    <div class="reject-box" id="reject-box">
-      <label style="font-size:.8rem; font-weight:600; color:#475569; text-transform:uppercase;">Reason for Rejection</label>
-      <textarea id="reject-reason" rows="3" placeholder="Provide a reason…" style="width:100%; margin-top:6px;"></textarea>
+    <!-- Reject reason box -->
+    <div class="reason-box" id="reject-box">
+      <label>Reason for Rejection <span class="field-note">— optional</span></label>
+      <textarea id="reject-reason" rows="3" placeholder="Provide a reason…"></textarea>
+    </div>
+
+    <!-- Hold reason box -->
+    <div class="reason-box" id="hold-box">
+      <label>Reason for Hold <span class="field-note">— optional</span></label>
+      <textarea id="hold-reason" rows="3" placeholder="Why is this being put on hold?"></textarea>
     </div>
 
     <div class="modal-actions" id="modal-actions"></div>
@@ -578,18 +773,102 @@
      JAVASCRIPT
 ═══════════════════════════════════════ -->
 <script>
-/* ── DATA STORE ── */
-let entries = [
-  { id:'JL-001-2026', title:'Farm Labor Cost Q1 2026', date:'2026-01-15', company:'BFC Farm Davao', manager:'Roberto Dela Cruz', dept:'Operations', amount:125000, status:'Approved', serial:'BFC-JL-001-2026', submittedAt:'2026-01-15', reviewedAt:'2026-01-17', approvedAt:'2026-01-20' },
-  { id:'JL-002-2026', title:'Harvesting Equipment Maintenance', date:'2026-02-10', company:'BFC Farm Bukidnon', manager:'Maria Santos', dept:'Maintenance', amount:87500, status:'Checked', serial:null, submittedAt:'2026-02-10', reviewedAt:'2026-02-12', approvedAt:null },
-  { id:'JL-003-2026', title:'Logistics Labor — March Run', date:'2026-03-05', company:'BFC Farm Cotabato', manager:'Juan Ramos', dept:'Logistics', amount:43000, status:'Rejected', serial:null, submittedAt:'2026-03-05', reviewedAt:'2026-03-06', approvedAt:null, rejectReason:'Missing supporting documents for overtime hours.' },
-  { id:'JL-004-2026', title:'HR Onboarding Cost April', date:'2026-04-20', company:'BFC Group HQ', manager:'Ana Mendoza', dept:'Human Resources', amount:31000, status:'Pending', serial:null, submittedAt:'2026-04-20', reviewedAt:null, approvedAt:null },
-  { id:'JL-005-2026', title:'Q2 Finance Audit Labor', date:'2026-05-01', company:'BFC Farm Mindanao', manager:'Carlos Villanueva', dept:'Finance', amount:56800, status:'Pending', serial:null, submittedAt:'2026-05-01', reviewedAt:null, approvedAt:null },
+/* ── REFERENCE DATA ──
+   Real app: companies + departments are DB tables managed on the admin
+   Maintenance page (with CSV import/export). The company `code` drives the
+   serial prefix. Company/dept are stored as plain strings on each entry. */
+const COMPANIES = [
+  { name: 'BFC',      code: 'BFC' },
+  { name: 'BDL',      code: 'BDL' },
+  { name: 'PFC',      code: 'PFC' },
+  { name: 'RH',       code: 'RH'  },
+  { name: 'Feedmill', code: 'FDM' },
 ];
 
-let idCounter = 6;
-let currentModalId = null;
-let currentModalCtx = null; // 'reviewer' | 'vp'
+const CURRENT_USER = { name: 'Iverson Craig', role: 'requestor', dept: 'Information Technology' };
+const YEAR = 2026;
+
+/* ── DATA STORE ──
+   Statuses: Pending → Reviewed → Approved → On Process
+   Branches: Rejected (reviewer), VP Rejected, On Hold (held_at remembers the
+   stage to return to), Cancelled (requestor, while Pending).
+   `reference` = JL-{id}-{year}, permanent from creation.
+   `serial`    = {CompanyCode}-JL-{n}-{year}, assigned only at VP approval
+                 (n = per-company approval count that year — approval order,
+                 not submission order). */
+let entries = [
+  { id:1, mine:false, title:'Farm Labor Cost Q1 2026',            date:'2026-01-15', company:'BFC',      manager:'Roberto Dela Cruz',  dept:'Operations',       amount:125000, status:'On Process',  held_at:null,       hold_reason:null, reject_reason:null, serial:'BFC-JL-001-2026', attachment:'labor-cost-q1.pdf', submittedAt:'2026-01-15', reviewedAt:'2026-01-17', approvedAt:'2026-01-20' },
+  { id:2, mine:false, title:'Harvesting Equipment Maintenance',   date:'2026-02-10', company:'BDL',      manager:'Maria Santos',       dept:'Maintenance',      amount:87500,  status:'Approved',    held_at:null,       hold_reason:null, reject_reason:null, serial:'BDL-JL-001-2026', attachment:null,                submittedAt:'2026-02-10', reviewedAt:'2026-02-12', approvedAt:'2026-02-14' },
+  { id:3, mine:false, title:'Logistics Labor — March Run',        date:'2026-03-05', company:'PFC',      manager:'Juan Ramos',         dept:'Logistics',        amount:43000,  status:'Rejected',    held_at:null,       hold_reason:null, reject_reason:'Missing supporting documents for overtime hours.', serial:null, attachment:null, submittedAt:'2026-03-05', reviewedAt:'2026-03-06', approvedAt:null },
+  { id:4, mine:false, title:'Feedmill Conveyor Repair',           date:'2026-03-22', company:'Feedmill', manager:'Elena Reyes',        dept:'Maintenance',      amount:64200,  status:'VP Rejected', held_at:null,       hold_reason:null, reject_reason:'Amount exceeds quarterly budget — resubmit next quarter.', serial:null, attachment:'conveyor-quote.pdf', submittedAt:'2026-03-22', reviewedAt:'2026-03-24', approvedAt:null },
+  { id:5, mine:false, title:'HR Onboarding Cost April',           date:'2026-04-20', company:'RH',       manager:'Ana Mendoza',        dept:'Human Resources',  amount:31000,  status:'On Hold',     held_at:'Reviewed', hold_reason:'Waiting for updated headcount from HR.', reject_reason:null, serial:null, attachment:null, submittedAt:'2026-04-20', reviewedAt:'2026-04-22', approvedAt:null },
+  { id:6, mine:false, title:'Broiler House Repainting',           date:'2026-05-08', company:'BFC',      manager:'Carlos Villanueva',  dept:'Operations',       amount:56800,  status:'On Hold',     held_at:'Approved', hold_reason:'Supplier availability being confirmed by Purchasing.', reject_reason:null, serial:'BFC-JL-002-2026', attachment:null, submittedAt:'2026-05-08', reviewedAt:'2026-05-10', approvedAt:'2026-05-12' },
+  { id:7, mine:true,  title:'IT Network Cabling — Farm Office',   date:'2026-06-02', company:'BFC',      manager:'Iverson Craig',      dept:'Information Technology', amount:48500, status:'Reviewed', held_at:null,     hold_reason:null, reject_reason:null, serial:null, attachment:'cabling-layout.pdf', submittedAt:'2026-06-02', reviewedAt:'2026-06-05', approvedAt:null },
+  { id:8, mine:true,  title:'Server Room Aircon Replacement',     date:'2026-06-18', company:'BFC',      manager:'Iverson Craig',      dept:'Information Technology', amount:92000, status:'Cancelled', held_at:null,     hold_reason:null, reject_reason:null, serial:null, attachment:null, submittedAt:'2026-06-18', reviewedAt:null, approvedAt:null },
+  { id:9, mine:true,  title:'CCTV Expansion — Hatchery',          date:'2026-07-10', company:'BDL',      manager:'Iverson Craig',      dept:'Information Technology', amount:37600, status:'Pending',  held_at:null,     hold_reason:null, reject_reason:null, serial:null, attachment:null, submittedAt:'2026-07-10', reviewedAt:null, approvedAt:null },
+];
+
+/* Real app: every transition writes a JlAuditLog row (free-text event). */
+let auditLog = [
+  { at:'2026-07-10 09:14', entryId:9, event:'submitted',    actor:null,               notes:null },
+  { at:'2026-06-20 15:02', entryId:8, event:'cancelled',    actor:'Iverson Craig',     notes:null },
+  { at:'2026-06-18 10:40', entryId:8, event:'submitted',    actor:null,               notes:null },
+  { at:'2026-06-05 11:21', entryId:7, event:'reviewed',     actor:'R. Bautista',      notes:null },
+  { at:'2026-06-02 08:55', entryId:7, event:'submitted',    actor:null,               notes:null },
+  { at:'2026-05-14 16:30', entryId:6, event:'on_hold',      actor:'P. Gutierrez',     notes:'Supplier availability being confirmed by Purchasing.' },
+  { at:'2026-05-12 10:05', entryId:6, event:'approved',     actor:'V. Aquino',        notes:null },
+  { at:'2026-04-22 14:11', entryId:5, event:'on_hold',      actor:'V. Aquino',        notes:'Waiting for updated headcount from HR.' },
+  { at:'2026-03-24 09:47', entryId:4, event:'vp_rejected',  actor:'V. Aquino',        notes:'Amount exceeds quarterly budget — resubmit next quarter.' },
+  { at:'2026-03-06 13:20', entryId:3, event:'rejected',     actor:'R. Bautista',      notes:'Missing supporting documents for overtime hours.' },
+  { at:'2026-02-14 10:00', entryId:2, event:'approved',     actor:'V. Aquino',        notes:null },
+  { at:'2026-01-21 08:15', entryId:1, event:'on_process',   actor:'P. Gutierrez',     notes:null },
+  { at:'2026-01-20 09:30', entryId:1, event:'approved',     actor:'V. Aquino',        notes:null },
+];
+
+const EVENT_META = {
+  submitted:        { label: 'Submitted',        bg:'#fef9c3', fg:'#854d0e' },
+  resubmitted:      { label: 'Resubmitted',      bg:'#fef9c3', fg:'#854d0e' },
+  reviewed:         { label: 'Reviewed',         bg:'#dbeafe', fg:'#1d4ed8' },
+  approved:         { label: 'Approved',         bg:'#dcfce7', fg:'#15803d' },
+  rejected:         { label: 'Rejected',         bg:'#fee2e2', fg:'#991b1b' },
+  vp_rejected:      { label: 'VP Rejected',      bg:'#fee2e2', fg:'#991b1b' },
+  on_hold:          { label: 'On Hold',          bg:'#fef3c7', fg:'#b45309' },
+  on_process:       { label: 'On Process',       bg:'#f3e8ff', fg:'#7e22ce' },
+  cancelled:        { label: 'Cancelled',        bg:'#e5e7eb', fg:'#4b5563' },
+  attachment_added: { label: 'Attachment Added', bg:'#f1f5f9', fg:'#475569' },
+};
+
+let nextId = 10;
+let currentModalId  = null;
+let currentModalCtx = null; // 'reviewer' | 'vp' | 'purchasing' | 'my'
+let editingId       = null; // set when doing Edit & Resubmit on a Cancelled entry
+
+/* ── HELPERS ── */
+const byId = (id) => entries.find(x => x.id === id);
+const reference = (e) => 'JL-' + String(e.id).padStart(3,'0') + '-' + YEAR;
+/* On Hold remembers the stage it was paused at; actions check the effective status. */
+const effectiveStatus = (e) => e.status === 'On Hold' ? e.held_at : e.status;
+
+function log(entryId, event, actor, notes) {
+  const now = new Date();
+  auditLog.unshift({
+    at: now.toISOString().slice(0,10) + ' ' + now.toTimeString().slice(0,5),
+    entryId, event, actor: actor || null, notes: notes || null,
+  });
+}
+
+function generateSerial(e) {
+  const co = COMPANIES.find(c => c.name === e.company);
+  const prefix = co ? co.code : e.company.slice(0,3).toUpperCase();
+  // Live count of already-serialed entries for this company this year — serial
+  // order follows APPROVAL order, not submission order (matches the real app).
+  const count = entries.filter(x => x.company === e.company && x.serial).length;
+  return `${prefix}-JL-${String(count + 1).padStart(3,'0')}-${YEAR}`;
+}
+
+function fmtAmount(n) {
+  return '₱ ' + n.toLocaleString('en-PH', {minimumFractionDigits:2});
+}
 
 /* ── NAVIGATION ── */
 function switchView(id, btn) {
@@ -604,229 +883,438 @@ function switchView(id, btn) {
 function submitForm() {
   const title   = document.getElementById('f-title').value.trim();
   const date    = document.getElementById('f-date').value;
-  const company = document.getElementById('f-company').value.trim();
+  const company = document.getElementById('f-company').value;
   const manager = document.getElementById('f-manager').value.trim();
-  const dept    = document.getElementById('f-dept').value;
   const amount  = parseFloat(document.getElementById('f-amount').value);
+  const fileEl  = document.getElementById('f-attachment');
+  const file    = fileEl.files[0] ? fileEl.files[0].name : null;
 
-  if (!title || !date || !company || !manager || !dept || isNaN(amount)) {
+  if (!title || !date || !company || !manager || isNaN(amount)) {
     showToast('Please fill in all required fields.', '#dc2626');
     return;
   }
 
-  const newId = 'JL-' + String(idCounter).padStart(3,'0') + '-2026';
-  idCounter++;
-  const entry = { id:newId, title, date, company, manager, dept, amount, status:'Pending', serial:null, submittedAt:date, reviewedAt:null, approvedAt:null };
-  entries.unshift(entry);
+  if (editingId) {
+    // Resubmit path: same row, same reference — back to Pending.
+    const e = byId(editingId);
+    Object.assign(e, {
+      title, date, company, manager, amount,
+      dept: CURRENT_USER.dept,       // server always forces the account's dept
+      status: 'Pending',
+      attachment: file || e.attachment,
+      submittedAt: new Date().toISOString().slice(0,10),
+    });
+    log(e.id, 'resubmitted', null);
+    showToast(`Corrected and resubmitted! Reference: ${reference(e)}`, '#16a34a');
+    document.getElementById('submit-ref').textContent = reference(e);
+    stopEditing();
+  } else {
+    const entry = {
+      id: nextId++, mine: true,
+      title, date, company, manager, amount,
+      dept: CURRENT_USER.dept,
+      status:'Pending', held_at:null, hold_reason:null, reject_reason:null,
+      serial:null, attachment:file,
+      submittedAt: new Date().toISOString().slice(0,10), reviewedAt:null, approvedAt:null,
+    };
+    entries.unshift(entry);
+    log(entry.id, 'submitted', null);
+    document.getElementById('submit-ref').textContent = reference(entry);
+    showToast('Form submitted! Reviewers have been notified.', '#16a34a');
+  }
 
-  document.getElementById('submit-ref').textContent = newId;
   document.getElementById('submit-confirm').style.display = 'block';
   resetForm();
-  showToast('Form submitted!', '#16a34a');
-}
-
-function resetForm() {
-  ['f-title','f-date','f-company','f-manager','f-amount'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-dept').value = '';
-  document.getElementById('submit-confirm').style.display = 'none';
-}
-
-/* ── RENDER TABLES ── */
-function statusBadge(status) {
-  const map = { 'Pending':'badge-pending', 'Checked':'badge-reviewed', 'Rejected':'badge-rejected', 'Approved':'badge-approved', 'VP Rejected':'badge-rejected' };
-  return `<span class="badge ${map[status]||''}">${status}</span>`;
-}
-
-function fmtAmount(n) {
-  return '₱ ' + n.toLocaleString('en-PH', {minimumFractionDigits:2});
-}
-
-function renderTables() {
-  renderReviewerTable(entries);
-  renderVpTable(entries.filter(e => ['Checked','Approved','VP Rejected'].includes(e.status)));
-  updateStats();
-}
-
-function renderReviewerTable(data) {
-  const tbody = document.getElementById('rev-tbody');
-  tbody.innerHTML = data.map(e => `
-    <tr data-status="${e.status}" data-text="${(e.title+e.company+e.manager).toLowerCase()}">
-      <td>${e.status === 'Approved' ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">Pending approval</span>`}</td>
-      <td><strong>${e.title}</strong></td>
-      <td>${e.date}</td>
-      <td>${e.company}</td>
-      <td>${e.manager}</td>
-      <td>${e.dept}</td>
-      <td>${fmtAmount(e.amount)}</td>
-      <td>${statusBadge(e.status)}</td>
-      <td class="action-cell">
-        <button class="kebab-btn" data-id="${e.id}" data-ctx="reviewer" onclick="toggleKebab(event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-      </td>
-    </tr>`).join('');
-}
-
-function renderVpTable(data) {
-  const tbody = document.getElementById('vp-tbody');
-  tbody.innerHTML = data.map(e => `
-    <tr data-status="${e.status}" data-text="${(e.title+e.company+e.manager).toLowerCase()}">
-      <td>${e.serial ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">—</span>`}</td>
-      <td><strong>${e.title}</strong></td>
-      <td>${e.date}</td>
-      <td>${e.company}</td>
-      <td>${e.manager}</td>
-      <td>${e.dept}</td>
-      <td>${fmtAmount(e.amount)}</td>
-      <td>${statusBadge(e.status)}</td>
-      <td class="action-cell">
-        <button class="kebab-btn" data-id="${e.id}" data-ctx="vp" onclick="toggleKebab(event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-      </td>
-    </tr>`).join('');
-}
-
-function updateStats() {
-  const total    = entries.length;
-  const pending  = entries.filter(e => e.status === 'Pending').length;
-  const checked  = entries.filter(e => e.status === 'Checked').length;
-  const approved = entries.filter(e => e.status === 'Approved').length;
-  const rejected = entries.filter(e => e.status === 'Rejected').length;
-
-  document.getElementById('stat-total').textContent   = total;
-  document.getElementById('stat-pending').textContent  = pending;
-  document.getElementById('stat-checked').textContent  = checked;
-  document.getElementById('stat-approved').textContent = approved;
-
-  const vpEntries  = entries.filter(e => ['Checked','Approved','VP Rejected'].includes(e.status));
-  const vpApproved = entries.filter(e => e.status === 'Approved').length;
-  const vpPending  = entries.filter(e => e.status === 'Checked').length;
-  const vpRejected = entries.filter(e => e.status === 'VP Rejected').length;
-
-  document.getElementById('vp-stat-total').textContent    = vpEntries.length;
-  document.getElementById('vp-stat-pending').textContent  = vpPending;
-  document.getElementById('vp-stat-approved').textContent = vpApproved;
-  document.getElementById('vp-stat-rejected').textContent = vpRejected;
-}
-
-/* ── QUICK ACTIONS ── */
-function quickAction(id, action) {
-  const e = entries.find(x => x.id === id);
-  if (!e) return;
-
-  if (action === 'Checked') {
-    e.status = 'Checked';
-    e.reviewedAt = new Date().toISOString().slice(0,10);
-    showToast(`Marked as Checked — forwarded to VP Approver.`, '#2563eb');
-  } else if (action === 'Approved') {
-    e.status = 'Approved';
-    e.approvedAt = new Date().toISOString().slice(0,10);
-    e.serial = generateSerial(e);
-    showToast(`Approved! Serial No. ${e.serial} assigned.`, '#16a34a');
-  }
   renderTables();
 }
 
-function openRejectModal(id, ctx) {
-  openModal(id, ctx);
-  document.getElementById('reject-box').classList.add('open');
+function resetForm() {
+  ['f-title','f-date','f-manager','f-amount','f-attachment'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-company').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
 }
 
-function generateSerial(e) {
-  const yr = new Date().getFullYear();
-  const num = String(entries.filter(x => x.serial).length).padStart(3,'0');
-  return `BFC-JL-${num}-${yr}`;
+function startEditing(id) {
+  const e = byId(id);
+  if (!e || e.status !== 'Cancelled') return;
+  editingId = id;
+  document.getElementById('f-title').value   = e.title;
+  document.getElementById('f-date').value    = e.date;
+  document.getElementById('f-company').value = e.company;
+  document.getElementById('f-manager').value = e.manager;
+  document.getElementById('f-amount').value  = e.amount;
+  document.getElementById('form-title-h1').textContent = 'Edit & Resubmit — ' + reference(e);
+  document.getElementById('f-submit-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Resubmit';
+  document.getElementById('submit-confirm').style.display = 'none';
+  // Jump to the Submit tab
+  switchView('form-view', document.querySelectorAll('.nav-tab')[1]);
+}
+
+function stopEditing() {
+  editingId = null;
+  document.getElementById('form-title-h1').textContent = 'JL Monitoring Form';
+  document.getElementById('f-submit-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Form';
+}
+
+/* ── STATUS BADGE ── */
+function statusBadge(status) {
+  const map = {
+    'Pending':     ['badge-pending',   'Pending'],
+    'Reviewed':    ['badge-reviewed',  'Reviewed'],
+    'Rejected':    ['badge-rejected',  'Reviewer Rejected'],
+    'Approved':    ['badge-approved',  'Approved'],
+    'VP Rejected': ['badge-rejected',  'VP Rejected'],
+    'On Hold':     ['badge-onhold',    'On Hold'],
+    'On Process':  ['badge-onprocess', 'On Process'],
+    'Cancelled':   ['badge-cancelled', 'Cancelled'],
+  };
+  const [cls, label] = map[status] || ['', status];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+/* ── RENDER TABLES ── */
+const DASH_HEADERS = ['Serial No.','JL Title','Status','Company / Farm','Department','Manager','Cost','Date','Action'];
+
+function dashboardRow(e, ctx) {
+  return `
+    <tr>
+      <td>${e.serial ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">Pending approval</span>`}</td>
+      <td><strong>${e.title}</strong><br><span class="ref-cell">${reference(e)}</span></td>
+      <td>${statusBadge(e.status)}</td>
+      <td>${e.company}</td>
+      <td>${e.dept}</td>
+      <td>${e.manager}</td>
+      <td>${fmtAmount(e.amount)}</td>
+      <td>${e.date}</td>
+      <td class="action-cell">
+        <button class="kebab-btn" data-id="${e.id}" data-ctx="${ctx}" onclick="toggleKebab(event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </td>
+    </tr>`;
+}
+
+function applyFilter(data, searchId, statusId) {
+  const q  = document.getElementById(searchId).value.toLowerCase();
+  const st = document.getElementById(statusId).value;
+  return data.filter(e =>
+    (!q || `${e.title} ${e.company} ${e.manager}`.toLowerCase().includes(q)) &&
+    (!st || e.status === st)
+  );
+}
+
+function renderTables() {
+  document.getElementById('rev-head').innerHTML = DASH_HEADERS.map(h => `<th>${h}</th>`).join('');
+  document.getElementById('vp-head').innerHTML  = DASH_HEADERS.map(h => `<th>${h}</th>`).join('');
+  document.getElementById('pu-head').innerHTML  = DASH_HEADERS.map(h => `<th>${h}</th>`).join('');
+
+  // Reviewer sees everything.
+  const revData = applyFilter(entries, 'rev-search', 'rev-status-filter');
+  document.getElementById('rev-tbody').innerHTML =
+    revData.map(e => dashboardRow(e, 'reviewer')).join('') || emptyRow();
+
+  // VP sees Reviewed onward, plus holds not held at the Pending stage.
+  const vpAll = entries.filter(e =>
+    ['Reviewed','Rejected','Approved','VP Rejected','On Process'].includes(e.status) ||
+    (e.status === 'On Hold' && e.held_at !== 'Pending')
+  );
+  const vpData = applyFilter(vpAll, 'vp-search', 'vp-status-filter');
+  document.getElementById('vp-tbody').innerHTML =
+    vpData.map(e => dashboardRow(e, 'vp')).join('') || emptyRow();
+
+  // Purchasing sees Approved / On Process, plus holds at those stages.
+  const puAll = entries.filter(e =>
+    ['Approved','On Process'].includes(e.status) ||
+    (e.status === 'On Hold' && ['Approved','On Process'].includes(e.held_at))
+  );
+  const puData = applyFilter(puAll, 'pu-search', 'pu-status-filter');
+  document.getElementById('pu-tbody').innerHTML =
+    puData.map(e => dashboardRow(e, 'purchasing')).join('') || emptyRow();
+
+  renderMyRequests();
+  renderAudit();
+  updateStats();
+}
+
+function emptyRow() {
+  return `<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:28px;">No records found.</td></tr>`;
+}
+
+function renderMyRequests() {
+  const mine = entries.filter(e => e.mine);
+  document.getElementById('my-tbody').innerHTML = mine.map(e => `
+    <tr>
+      <td>${e.serial ? `<span class="serial-cell">${e.serial}</span>` : `<span class="serial-pending">Pending approval</span>`}</td>
+      <td class="ref-cell">${reference(e)}</td>
+      <td><strong>${e.title}</strong></td>
+      <td>${statusBadge(e.status)}</td>
+      <td>${e.company}</td>
+      <td>${e.dept}</td>
+      <td>${e.manager}</td>
+      <td>${fmtAmount(e.amount)}</td>
+      <td>${e.date}</td>
+      <td style="text-align:right;">
+        ${e.status === 'Pending'   ? `<button class="btn btn-sm" style="background:#fff; border:1.5px solid #fecaca; color:#dc2626;" onclick="cancelEntry(${e.id})">Cancel</button>` : ''}
+        ${e.status === 'Cancelled' ? `<button class="btn btn-sm btn-outline" onclick="startEditing(${e.id})">Edit &amp; Resubmit</button>` : ''}
+        ${!e.attachment            ? `<button class="btn btn-sm btn-outline" onclick="addAttachment(${e.id})">Add Attachment</button>` : ''}
+        <button class="btn btn-sm btn-outline" onclick="openModal(${e.id}, 'my')">View</button>
+      </td>
+    </tr>`).join('') ||
+    `<tr><td colspan="10" style="text-align:center; color:#94a3b8; padding:28px;">You haven't submitted any JL forms yet.</td></tr>`;
+}
+
+function renderAudit() {
+  document.getElementById('audit-tbody').innerHTML = auditLog.map(l => {
+    const e = byId(l.entryId);
+    const meta = EVENT_META[l.event] || { label:l.event, bg:'#f1f5f9', fg:'#475569' };
+    return `
+      <tr>
+        <td style="color:#64748b;">${l.at}</td>
+        <td class="ref-cell">${e ? reference(e) : '—'}</td>
+        <td>${e ? e.title : '—'}</td>
+        <td><span class="event-chip" style="background:${meta.bg}; color:${meta.fg};">${meta.label}</span></td>
+        <td>${l.actor || '<em style="color:#94a3b8;">requestor</em>'}</td>
+        <td style="white-space:normal; max-width:320px; color:#64748b;">${l.notes || '—'}</td>
+      </tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  const count = (fn) => entries.filter(fn).length;
+
+  // Reviewer stats
+  document.getElementById('stat-total').textContent    = entries.length;
+  document.getElementById('stat-pending').textContent  = count(e => e.status === 'Pending');
+  document.getElementById('stat-reviewed').textContent = count(e => e.status === 'Reviewed');
+  document.getElementById('stat-approved').textContent = count(e => e.status === 'Approved');
+  document.getElementById('stat-rej-rev').textContent  = count(e => e.status === 'Rejected');
+  document.getElementById('stat-rej-vp').textContent   = count(e => e.status === 'VP Rejected');
+  document.getElementById('stat-onhold').textContent   = count(e => e.status === 'On Hold');
+
+  // VP stats
+  const vpAll = entries.filter(e =>
+    ['Reviewed','Rejected','Approved','VP Rejected','On Process'].includes(e.status) ||
+    (e.status === 'On Hold' && e.held_at !== 'Pending')
+  );
+  document.getElementById('vp-stat-total').textContent    = vpAll.filter(e => e.status !== 'Rejected').length;
+  document.getElementById('vp-stat-pending').textContent  = count(e => e.status === 'Reviewed' || (e.status === 'On Hold' && e.held_at === 'Reviewed'));
+  document.getElementById('vp-stat-approved').textContent = count(e => e.status === 'Approved');
+  document.getElementById('vp-stat-rejected').textContent = count(e => e.status === 'VP Rejected');
+  document.getElementById('vp-stat-onhold').textContent   = count(e => e.status === 'On Hold' && e.held_at === 'Reviewed');
+  document.getElementById('vp-stat-rev-rej').textContent  = count(e => e.status === 'Rejected');
+
+  // Purchasing stats
+  document.getElementById('pu-stat-approved').textContent = count(e => e.status === 'Approved');
+  document.getElementById('pu-stat-process').textContent  = count(e => e.status === 'On Process');
+  document.getElementById('pu-stat-onhold').textContent   = count(e => e.status === 'On Hold' && ['Approved','On Process'].includes(e.held_at));
+}
+
+/* ── WORKFLOW ACTIONS (mirror JlController guards) ── */
+function reviewEntry(id) {
+  const e = byId(id);
+  if (effectiveStatus(e) !== 'Pending') return showToast('Entry is not pending.', '#dc2626');
+  Object.assign(e, { status:'Reviewed', held_at:null, hold_reason:null, reviewedAt:new Date().toISOString().slice(0,10) });
+  log(id, 'reviewed', 'You (Reviewer)');
+  showToast('Marked as Reviewed — forwarded to VP Approver.', '#2563eb');
+  renderTables();
+}
+
+function approveEntry(id) {
+  const e = byId(id);
+  const eff = effectiveStatus(e);
+  // VP Rejected is a valid re-entry point: the VP can re-approve their own rejection.
+  if (!['Reviewed','VP Rejected'].includes(eff)) return showToast('Entry is not reviewed.', '#dc2626');
+  const isReapproval = eff === 'VP Rejected';
+  Object.assign(e, {
+    status:'Approved', held_at:null, hold_reason:null, reject_reason:null,
+    approvedAt:new Date().toISOString().slice(0,10),
+    serial: generateSerial(e),
+  });
+  log(id, 'approved', 'You (VP)', isReapproval ? 'Re-approved after a previous VP rejection.' : null);
+  showToast(`Approved! Serial No. ${e.serial} assigned. Purchasing notified.`, '#16a34a');
+  renderTables();
+}
+
+function rejectEntry(id, ctx, reason) {
+  const e = byId(id);
+  const eff = effectiveStatus(e);
+  // VP-only: walk back an approval while it's still plainly Approved —
+  // the window closes the moment Purchasing acts (On Process / held there).
+  const canRejectApproved = ctx === 'vp' && e.status === 'Approved';
+  if (!['Pending','Reviewed'].includes(eff) && !canRejectApproved)
+    return showToast('Entry cannot be rejected.', '#dc2626');
+
+  const isVpReject = canRejectApproved || eff === 'Reviewed';
+  Object.assign(e, {
+    status: isVpReject ? 'VP Rejected' : 'Rejected',
+    held_at:null, hold_reason:null,
+    reviewedAt: e.reviewedAt || new Date().toISOString().slice(0,10),
+    reject_reason: reason || 'No reason provided.',
+  });
+  if (canRejectApproved) { e.serial = null; e.approvedAt = null; } // serial slot is freed
+  log(id, isVpReject ? 'vp_rejected' : 'rejected', ctx === 'vp' ? 'You (VP)' : 'You (Reviewer)',
+      canRejectApproved ? 'Rejected after approval, before Purchasing action. ' + (reason || '') : (reason || null));
+  showToast('Form rejected.', '#dc2626');
+  renderTables();
+}
+
+function holdEntry(id, ctx, reason) {
+  const e = byId(id);
+  if (e.status === 'On Hold') return showToast('Entry is already on hold.', '#dc2626');
+  Object.assign(e, { held_at: e.status, status:'On Hold', hold_reason: reason || null });
+  log(id, 'on_hold', 'You (' + ctx.charAt(0).toUpperCase() + ctx.slice(1) + ')', reason || null);
+  showToast('Entry put on hold.', '#d97706');
+  renderTables();
+}
+
+function processEntry(id) {
+  const e = byId(id);
+  if (!['Approved','On Process'].includes(effectiveStatus(e)))
+    return showToast('Entry cannot be marked as On Process.', '#dc2626');
+  Object.assign(e, { status:'On Process', held_at:null, hold_reason:null });
+  log(id, 'on_process', 'You (Purchasing)');
+  showToast('Marked as On Process — reviewer and VP notified.', '#7e22ce');
+  renderTables();
+}
+
+function cancelEntry(id) {
+  const e = byId(id);
+  if (e.status !== 'Pending') return showToast('Only pending requests can be cancelled.', '#dc2626');
+  e.status = 'Cancelled';
+  log(id, 'cancelled', CURRENT_USER.name);
+  showToast(`${reference(e)} has been cancelled. Edit and resubmit it anytime from My Requests.`, '#4b5563');
+  renderTables();
+}
+
+function addAttachment(id) {
+  const e = byId(id);
+  if (e.attachment) return;
+  e.attachment = 'supporting-document.pdf';
+  log(id, 'attachment_added', CURRENT_USER.name);
+  showToast(`Attachment added to ${reference(e)}.`, '#16a34a');
+  renderTables();
 }
 
 /* ── MODAL ── */
 function openModal(id, ctx) {
-  const e = entries.find(x => x.id === id);
+  const e = byId(id);
   if (!e) return;
   currentModalId  = id;
   currentModalCtx = ctx;
 
-  document.getElementById('modal-title').textContent = 'JL Form — ' + e.id;
+  document.getElementById('modal-title').textContent = 'JL Form — ' + reference(e);
   document.getElementById('reject-box').classList.remove('open');
+  document.getElementById('hold-box').classList.remove('open');
   document.getElementById('reject-reason').value = '';
+  document.getElementById('hold-reason').value = '';
 
   // Workflow indicator
+  const eff = effectiveStatus(e);
   const wfR = document.getElementById('wf-reviewed');
   const wfA = document.getElementById('wf-approved');
-  wfR.className = 'wf-icon';
-  wfA.className = 'wf-icon';
-  if (['Checked','Approved','Rejected','VP Rejected'].includes(e.status)) wfR.classList.add('done');
-  if (e.status === 'Pending' || e.status === 'Rejected') wfR.classList.add('active');
-  if (e.status === 'Checked') { wfR.classList.add('done'); wfA.classList.add('active'); }
-  if (e.status === 'Approved') { wfR.classList.add('done'); wfA.classList.add('done'); }
+  const wfP = document.getElementById('wf-process');
+  wfR.className = 'wf-icon'; wfA.className = 'wf-icon'; wfP.className = 'wf-icon';
+
+  const reached = { 'Pending':0, 'Reviewed':1, 'Approved':2, 'On Process':3, 'Rejected':0, 'VP Rejected':1, 'Cancelled':0 }[eff] ?? 0;
+  if (reached >= 1) wfR.classList.add('done');
+  if (reached >= 2) wfA.classList.add('done');
+  if (reached >= 3) wfP.classList.add('done');
+  if (eff === 'Pending')  wfR.classList.add('active');
+  if (eff === 'Reviewed') wfA.classList.add('active');
+  if (eff === 'Approved') wfP.classList.add('active');
+
+  const note = document.getElementById('wf-note');
+  note.style.display = 'none';
+  if (e.status === 'On Hold') {
+    note.style.display = 'block'; note.className = 'wf-note amber';
+    note.innerHTML = `<i class="fa-solid fa-pause"></i> On Hold at the <strong>${e.held_at}</strong> stage${e.hold_reason ? ' — ' + e.hold_reason : ''}. Acting on it (review / approve / process) resumes the workflow.`;
+    if (e.held_at === 'Pending') wfR.classList.add('held');
+    if (e.held_at === 'Reviewed') wfA.classList.add('held');
+    if (['Approved','On Process'].includes(e.held_at)) wfP.classList.add('held');
+  } else if (e.status === 'Rejected') {
+    note.style.display = 'block'; note.className = 'wf-note red';
+    note.innerHTML = `<i class="fa-solid fa-xmark"></i> Rejected by the Reviewer${e.reject_reason ? ' — ' + e.reject_reason : ''}`;
+    wfR.classList.add('halted');
+  } else if (e.status === 'VP Rejected') {
+    note.style.display = 'block'; note.className = 'wf-note red';
+    note.innerHTML = `<i class="fa-solid fa-xmark"></i> Rejected by the VP${e.reject_reason ? ' — ' + e.reject_reason : ''}. The VP can still re-approve this entry.`;
+    wfA.classList.add('halted');
+  } else if (e.status === 'Cancelled') {
+    note.style.display = 'block'; note.className = 'wf-note gray';
+    note.innerHTML = `<i class="fa-solid fa-ban"></i> Cancelled by the requestor — can be edited and resubmitted under the same reference.`;
+  }
 
   // Detail grid
   document.getElementById('modal-details').innerHTML = `
     <div class="detail-item full"><label>JL Title</label><span>${e.title}</span></div>
-    <div class="detail-item"><label>Date Prepared</label><span>${e.date}</span></div>
+    <div class="detail-item"><label>Reference No.</label><span class="ref-cell" style="font-size:.95rem;">${reference(e)}</span></div>
+    <div class="detail-item"><label>Serial Number</label><span>${e.serial ? `<strong style="color:#1e3a5f; font-family:monospace;">${e.serial}</strong>` : '<em style="color:#94a3b8;">Assigned at VP approval</em>'}</span></div>
     <div class="detail-item"><label>Status</label><span>${statusBadge(e.status)}</span></div>
+    <div class="detail-item"><label>Date Prepared</label><span>${e.date}</span></div>
     <div class="detail-item"><label>Company / Farm</label><span>${e.company}</span></div>
-    <div class="detail-item"><label>Farm Manager / Supervisor</label><span>${e.manager}</span></div>
     <div class="detail-item"><label>Department</label><span>${e.dept}</span></div>
+    <div class="detail-item"><label>Farm Manager / Supervisor</label><span>${e.manager}</span></div>
     <div class="detail-item"><label>Estimated Amount</label><span>${fmtAmount(e.amount)}</span></div>
     <div class="detail-item"><label>Submitted On</label><span>${e.submittedAt || '—'}</span></div>
     <div class="detail-item"><label>Reviewed On</label><span>${e.reviewedAt || '—'}</span></div>
     <div class="detail-item"><label>Approved On</label><span>${e.approvedAt || '—'}</span></div>
-    <div class="detail-item"><label>Serial Number</label><span>${e.serial ? `<strong style="color:#1e3a5f;">${e.serial}</strong>` : '<em style="color:#94a3b8;">Not yet assigned</em>'}</span></div>
-    ${e.rejectReason ? `<div class="detail-item full"><label>Rejection Reason</label><span style="color:#dc2626;">${e.rejectReason}</span></div>` : ''}
+    <div class="detail-item"><label>Attachment</label><span>${e.attachment ? `<a href="#" onclick="showToast('Downloads the stored file in the real app.'); return false;" style="color:#2563eb;"><i class="fa-solid fa-paperclip"></i> ${e.attachment}</a>` : '<em style="color:#94a3b8;">None</em>'}</span></div>
+    ${e.hold_reason   ? `<div class="detail-item full"><label>Hold Reason</label><span style="color:#b45309;">${e.hold_reason}</span></div>` : ''}
+    ${e.reject_reason ? `<div class="detail-item full"><label>Rejection Reason</label><span style="color:#dc2626;">${e.reject_reason}</span></div>` : ''}
   `;
 
-  // Action buttons
+  // Action buttons per context — mirrors JlModal / JlTable logic
+  const eid = e.id;
   let actions = `<button class="btn btn-outline" onclick="closeModal()">Close</button>`;
-  if (ctx === 'reviewer' && e.status === 'Pending') {
+
+  if (ctx === 'reviewer' && eff === 'Pending') {
     actions += `
-      <button class="btn btn-danger" onclick="confirmReject('reviewer')"><i class="fa-solid fa-xmark"></i> Reject</button>
-      <button class="btn btn-success" onclick="quickAction('${e.id}','Checked'); closeModal();"><i class="fa-solid fa-check"></i> Mark as Checked</button>`;
+      <button class="btn btn-warning" onclick="showHoldBox()"><i class="fa-solid fa-pause"></i> On Hold</button>
+      <button class="btn btn-danger" onclick="showRejectBox()"><i class="fa-solid fa-xmark"></i> Reject</button>
+      <button class="btn btn-success" onclick="reviewEntry(${eid}); closeModal();"><i class="fa-solid fa-check"></i> Mark as Reviewed</button>`;
   }
-  if (ctx === 'vp' && e.status === 'Checked') {
-    actions += `
-      <button class="btn btn-danger" onclick="confirmReject('vp')"><i class="fa-solid fa-xmark"></i> Reject</button>
-      <button class="btn btn-success" onclick="quickAction('${e.id}','Approved'); closeModal();"><i class="fa-solid fa-circle-check"></i> Approve</button>`;
+  if (ctx === 'vp') {
+    if (eff === 'Reviewed') {
+      actions += `
+        <button class="btn btn-warning" onclick="showHoldBox()"><i class="fa-solid fa-pause"></i> On Hold</button>
+        <button class="btn btn-danger" onclick="showRejectBox()"><i class="fa-solid fa-xmark"></i> Reject</button>
+        <button class="btn btn-success" onclick="approveEntry(${eid}); closeModal();"><i class="fa-solid fa-circle-check"></i> Approve</button>`;
+    } else if (e.status === 'VP Rejected') {
+      actions += `<button class="btn btn-success" onclick="approveEntry(${eid}); closeModal();"><i class="fa-solid fa-rotate-right"></i> Re-Approve</button>`;
+    } else if (e.status === 'Approved') {
+      actions += `<button class="btn btn-danger" onclick="showRejectBox()"><i class="fa-solid fa-xmark"></i> Reject (undo approval)</button>`;
+    }
+  }
+  if (ctx === 'purchasing' && ['Approved','On Process'].includes(eff) && e.status !== 'On Process') {
+    if (e.status !== 'On Hold') actions += `<button class="btn btn-warning" onclick="showHoldBox()"><i class="fa-solid fa-pause"></i> On Hold</button>`;
+    actions += `<button class="btn" style="background:#7c3aed; color:#fff;" onclick="processEntry(${eid}); closeModal();"><i class="fa-solid fa-play"></i> On Process</button>`;
   }
   document.getElementById('modal-actions').innerHTML = actions;
 
   document.getElementById('modal-overlay').classList.add('open');
 }
 
-function confirmReject(ctx) {
+function showRejectBox() {
+  document.getElementById('hold-box').classList.remove('open');
   document.getElementById('reject-box').classList.add('open');
-  const e = entries.find(x => x.id === currentModalId);
-  // Swap buttons
-  const actions = document.getElementById('modal-actions');
-  actions.innerHTML = `
+  document.getElementById('modal-actions').innerHTML = `
     <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-danger" onclick="doReject('${ctx}')"><i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection</button>`;
+    <button class="btn btn-danger" onclick="rejectEntry(currentModalId, currentModalCtx, document.getElementById('reject-reason').value.trim()); closeModal();">
+      <i class="fa-solid fa-triangle-exclamation"></i> Confirm Rejection
+    </button>`;
 }
 
-function doReject(ctx) {
-  const e = entries.find(x => x.id === currentModalId);
-  if (!e) return;
-  const reason = document.getElementById('reject-reason').value.trim();
-  e.status = ctx === 'vp' ? 'VP Rejected' : 'Rejected';
-  e.reviewedAt = e.reviewedAt || new Date().toISOString().slice(0,10);
-  e.rejectReason = reason || 'No reason provided.';
-  closeModal();
-  renderTables();
-  showToast('Form rejected.', '#dc2626');
+function showHoldBox() {
+  document.getElementById('reject-box').classList.remove('open');
+  document.getElementById('hold-box').classList.add('open');
+  document.getElementById('modal-actions').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-warning" onclick="holdEntry(currentModalId, currentModalCtx, document.getElementById('hold-reason').value.trim()); closeModal();">
+      <i class="fa-solid fa-pause"></i> Confirm Hold
+    </button>`;
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   currentModalId = null;
-}
-
-/* ── FILTER ── */
-function filterTable(tableId, text, statusFilterId) {
-  const statusVal = typeof statusFilterId === 'string'
-    ? document.getElementById(statusFilterId).value
-    : statusFilterId.value || '';
-  const q = (text || '').toLowerCase();
-  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
-    const matchText   = !q || tr.dataset.text.includes(q);
-    const matchStatus = !statusVal || tr.dataset.status === statusVal;
-    tr.style.display  = matchText && matchStatus ? '' : 'none';
-  });
 }
 
 /* ── TOAST ── */
@@ -835,34 +1323,57 @@ function showToast(msg, bg) {
   t.textContent = msg;
   t.style.background = bg || '#1e3a5f';
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-/* ── KEBAB MENU ── */
+/* ── KEBAB MENU (mirrors JlTable per-context actionability) ── */
 function toggleKebab(ev) {
   ev.stopPropagation();
-  const btn   = ev.currentTarget;
-  const id    = btn.dataset.id;
-  const ctx   = btn.dataset.ctx;
-  const menu  = document.getElementById('shared-kebab');
+  const btn  = ev.currentTarget;
+  const id   = parseInt(btn.dataset.id, 10);
+  const ctx  = btn.dataset.ctx;
+  const menu = document.getElementById('shared-kebab');
   const alreadyThisBtn = menu.classList.contains('open') && menu.dataset.activeId === id + ctx;
 
   closeKebabs();
   if (alreadyThisBtn) return;
 
-  const entry = entries.find(x => x.id === id);
-  let html = `<button class="kebab-item" onclick="openModal('${id}','${ctx}'); closeKebabs()"><i class="fa-solid fa-eye"></i> View Details</button>`;
+  const e   = byId(id);
+  const eff = effectiveStatus(e);
+  const held = e.status === 'On Hold';
+  let html = '';
 
-  if (ctx === 'reviewer' && entry.status === 'Pending') {
-    html += `<div class="kebab-divider"></div>
-      <button class="kebab-item success" onclick="quickAction('${id}','Checked'); closeKebabs()"><i class="fa-solid fa-check"></i> Mark as Checked</button>
-      <button class="kebab-item danger" onclick="openRejectModal('${id}','reviewer'); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+  const canAct =
+    (ctx === 'reviewer'   && eff === 'Pending') ||
+    (ctx === 'vp'         && eff === 'Reviewed') ||
+    (ctx === 'purchasing' && ['Approved','On Process'].includes(eff));
+
+  if (ctx === 'reviewer' && canAct) {
+    html += `<button class="kebab-item success" onclick="openModal(${id},'reviewer'); closeKebabs()"><i class="fa-solid fa-check"></i> For Review</button>
+      <div class="kebab-divider"></div>
+      <button class="kebab-item danger" onclick="openModal(${id},'reviewer'); showRejectBox(); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+    if (!held) html += `<div class="kebab-divider"></div>
+      <button class="kebab-item warning" onclick="openModal(${id},'reviewer'); showHoldBox(); closeKebabs()"><i class="fa-solid fa-pause"></i> On Hold</button>`;
+  } else if (ctx === 'vp' && canAct) {
+    html += `<button class="kebab-item success" onclick="openModal(${id},'vp'); closeKebabs()"><i class="fa-solid fa-check"></i> For Approval</button>
+      <div class="kebab-divider"></div>
+      <button class="kebab-item danger" onclick="openModal(${id},'vp'); showRejectBox(); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+    if (!held) html += `<div class="kebab-divider"></div>
+      <button class="kebab-item warning" onclick="openModal(${id},'vp'); showHoldBox(); closeKebabs()"><i class="fa-solid fa-pause"></i> On Hold</button>`;
+  } else if (ctx === 'vp' && e.status === 'VP Rejected') {
+    html += `<button class="kebab-item success" onclick="approveEntry(${id}); closeKebabs()"><i class="fa-solid fa-rotate-right"></i> Re-Approve</button>
+      <div class="kebab-divider"></div>`;
+  } else if (ctx === 'purchasing' && canAct) {
+    if (e.status !== 'On Process') {
+      html += `<button class="kebab-item success" onclick="processEntry(${id}); closeKebabs()"><i class="fa-solid fa-play"></i> On Process</button>
+        <div class="kebab-divider"></div>`;
+    }
+    if (!held) html += `<button class="kebab-item warning" onclick="openModal(${id},'purchasing'); showHoldBox(); closeKebabs()"><i class="fa-solid fa-pause"></i> On Hold</button>
+      <div class="kebab-divider"></div>`;
   }
-  if (ctx === 'vp' && entry.status === 'Checked') {
-    html += `<div class="kebab-divider"></div>
-      <button class="kebab-item success" onclick="quickAction('${id}','Approved'); closeKebabs()"><i class="fa-solid fa-circle-check"></i> Approve</button>
-      <button class="kebab-item danger" onclick="openRejectModal('${id}','vp'); closeKebabs()"><i class="fa-solid fa-xmark"></i> Reject</button>`;
-  }
+
+  html += `<button class="kebab-item" onclick="openModal(${id},'${ctx}'); closeKebabs()"><i class="fa-solid fa-eye"></i> View Details</button>`;
 
   menu.innerHTML = html;
   menu.dataset.activeId = id + ctx;
@@ -884,6 +1395,9 @@ document.addEventListener('click', closeKebabs);
 document.addEventListener('scroll', closeKebabs, true);
 
 /* ── INIT ── */
+document.getElementById('f-company').innerHTML =
+  '<option value="">— Select company —</option>' +
+  COMPANIES.map(c => `<option>${c.name}</option>`).join('');
 document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
 document.getElementById('modal-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
