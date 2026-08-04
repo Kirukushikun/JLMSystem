@@ -28,6 +28,8 @@ export default function Vp({ entries }: Props) {
     const [search, setSearch]               = useState('');
     const [statusFilter, setStatusFilter]   = useState('');
     const [modal, setModal]                 = useState<JlEntry | null>(null);
+    const [showApproveBox, setShowApproveBox]   = useState(false);
+    const [approveRemarks, setApproveRemarks]   = useState('');
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason]   = useState('');
     const [rejectEntry, setRejectEntry]     = useState<JlEntry | null>(null);
@@ -43,13 +45,14 @@ export default function Vp({ entries }: Props) {
     }
 
     function closeModal() {
-        setModal(null); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
+        setModal(null); setShowApproveBox(false); setApproveRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
     }
 
-    function handleApprove(id: number) {
-        router.patch(`/jl/${id}/approve`, {}, {
+    function handleConfirmApprove() {
+        if (!modal) return;
+        router.patch(`/jl/${modal.id}/approve`, { approve_remarks: approveRemarks }, {
             preserveScroll: true,
-            onSuccess: () => showToast('Entry approved and serial number assigned.'),
+            onSuccess: () => { closeModal(); showToast('Entry approved and serial number assigned.'); },
         });
     }
 
@@ -109,7 +112,7 @@ export default function Vp({ entries }: Props) {
                 <ul className="mt-2 list-disc pl-4">
                     <li>Forms with status <strong>Reviewed</strong> are waiting for your action — use the kebab menu (⋮).</li>
                     <li><strong>For Approval</strong> — opens the full form details before you confirm approval.</li>
-                    <li><strong>Approve</strong> — grants final approval and triggers the auto-generated serial number.</li>
+                    <li><strong>Approve</strong> — grants final approval, triggers the auto-generated serial number, and lets you add optional remarks visible to every role.</li>
                     <li><strong>Reject</strong> — opens a confirmation with an optional reason; status becomes VP Rejected.</li>
                     <li><strong>On Hold</strong> — pauses a Reviewed form with an optional reason. Use <strong>View Details</strong> on any held entry to see the hold reason.</li>
                     <li><strong>Re-Approve</strong> — a form you previously rejected (VP Rejected) can be approved after all; it gets a fresh serial number.</li>
@@ -168,7 +171,7 @@ export default function Vp({ entries }: Props) {
                 <JlTable
                     entries={pageItems}
                     context="vp"
-                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
+                    onView={(e) => { setModal(e); setShowApproveBox(false); setApproveRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
                 />
@@ -186,7 +189,11 @@ export default function Vp({ entries }: Props) {
                 entry={modal}
                 context="vp"
                 onClose={closeModal}
-                onApprove={handleApprove}
+                onApproveClick={() => setShowApproveBox(true)}
+                showApproveBox={showApproveBox}
+                approveRemarks={approveRemarks}
+                onApproveRemarksChange={setApproveRemarks}
+                onConfirmApprove={handleConfirmApprove}
                 onRejectClick={() => setShowRejectBox(true)}
                 showRejectBox={showRejectBox}
                 rejectReason={rejectReason}

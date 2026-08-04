@@ -261,7 +261,7 @@ class JlController extends Controller
         return back();
     }
 
-    public function approve(JlEntry $entry): RedirectResponse
+    public function approve(Request $request, JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
 
@@ -270,21 +270,28 @@ class JlController extends Controller
         abort_if(! in_array($effective, ['Reviewed', 'VP Rejected']), 422, 'Entry is not reviewed.');
 
         $isReapproval = $effective === 'VP Rejected';
+        $remarks      = $request->input('approve_remarks') ?: null;
 
         $entry->update([
-            'status'        => 'Approved',
-            'held_at'       => null,
-            'hold_reason'   => null,
-            'reject_reason' => null,
-            'approved_at'   => now()->toDateString(),
-            'serial'        => $this->generateSerial($entry),
+            'status'          => 'Approved',
+            'held_at'         => null,
+            'hold_reason'     => null,
+            'reject_reason'   => null,
+            'approved_at'     => now()->toDateString(),
+            'serial'          => $this->generateSerial($entry),
+            'approve_remarks' => $remarks,
         ]);
+
+        $notes = $isReapproval ? 'Re-approved after a previous VP rejection.' : null;
+        if ($remarks) {
+            $notes = trim(($notes ? $notes . ' ' : '') . $remarks);
+        }
 
         JlAuditLog::create([
             'jl_entry_id' => $entry->id,
             'event'       => 'approved',
             'actor'       => auth()->user()->name,
-            'notes'       => $isReapproval ? 'Re-approved after a previous VP rejection.' : null,
+            'notes'       => $notes,
         ]);
 
         $this->notifyRoles(['purchasing', 'admin'], $entry, 'approved',
@@ -442,7 +449,7 @@ class JlController extends Controller
             fputcsv($out, [
                 'Reference', 'Title', 'Date Prepared', 'Company', 'Department',
                 'Manager', 'Est. Amount', 'Status', 'Held At', 'Serial No.',
-                'Submitted', 'Reviewed', 'Approved', 'Reject Reason',
+                'Submitted', 'Reviewed', 'Approved', 'Reject Reason', 'Approval Remarks',
             ]);
             foreach ($entries as $e) {
                 fputcsv($out, [
@@ -460,6 +467,7 @@ class JlController extends Controller
                     $e->reviewed_at ?? '',
                     $e->approved_at ?? '',
                     $e->reject_reason ?? '',
+                    $e->approve_remarks ?? '',
                 ]);
             }
             fclose($out);

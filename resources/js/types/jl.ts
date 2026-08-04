@@ -25,6 +25,7 @@ export interface JlEntry {
     reviewed_at: string | null;
     approved_at: string | null;
     reject_reason?: string | null;
+    approve_remarks?: string | null;
     attachment: string | null;
     attachment_name: string | null;
     attachment_url: string | null;

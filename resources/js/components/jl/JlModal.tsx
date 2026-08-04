@@ -7,8 +7,12 @@ interface Props {
     context: 'reviewer' | 'vp' | 'purchasing';
     onClose: () => void;
     onCheck?: (id: number) => void;
-    onApprove?: (id: number) => void;
     onProcess?: (id: number) => void;
+    onApproveClick?: () => void;
+    showApproveBox?: boolean;
+    approveRemarks?: string;
+    onApproveRemarksChange?: (v: string) => void;
+    onConfirmApprove?: () => void;
     onRejectClick?: () => void;
     showRejectBox?: boolean;
     rejectReason?: string;
@@ -61,8 +65,12 @@ export default function JlModal({
     context,
     onClose,
     onCheck,
-    onApprove,
     onProcess,
+    onApproveClick,
+    showApproveBox,
+    approveRemarks,
+    onApproveRemarksChange,
+    onConfirmApprove,
     onRejectClick,
     showRejectBox,
     rejectReason,
@@ -107,7 +115,7 @@ export default function JlModal({
     const wasApprovedTrack   = effective === 'Approved' || effective === 'On Process';
     const rejectWindowClosed = context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
-    const showingBox = showRejectBox || showHoldBox;
+    const showingBox = showRejectBox || showHoldBox || showApproveBox;
 
     return (
         <div
@@ -188,6 +196,13 @@ export default function JlModal({
                             full
                         />
                     )}
+                    {entry.approve_remarks && (
+                        <DetailItem
+                            label="Approval Remarks"
+                            value={<span className="text-green-700">{entry.approve_remarks}</span>}
+                            full
+                        />
+                    )}
                 </div>
 
                 {rejectWindowClosed && (
@@ -228,6 +243,22 @@ export default function JlModal({
                     </div>
                 )}
 
+                {/* Approve remarks textarea */}
+                {showApproveBox && (
+                    <div className="mt-4">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Remarks (optional)
+                        </label>
+                        <textarea
+                            rows={3}
+                            value={approveRemarks}
+                            onChange={(e) => onApproveRemarksChange?.(e.target.value)}
+                            placeholder="Add a comment about this approval…"
+                            className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
+                        />
+                    </div>
+                )}
+
                 {/* Action buttons */}
                 <div className="mt-6 flex flex-wrap justify-end gap-2">
                     {!showingBox ? (
@@ -264,7 +295,7 @@ export default function JlModal({
                             )}
                             {(canApprove || canReapprove) && (
                                 <button
-                                    onClick={() => { onApprove?.(entry.id); onClose(); }}
+                                    onClick={onApproveClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
                                     <i class="fa-solid fa-check"></i> {canReapprove ? 'Re-Approve' : 'Approve'}
@@ -292,6 +323,21 @@ export default function JlModal({
                                 className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
                                 ⚠ Confirm Rejection
+                            </button>
+                        </>
+                    ) : showApproveBox ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmApprove}
+                                className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                <i class="fa-solid fa-check"></i> Confirm Approval
                             </button>
                         </>
                     ) : (
