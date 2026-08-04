@@ -27,24 +27,28 @@
 
 ## About
 
-The JL Monitoring System is an internal web application for submitting, reviewing, and approving Justification Letter (JL) cost forms across the organization's farms and departments. Requestors log in to submit a JL form and track its status, which is then routed through a two-step approval workflow before a system-generated serial number is assigned.
+The JL Monitoring System is an internal web application for submitting, reviewing, and approving Justification Letter (JL) cost forms across the organization's farms and departments. Requestors log in to submit a JL form and track its status, which is then routed through a multi-step approval workflow before a system-generated serial number is assigned.
 
 **Key features:**
 
-- Requestor login required to submit a form and view its status — no more public/anonymous submissions
-- My Requests — requestors can see the status of every JL form they've submitted
-- Reviewer dashboard — mark submitted forms as checked and forward to VP Approver
-- VP Approver dashboard — final approval with auto-generated serial number (e.g. `BFC-JL-001-2026`)
-- Purchasing dashboard — track approved forms through processing
-- On Hold workflow — any role can pause a form at their stage; each role only sees forms held at their own stage
-- CSV data export — role-scoped export with status and date range filtering
+- Login required end-to-end — no public/anonymous submissions; every role (including `requestor`) must authenticate
+- My Requests — requestors can track every JL form they've submitted, cancel a still-Pending request, or edit-and-resubmit a Rejected one under the same reference number
+- Pre-submit confirmation step — requestors review a full summary before a form is actually submitted
+- Reviewer dashboard — mark submitted forms as Reviewed and forward to VP Approver, reject, or hold
+- VP Approver dashboard — final approval with auto-generated serial number (e.g. `BFC-JL-001-2026`); can **re-approve** an entry it previously VP-rejected, and can **reject an already-Approved entry** for as long as Purchasing hasn't acted on it yet — the modal shows an inline notice once that window has closed
+- Purchasing dashboard — mark approved forms On Process or place them On Hold
+- On Hold / On Process actions are available directly inside the shared approval-preview modal (role- and status-aware), not just the table's action menu
+- Paginated list tables with a page-size selector across all dashboards
+- CSV import/export — role-scoped export with status and date range filtering, plus admin-only import for companies, departments, and historical JL entries (used for redeploying to a new environment)
 - Real-time in-app notifications via Laravel Reverb (WebSocket) — bell icon with unread count
 - OS-level web push notifications via Firebase Cloud Messaging (FCM) — alerts even when the tab is closed
-- Role-based access control — reviewer, VP, purchasing, and admin roles with route-level guards
+- Outbound VP-approval webhook — notifies an external system (email + platform name + approval link) the moment an entry reaches the VP's queue
+- Role-based access control — requestor, reviewer, VP, purchasing, and admin roles with route-level guards
 - User Management — grant or revoke system access for any organization user via external API lookup
-- Maintenance — admin can dynamically manage the list of companies and departments shown in the submit form
+- Maintenance — admin can dynamically manage companies and departments, and import/export CSV data for redeployment
 - Authentication via the organization's centralized external auth API (no local password validation)
 - Brute-force protection — 3 failed attempts triggers a 15-minute lockout
+- Cloudflare Turnstile bot protection on login
 
 ---
 
@@ -67,13 +71,13 @@ The JL Monitoring System is an internal web application for submitting, reviewin
 
 ## User Roles
 
-| Role         | Access                                                                        |
-|--------------|-------------------------------------------------------------------------------|
-| `requestor`  | Submit Form, My Requests (view own submission status)                        |
-| `reviewer`   | Submit Form, Reviewer Dashboard (review, reject, hold), CSV export            |
-| `vp`         | Submit Form, VP Approver Dashboard (approve, reject, hold), CSV export        |
-| `purchasing` | Purchasing Dashboard (process, hold), CSV export                              |
-| `admin`      | All pages including User Management, Maintenance, and Audit Trail             |
+| Role         | Access                                                                                          |
+|--------------|---------------------------------------------------------------------------------------------------|
+| `requestor`  | Submit Form, My Requests (view own status, cancel while Pending, edit-and-resubmit if Rejected)  |
+| `reviewer`   | Reviewer Dashboard (review, reject, hold), CSV export                                            |
+| `vp`         | VP Approver Dashboard (approve, re-approve, reject, hold), CSV export                            |
+| `purchasing` | Purchasing Dashboard (process, hold), CSV export                                                 |
+| `admin`      | All pages including User Management, Maintenance, and Audit Trail                                |
 
 Roles are assigned by an admin through the User Management page. Authentication is handled by the organization's external API — no local passwords are validated.
 
@@ -82,28 +86,45 @@ Roles are assigned by an admin through the User Management page. Authentication 
 ## Workflow
 
 ```
-[Public Submit]
-      │
-      ▼
   Pending  ──── Reviewer ────► Reviewed ──── VP ────► Approved ──── Purchasing ────► On Process
       │              │               │          │            │               │
       │           Reject          VP Reject   Hold         Hold            Hold
       │              │               │          │            │               │
       ▼              ▼               ▼          ▼            ▼               ▼
-  (stays)       Rejected        VP Rejected  On Hold      On Hold         On Hold
+  Cancelled      Rejected        VP Rejected  On Hold      On Hold         On Hold
 ```
+
+`On Hold` remembers the status it was held from (`held_at`) and resumes back into it. A form's `reference` (`JL-{id}-{year}`) is permanent from submission; its `serial` (`{FarmCode}-JL-{n}-{year}`) is assigned only at approval, so the two can fall out of order if approvals happen out of submission order — this is expected.
+
+**VP re-approval / reject-after-approval rules:**
+
+- An entry the VP previously **VP-rejected** can be **re-approved**, generating a fresh serial number.
+- The VP can **reject an already-Approved entry**, but only while it's still literally `Approved` — the instant Purchasing marks it On Process (or holds it at that stage), the window closes and the modal shows an inline notice explaining why rejection is no longer available.
 
 **Notification triggers:**
 
-| Event                        | Notifies (in-app + FCM)   |
-|------------------------------|---------------------------|
-| New form submitted           | Reviewers + Admin         |
-| Reviewer approves            | VP + Admin                |
-| VP approves                  | Purchasing + Admin        |
-| Reviewer rejects             | —                         |
-| VP rejects                   | Reviewers + Admin         |
-| Any role puts on hold        | Reviewers / VP / Admin    |
-| Purchasing marks On Process  | Reviewers + VP + Admin    |
+| Event                        | Notifies (in-app + FCM)   | External webhook                |
+|------------------------------|---------------------------|----------------------------------|
+| New form submitted           | Reviewers + Admin         | —                                |
+| Reviewer marks Reviewed      | VP + Admin                | VP approval webhook (see below) |
+| VP approves                  | Purchasing + Admin        | —                                |
+| Reviewer rejects             | —                         | —                                |
+| VP rejects                   | Reviewers + Admin         | —                                |
+| Any role puts on hold        | Reviewers / VP / Admin    | —                                |
+| Purchasing marks On Process  | Reviewers + VP + Admin    | —                                |
+
+**VP approval webhook** — when an entry reaches the VP's queue (`Pending → Reviewed`), the app POSTs to an external URL (e.g. a Power Automate flow) so a separate tool can notify the VP outside the app. Silently disabled if `VP_APPROVAL_WEBHOOK_URL` is blank, and failures never block the actual review action.
+
+```json
+POST {VP_APPROVAL_WEBHOOK_URL}
+Headers: x-api-key: {VP_APPROVAL_WEBHOOK_API_KEY}, Accept: application/json
+
+{
+  "email": "<pulled live from the users table, role=vp>",
+  "platform": "JL Monitoring",
+  "url": "<link to the VP dashboard>"
+}
+```
 
 ---
 
@@ -186,6 +207,12 @@ TURNSTILE_VERIFY=true
 TURNSTILE_SITE_KEY=      # Public site key (shown in the widget)
 TURNSTILE_SECRET_KEY=    # Secret key (used for server-side verification)
 
+# VP approval webhook — fires when an entry reaches "Reviewed" (VP's queue)
+# Leave VP_APPROVAL_WEBHOOK_URL blank to disable entirely. Email is pulled live
+# from the users table (role=vp), never set here.
+VP_APPROVAL_WEBHOOK_URL=
+VP_APPROVAL_WEBHOOK_API_KEY=
+
 # Laravel Reverb — WebSocket server for real-time in-app notifications
 # Auto-generated by: php artisan reverb:install
 REVERB_APP_ID=
@@ -239,7 +266,7 @@ npm run dev
 php artisan reverb:start
 ```
 
-The app will be available at `http://localhost:8000`. The submit form at `/` is public; all other pages require login.
+The app will be available at `http://localhost:8000`. Every page, including the submit form at `/`, requires login.
 
 ---
 
@@ -249,10 +276,10 @@ The app will be available at `http://localhost:8000`. The submit form at `/` is 
 app/
 ├── Http/
 │   ├── Controllers/
-│   │   ├── JlController.php             # Submit, all workflow actions, notifications API, export
+│   │   ├── JlController.php             # Submit, cancel/resubmit, all workflow actions, VP webhook, notifications API, export
 │   │   ├── LoginController.php          # External API auth + brute-force protection
 │   │   ├── UserManagementController.php # Grant/revoke user access (admin)
-│   │   └── MaintenanceController.php    # Companies & departments CRUD (admin)
+│   │   └── MaintenanceController.php    # Companies/departments/JL entries CRUD + CSV import/export (admin)
 │   ├── Middleware/
 │   │   ├── CheckRole.php                # Role guard (role:reviewer,admin etc.)
 │   │   └── HandleInertiaRequests.php    # Shares auth + flash data to all pages
@@ -294,26 +321,33 @@ routes/
 resources/js/
 ├── components/
 │   ├── jl/
-│   │   ├── JlTable.tsx         # Shared table with kebab action menu
-│   │   ├── JlModal.tsx         # Entry detail modal with workflow actions
-│   │   ├── StatusBadge.tsx     # Color-coded status pill
-│   │   ├── HoldModal.tsx       # On Hold confirmation modal with optional reason
-│   │   └── ExportModal.tsx     # CSV export modal with status + date filters
+│   │   ├── JlTable.tsx              # Shared table with kebab action menu
+│   │   ├── JlModal.tsx              # Entry detail modal — approve/reject/hold/process actions, role- and status-aware
+│   │   ├── StatusBadge.tsx          # Color-coded status pill
+│   │   ├── HoldModal.tsx            # On Hold confirmation modal with optional reason
+│   │   ├── RejectModal.tsx          # Reject confirmation modal with optional reason
+│   │   ├── CancelModal.tsx          # Requestor cancel-submission confirmation
+│   │   ├── SubmitSummaryModal.tsx   # Pre-submit review/summary confirmation step
+│   │   ├── AttachmentUploadModal.tsx# Attachment-only upload for entries missing one
+│   │   └── ExportModal.tsx          # CSV export modal with status + date filters
+│   ├── Pagination.tsx          # Page-size selector + page nav, shared across list tables
 │   └── NotificationBell.tsx    # Real-time notification bell (navbar, WebSocket)
+├── hooks/
+│   └── usePagination.ts        # Client-side pagination state hook
 ├── layouts/
 │   └── AppLayout.tsx           # Nav bar with role-aware tabs, notification bell, FCM registration + foreground toast
 ├── pages/
 │   ├── auth/Login.tsx
 │   ├── jl/
 │   │   ├── Submit.tsx          # JL submission form (requestor login required)
-│   │   ├── MyRequests.tsx      # Requestor's own submissions and their status
+│   │   ├── MyRequests.tsx      # Requestor's own submissions — cancel, edit & resubmit, upload attachment
 │   │   ├── Reviewer.tsx        # Reviewer dashboard
 │   │   ├── Vp.tsx              # VP Approver dashboard
 │   │   ├── Purchasing.tsx      # Purchasing dashboard
 │   │   └── AuditTrail.tsx      # Full audit log (admin)
 │   └── admin/
 │       ├── Users.tsx           # User Management page
-│       └── Maintenance.tsx     # Companies & departments management
+│       └── Maintenance.tsx     # Companies/departments management + CSV import/export
 ├── firebase.ts                 # FCM token registration + foreground message listener
 └── types/
     ├── auth.ts
@@ -376,6 +410,7 @@ supervisorctl reread && supervisorctl update && supervisorctl start reverb
 - [ ] All `VITE_FIREBASE_*` values set before running `npm run build` (frontend FCM)
 - [ ] `VITE_FIREBASE_VAPID_KEY` set (required for push permission in browser)
 - [ ] `storage/cacert.pem` is present on the server
+- [ ] `VP_APPROVAL_WEBHOOK_URL` and `VP_APPROVAL_WEBHOOK_API_KEY` set if the external VP-notification webhook is in use
 - [ ] `php artisan db:seed` has been run (admin user + companies + departments)
 - [ ] File permissions: `storage/` and `bootstrap/cache/` are writable
 - [ ] Reverse proxy (nginx/Apache) configured to forward WebSocket traffic on port 8080
