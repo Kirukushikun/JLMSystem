@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
-    context: 'reviewer' | 'vp' | 'purchasing';
+    context: 'reviewer' | 'vp' | 'purchasing' | 'requestor';
     onClose: () => void;
     onCheck?: (id: number) => void;
     onProcess?: (id: number) => void;

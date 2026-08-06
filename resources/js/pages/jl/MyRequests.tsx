@@ -150,7 +150,7 @@ export default function MyRequests({ entries }: Props) {
                 />
             </div>
 
-            <JlModal entry={modal} context="purchasing" onClose={() => setModal(null)} />
+            <JlModal entry={modal} context="requestor" onClose={() => setModal(null)} />
 
             <CancelModal
                 entry={cancelEntry}
