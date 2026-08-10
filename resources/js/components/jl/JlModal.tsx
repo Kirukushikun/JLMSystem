@@ -6,8 +6,12 @@ interface Props {
     entry: JlEntry | null;
     context: 'reviewer' | 'vp' | 'purchasing' | 'requestor';
     onClose: () => void;
-    onCheck?: (id: number) => void;
     onProcess?: (id: number) => void;
+    onCheckClick?: () => void;
+    showCheckBox?: boolean;
+    checkRemarks?: string;
+    onCheckRemarksChange?: (v: string) => void;
+    onConfirmCheck?: () => void;
     onApproveClick?: () => void;
     showApproveBox?: boolean;
     approveRemarks?: string;
@@ -64,8 +68,12 @@ export default function JlModal({
     entry,
     context,
     onClose,
-    onCheck,
     onProcess,
+    onCheckClick,
+    showCheckBox,
+    checkRemarks,
+    onCheckRemarksChange,
+    onConfirmCheck,
     onApproveClick,
     showApproveBox,
     approveRemarks,
@@ -115,7 +123,7 @@ export default function JlModal({
     const wasApprovedTrack   = effective === 'Approved' || effective === 'On Process';
     const rejectWindowClosed = context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
-    const showingBox = showRejectBox || showHoldBox || showApproveBox;
+    const showingBox = showRejectBox || showHoldBox || showApproveBox || showCheckBox;
 
     return (
         <div
@@ -196,6 +204,13 @@ export default function JlModal({
                             full
                         />
                     )}
+                    {entry.review_remarks && (
+                        <DetailItem
+                            label="Review Remarks"
+                            value={<span className="text-blue-700">{entry.review_remarks}</span>}
+                            full
+                        />
+                    )}
                     {entry.approve_remarks && (
                         <DetailItem
                             label="Approval Remarks"
@@ -239,6 +254,22 @@ export default function JlModal({
                             onChange={(e) => onHoldReasonChange?.(e.target.value)}
                             placeholder="Note why this is being held…"
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                        />
+                    </div>
+                )}
+
+                {/* Check (review) remarks textarea */}
+                {showCheckBox && (
+                    <div className="mt-4">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Remarks (optional)
+                        </label>
+                        <textarea
+                            rows={3}
+                            value={checkRemarks}
+                            onChange={(e) => onCheckRemarksChange?.(e.target.value)}
+                            placeholder="Add a comment about this review…"
+                            className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
                 )}
@@ -287,7 +318,7 @@ export default function JlModal({
                             )}
                             {canCheck && (
                                 <button
-                                    onClick={() => { onCheck?.(entry.id); onClose(); }}
+                                    onClick={onCheckClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
                                     <i class="fa-solid fa-check"></i> Mark as Reviewed
@@ -338,6 +369,21 @@ export default function JlModal({
                                 className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
                                 <i class="fa-solid fa-check"></i> Confirm Approval
+                            </button>
+                        </>
+                    ) : showCheckBox ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmCheck}
+                                className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                <i class="fa-solid fa-check"></i> Confirm Review
                             </button>
                         </>
                     ) : (

@@ -233,22 +233,26 @@ class JlController extends Controller
         );
     }
 
-    public function review(JlEntry $entry): RedirectResponse
+    public function review(Request $request, JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
         abort_if($effective !== 'Pending', 422, 'Entry is not pending.');
 
+        $remarks = $request->input('review_remarks') ?: null;
+
         $entry->update([
-            'status'      => 'Reviewed',
-            'held_at'     => null,
-            'hold_reason' => null,
-            'reviewed_at' => now()->toDateString(),
+            'status'          => 'Reviewed',
+            'held_at'         => null,
+            'hold_reason'     => null,
+            'reviewed_at'     => now()->toDateString(),
+            'review_remarks'  => $remarks,
         ]);
 
         JlAuditLog::create([
             'jl_entry_id' => $entry->id,
             'event'       => 'reviewed',
             'actor'       => auth()->user()->name,
+            'notes'       => $remarks,
         ]);
 
         $this->notifyRoles(['vp', 'admin'], $entry, 'reviewed',
@@ -449,7 +453,7 @@ class JlController extends Controller
             fputcsv($out, [
                 'Reference', 'Title', 'Date Prepared', 'Company', 'Department',
                 'Manager', 'Est. Amount', 'Status', 'Held At', 'Serial No.',
-                'Submitted', 'Reviewed', 'Approved', 'Reject Reason', 'Approval Remarks',
+                'Submitted', 'Reviewed', 'Approved', 'Reject Reason', 'Review Remarks', 'Approval Remarks',
             ]);
             foreach ($entries as $e) {
                 fputcsv($out, [
@@ -467,6 +471,7 @@ class JlController extends Controller
                     $e->reviewed_at ?? '',
                     $e->approved_at ?? '',
                     $e->reject_reason ?? '',
+                    $e->review_remarks ?? '',
                     $e->approve_remarks ?? '',
                 ]);
             }

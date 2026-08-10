@@ -28,6 +28,8 @@ export default function Reviewer({ entries }: Props) {
     const [search, setSearch]             = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [modal, setModal]               = useState<JlEntry | null>(null);
+    const [showCheckBox, setShowCheckBox] = useState(false);
+    const [checkRemarks, setCheckRemarks] = useState('');
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [rejectEntry, setRejectEntry]   = useState<JlEntry | null>(null);
@@ -43,13 +45,14 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function closeModal() {
-        setModal(null); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
+        setModal(null); setShowCheckBox(false); setCheckRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
     }
 
-    function handleCheck(id: number) {
-        router.patch(`/jl/${id}/review`, {}, {
+    function handleConfirmCheck() {
+        if (!modal) return;
+        router.patch(`/jl/${modal.id}/review`, { review_remarks: checkRemarks }, {
             preserveScroll: true,
-            onSuccess: () => showToast('Marked as Reviewed — forwarded to VP Approver.'),
+            onSuccess: () => { closeModal(); showToast('Marked as Reviewed — forwarded to VP Approver.'); },
         });
     }
 
@@ -109,7 +112,7 @@ export default function Reviewer({ entries }: Props) {
                 <p>This is your queue of all submitted JL forms. You are the first approval step before forms reach the VP Approver.</p>
                 <ul className="mt-2 list-disc pl-4">
                     <li>Forms with status <strong>Pending</strong> require your action — use the kebab menu (⋮) to act.</li>
-                    <li><strong>For Review</strong> — opens the form details for you to inspect before marking as Reviewed.</li>
+                    <li><strong>For Review</strong> — opens the form details for you to inspect and mark as Reviewed, with optional remarks visible to every role.</li>
                     <li><strong>Reject</strong> — opens a quick confirmation where you can enter an optional rejection reason.</li>
                     <li><strong>On Hold</strong> — pauses the form with an optional reason so you can come back to it later. Use <strong>View Details</strong> on any held entry to see why it was held.</li>
                     <li>Once marked as Reviewed, the form moves to the VP Approver's queue automatically.</li>
@@ -169,7 +172,7 @@ export default function Reviewer({ entries }: Props) {
                 <JlTable
                     entries={pageItems}
                     context="reviewer"
-                    onView={(e) => { setModal(e); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
+                    onView={(e) => { setModal(e); setShowCheckBox(false); setCheckRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
                 />
@@ -187,7 +190,11 @@ export default function Reviewer({ entries }: Props) {
                 entry={modal}
                 context="reviewer"
                 onClose={closeModal}
-                onCheck={handleCheck}
+                onCheckClick={() => setShowCheckBox(true)}
+                showCheckBox={showCheckBox}
+                checkRemarks={checkRemarks}
+                onCheckRemarksChange={setCheckRemarks}
+                onConfirmCheck={handleConfirmCheck}
                 onRejectClick={() => setShowRejectBox(true)}
                 showRejectBox={showRejectBox}
                 rejectReason={rejectReason}

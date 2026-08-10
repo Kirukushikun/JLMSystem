@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $reviewed_at
  * @property \Illuminate\Support\Carbon|null $approved_at
  * @property string|null $reject_reason
+ * @property string|null $review_remarks
  * @property string|null $approve_remarks
  * @property string|null $hold_reason
  * @property string|null $attachment
@@ -30,7 +31,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable([
     'user_id', 'title', 'date', 'company', 'manager', 'dept', 'amount',
     'status', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
-    'approve_remarks', 'attachment', 'attachment_name',
+    'review_remarks', 'approve_remarks', 'attachment', 'attachment_name',
 ])]
 class JlEntry extends Model
 {
