@@ -21,7 +21,7 @@ class MaintenanceController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/Maintenance', [
-            'companies'   => Company::orderBy('name')->get(),
+            'companies' => Company::orderBy('name')->get(),
             'departments' => Department::orderBy('name')->get(),
         ]);
     }
@@ -65,7 +65,7 @@ class MaintenanceController extends Controller
                 fputcsv($out, [$c->name, $c->code]);
             }
             fclose($out);
-        }, 'companies-' . now()->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, 'companies-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function importCompanies(Request $request): RedirectResponse
@@ -78,7 +78,7 @@ class MaintenanceController extends Controller
         }
 
         $imported = 0;
-        $errors   = [];
+        $errors = [];
 
         foreach ($rows as $i => $row) {
             $line = $i + 2;
@@ -87,6 +87,7 @@ class MaintenanceController extends Controller
 
             if ($name === '' || $code === '') {
                 $errors[] = "Row {$line}: missing name or code.";
+
                 continue;
             }
 
@@ -133,7 +134,7 @@ class MaintenanceController extends Controller
                 fputcsv($out, [$d->name]);
             }
             fclose($out);
-        }, 'departments-' . now()->format('Y-m-d') . '.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }, 'departments-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function importDepartments(Request $request): RedirectResponse
@@ -146,7 +147,7 @@ class MaintenanceController extends Controller
         }
 
         $imported = 0;
-        $errors   = [];
+        $errors = [];
 
         foreach ($rows as $i => $row) {
             $line = $i + 2;
@@ -154,6 +155,7 @@ class MaintenanceController extends Controller
 
             if ($name === '') {
                 $errors[] = "Row {$line}: missing name.";
+
                 continue;
             }
 
@@ -179,52 +181,58 @@ class MaintenanceController extends Controller
         }
 
         $companyNames = Company::pluck('name')->all();
-        $deptNames    = Department::pluck('name')->all();
+        $deptNames = Department::pluck('name')->all();
 
         $imported = 0;
-        $errors   = [];
+        $errors = [];
         $seenSerials = [];
 
         DB::transaction(function () use ($rows, $companyNames, $deptNames, &$imported, &$errors, &$seenSerials) {
             foreach ($rows as $i => $row) {
                 $line = $i + 2;
 
-                $title    = trim($row['Title'] ?? '');
-                $date     = trim($row['Date Prepared'] ?? '');
-                $company  = trim($row['Company'] ?? '');
-                $dept     = trim($row['Department'] ?? '');
-                $manager  = trim($row['Manager'] ?? '');
-                $amount   = preg_replace('/[^0-9.\-]/', '', $row['Est. Amount'] ?? '');
-                $status   = trim($row['Status'] ?? '');
-                $heldAt   = trim($row['Held At'] ?? '') ?: null;
-                $serial   = trim($row['Serial No.'] ?? '') ?: null;
+                $title = trim($row['Title'] ?? '');
+                $date = trim($row['Date Prepared'] ?? '');
+                $company = trim($row['Company'] ?? '');
+                $dept = trim($row['Department'] ?? '');
+                $manager = trim($row['Manager'] ?? '');
+                $amount = preg_replace('/[^0-9.\-]/', '', $row['Est. Amount'] ?? '');
+                $status = trim($row['Status'] ?? '');
+                $heldAt = trim($row['Held At'] ?? '') ?: null;
+                $serial = trim($row['Serial No.'] ?? '') ?: null;
                 $submitted = trim($row['Submitted'] ?? '');
-                $reviewed  = trim($row['Reviewed'] ?? '') ?: null;
-                $approved  = trim($row['Approved'] ?? '') ?: null;
+                $reviewed = trim($row['Reviewed'] ?? '') ?: null;
+                $approved = trim($row['Approved'] ?? '') ?: null;
                 $rejectReason = trim($row['Reject Reason'] ?? '') ?: null;
 
                 if ($title === '' || $company === '' || $dept === '' || $manager === '' || $date === '' || $submitted === '') {
                     $errors[] = "Row {$line}: missing required field(s).";
+
                     continue;
                 }
                 if (! in_array($company, $companyNames, true)) {
                     $errors[] = "Row {$line}: unknown company \"{$company}\" — add it in Maintenance first.";
+
                     continue;
                 }
                 if (! in_array($dept, $deptNames, true)) {
                     $errors[] = "Row {$line}: unknown department \"{$dept}\" — add it in Maintenance first.";
+
                     continue;
                 }
                 if (! in_array($status, self::VALID_STATUSES, true)) {
                     $errors[] = "Row {$line}: invalid status \"{$status}\".";
+
                     continue;
                 }
                 if ($amount === '' || ! is_numeric($amount)) {
                     $errors[] = "Row {$line}: invalid amount.";
+
                     continue;
                 }
                 if (! strtotime($date) || ! strtotime($submitted)) {
                     $errors[] = "Row {$line}: invalid date.";
+
                     continue;
                 }
 
@@ -259,10 +267,12 @@ class MaintenanceController extends Controller
                 if ($serial !== null) {
                     if (isset($seenSerials[$serial])) {
                         $errors[] = "Row {$line}: duplicate serial \"{$serial}\" (already used by row {$seenSerials[$serial]} in this file).";
+
                         continue;
                     }
                     if (JlEntry::where('serial', $serial)->exists()) {
                         $errors[] = "Row {$line}: serial \"{$serial}\" already exists in the database.";
+
                         continue;
                     }
                     $seenSerials[$serial] = $line;
@@ -270,24 +280,24 @@ class MaintenanceController extends Controller
 
                 try {
                     JlEntry::create([
-                        'title'         => $title,
-                        'date'          => $date,
-                        'company'       => $company,
-                        'dept'          => $dept,
-                        'manager'       => $manager,
-                        'amount'        => (float) $amount,
-                        'status'        => $status,
-                        'held_at'       => $heldAt,
-                        'serial'        => $serial,
-                        'submitted_at'  => $submitted,
-                        'reviewed_at'   => $reviewed ?: null,
-                        'approved_at'   => $approved ?: null,
+                        'title' => $title,
+                        'date' => $date,
+                        'company' => $company,
+                        'dept' => $dept,
+                        'manager' => $manager,
+                        'amount' => (float) $amount,
+                        'status' => $status,
+                        'held_at' => $heldAt,
+                        'serial' => $serial,
+                        'submitted_at' => $submitted,
+                        'reviewed_at' => $reviewed ?: null,
+                        'approved_at' => $approved ?: null,
                         'reject_reason' => $rejectReason,
                     ]);
 
                     $imported++;
                 } catch (\Throwable $e) {
-                    $errors[] = "Row {$line}: could not be saved (" . Str::limit($e->getMessage(), 120) . ').';
+                    $errors[] = "Row {$line}: could not be saved (".Str::limit($e->getMessage(), 120).').';
                 }
             }
         });
@@ -310,11 +320,12 @@ class MaintenanceController extends Controller
         $header = fgetcsv($handle);
         if (! $header) {
             fclose($handle);
+
             return [[], 'The file is empty.'];
         }
 
         $columns = count($header);
-        $rows    = [];
+        $rows = [];
 
         while (($line = fgetcsv($handle)) !== false) {
             if ($line === [null] || $line === false) {
@@ -331,14 +342,14 @@ class MaintenanceController extends Controller
 
     private function importResponse(string $singular, string $plural, int $imported, array $errors): RedirectResponse
     {
-        $label   = $imported === 1 ? $singular : $plural;
+        $label = $imported === 1 ? $singular : $plural;
         $message = "Imported {$imported} {$label}.";
 
         if ($errors) {
             $shown = array_slice($errors, 0, 5);
-            $message .= ' ' . count($errors) . ' row(s) skipped: ' . implode(' ', $shown);
+            $message .= ' '.count($errors).' row(s) skipped: '.implode(' ', $shown);
             if (count($errors) > 5) {
-                $message .= ' …and ' . (count($errors) - 5) . ' more.';
+                $message .= ' …and '.(count($errors) - 5).' more.';
             }
         }
 

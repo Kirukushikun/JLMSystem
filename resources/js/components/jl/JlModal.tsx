@@ -4,7 +4,7 @@ import StatusBadge from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
-    context: 'reviewer' | 'vp' | 'purchasing' | 'requestor';
+    context: 'reviewer' | 'vp' | 'purchasing' | 'requestor' | 'viewer';
     onClose: () => void;
     onProcess?: (id: number) => void;
     onCheckClick?: () => void;
@@ -38,23 +38,40 @@ const WF_STYLES: Record<WfState, string> = {
 };
 
 function WfStep({ label, state }: { label: string; state: WfState }) {
-    const icons: Record<WfState, string> = { idle: '○', active: '◎', done: '✓' };
+    const icons: Record<WfState, string> = {
+        idle: '○',
+        active: '◎',
+        done: '✓',
+    };
+
     return (
         <div className="flex flex-1 flex-col items-center gap-1.5">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold ${WF_STYLES[state]}`}>
+            <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-bold ${WF_STYLES[state]}`}
+            >
                 {icons[state]}
             </div>
-            <span className="text-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            <span className="text-center text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
                 {label}
             </span>
         </div>
     );
 }
 
-function DetailItem({ label, value, full }: { label: string; value: React.ReactNode; full?: boolean }) {
+function DetailItem({
+    label,
+    value,
+    full,
+}: {
+    label: string;
+    value: React.ReactNode;
+    full?: boolean;
+}) {
     return (
         <div className={full ? 'sm:col-span-2' : ''}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+            <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                {label}
+            </p>
             <div className="mt-0.5 font-medium text-gray-900">{value}</div>
         </div>
     );
@@ -91,47 +108,84 @@ export default function JlModal({
     onConfirmHold,
 }: Props) {
     useEffect(() => {
-        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        }
         document.addEventListener('keydown', onKey);
+
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    if (!entry) return null;
+    if (!entry) {
+        return null;
+    }
 
-    const s         = entry.status;
+    const s = entry.status;
     const effective = s === 'On Hold' ? (entry.held_at ?? 'Pending') : s;
 
-    const reviewedState: WfState = ['Reviewed', 'Approved', 'Rejected', 'VP Rejected', 'On Process'].includes(effective)
-        ? 'done' : 'active';
-    const approvedState: WfState = ['Approved', 'On Process'].includes(effective)
-        ? 'done' : effective === 'Reviewed' ? 'active' : 'idle';
+    const reviewedState: WfState = [
+        'Reviewed',
+        'Approved',
+        'Rejected',
+        'VP Rejected',
+        'On Process',
+    ].includes(effective)
+        ? 'done'
+        : 'active';
+    const approvedState: WfState = ['Approved', 'On Process'].includes(
+        effective,
+    )
+        ? 'done'
+        : effective === 'Reviewed'
+          ? 'active'
+          : 'idle';
 
-    const canCheck          = context === 'reviewer' && (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
-    const canApprove        = context === 'vp' && (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
-    const canReapprove      = context === 'vp' && (s === 'VP Rejected' || (s === 'On Hold' && entry.held_at === 'VP Rejected'));
+    const canCheck =
+        context === 'reviewer' &&
+        (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
+    const canApprove =
+        context === 'vp' &&
+        (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
+    const canReapprove =
+        context === 'vp' &&
+        (s === 'VP Rejected' ||
+            (s === 'On Hold' && entry.held_at === 'VP Rejected'));
     const canRejectApproved = context === 'vp' && s === 'Approved';
-    const canProcess        = context === 'purchasing'
-        && (s === 'Approved' || (s === 'On Hold' && (entry.held_at === 'Approved' || entry.held_at === 'On Process')));
+    const canProcess =
+        context === 'purchasing' &&
+        (s === 'Approved' ||
+            (s === 'On Hold' &&
+                (entry.held_at === 'Approved' ||
+                    entry.held_at === 'On Process')));
 
     const canReject = canCheck || canApprove || canRejectApproved;
-    const canHold   = canCheck || canApprove || canRejectApproved || canReapprove
-        || (context === 'purchasing' && (s === 'Approved' || s === 'On Process'));
+    const canHold =
+        canCheck ||
+        canApprove ||
+        canRejectApproved ||
+        canReapprove ||
+        (context === 'purchasing' && (s === 'Approved' || s === 'On Process'));
 
     // VP viewing something that was on the approved track but has since moved past
     // the reject-eligible window — the instant literal status leaves 'Approved'
     // (On Process, or held at either stage), that window is closed for good.
-    const wasApprovedTrack   = effective === 'Approved' || effective === 'On Process';
-    const rejectWindowClosed = context === 'vp' && wasApprovedTrack && s !== 'Approved';
+    const wasApprovedTrack =
+        effective === 'Approved' || effective === 'On Process';
+    const rejectWindowClosed =
+        context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
-    const showingBox = showRejectBox || showHoldBox || showApproveBox || showCheckBox;
+    const showingBox =
+        showRejectBox || showHoldBox || showApproveBox || showCheckBox;
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-lg rounded-t-2xl sm:rounded-2xl bg-white p-5 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+                className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-8"
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
@@ -141,7 +195,10 @@ export default function JlModal({
                     ✕
                 </button>
 
-                <h2 className="mb-5 text-lg font-bold" style={{ color: '#1e3a5f' }}>
+                <h2
+                    className="mb-5 text-lg font-bold"
+                    style={{ color: '#1e3a5f' }}
+                >
                     JL Form — {entry.reference}
                 </h2>
 
@@ -155,23 +212,47 @@ export default function JlModal({
                 </div>
 
                 {/* Detail grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                     <DetailItem label="JL Title" value={entry.title} full />
                     <DetailItem label="Date Prepared" value={entry.date} />
-                    <DetailItem label="Status" value={<StatusBadge status={entry.status} />} />
+                    <DetailItem
+                        label="Status"
+                        value={<StatusBadge status={entry.status} />}
+                    />
                     <DetailItem label="Company / Farm" value={entry.company} />
-                    <DetailItem label="Manager / Supervisor" value={entry.manager} />
+                    <DetailItem
+                        label="Manager / Supervisor"
+                        value={entry.manager}
+                    />
                     <DetailItem label="Department" value={entry.dept} />
-                    <DetailItem label="Estimated Amount" value={fmtAmt(entry.amount)} />
-                    <DetailItem label="Submitted On" value={entry.submitted_at || '—'} />
-                    <DetailItem label="Reviewed On" value={entry.reviewed_at || '—'} />
-                    <DetailItem label="Approved On" value={entry.approved_at || '—'} />
+                    <DetailItem
+                        label="Estimated Amount"
+                        value={fmtAmt(entry.amount)}
+                    />
+                    <DetailItem
+                        label="Submitted On"
+                        value={entry.submitted_at || '—'}
+                    />
+                    <DetailItem
+                        label="Reviewed On"
+                        value={entry.reviewed_at || '—'}
+                    />
+                    <DetailItem
+                        label="Approved On"
+                        value={entry.approved_at || '—'}
+                    />
                     <DetailItem
                         label="Serial Number"
                         value={
-                            entry.serial
-                                ? <strong style={{ color: '#1e3a5f' }}>{entry.serial}</strong>
-                                : <em className="text-gray-400">Not yet assigned</em>
+                            entry.serial ? (
+                                <strong style={{ color: '#1e3a5f' }}>
+                                    {entry.serial}
+                                </strong>
+                            ) : (
+                                <em className="text-gray-400">
+                                    Not yet assigned
+                                </em>
+                            )
                         }
                     />
                     {entry.attachment_url && (
@@ -184,7 +265,8 @@ export default function JlModal({
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
                                 >
-                                    📎 {entry.attachment_name ?? 'View Attachment'}
+                                    📎{' '}
+                                    {entry.attachment_name ?? 'View Attachment'}
                                 </a>
                             }
                             full
@@ -193,28 +275,44 @@ export default function JlModal({
                     {entry.status === 'On Hold' && entry.hold_reason && (
                         <DetailItem
                             label="Hold Reason"
-                            value={<span className="text-amber-700">{entry.hold_reason}</span>}
+                            value={
+                                <span className="text-amber-700">
+                                    {entry.hold_reason}
+                                </span>
+                            }
                             full
                         />
                     )}
                     {entry.reject_reason && (
                         <DetailItem
                             label="Rejection Reason"
-                            value={<span className="text-red-600">{entry.reject_reason}</span>}
+                            value={
+                                <span className="text-red-600">
+                                    {entry.reject_reason}
+                                </span>
+                            }
                             full
                         />
                     )}
                     {entry.review_remarks && (
                         <DetailItem
                             label="Review Remarks"
-                            value={<span className="text-blue-700">{entry.review_remarks}</span>}
+                            value={
+                                <span className="text-blue-700">
+                                    {entry.review_remarks}
+                                </span>
+                            }
                             full
                         />
                     )}
                     {entry.approve_remarks && (
                         <DetailItem
                             label="Approval Remarks"
-                            value={<span className="text-green-700">{entry.approve_remarks}</span>}
+                            value={
+                                <span className="text-green-700">
+                                    {entry.approve_remarks}
+                                </span>
+                            }
                             full
                         />
                     )}
@@ -222,20 +320,23 @@ export default function JlModal({
 
                 {rejectWindowClosed && (
                     <div className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                        ⚠ This request has already moved on with Purchasing and can no longer be rejected.
+                        ⚠ This request has already moved on with Purchasing and
+                        can no longer be rejected.
                     </div>
                 )}
 
                 {/* Reject reason textarea */}
                 {showRejectBox && (
                     <div className="mt-4">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                             Reason for Rejection
                         </label>
                         <textarea
                             rows={3}
                             value={rejectReason}
-                            onChange={(e) => onRejectReasonChange?.(e.target.value)}
+                            onChange={(e) =>
+                                onRejectReasonChange?.(e.target.value)
+                            }
                             placeholder="Provide a reason…"
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
@@ -245,13 +346,15 @@ export default function JlModal({
                 {/* Hold reason textarea */}
                 {showHoldBox && (
                     <div className="mt-4">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                             Reason for Hold (optional)
                         </label>
                         <textarea
                             rows={3}
                             value={holdReason}
-                            onChange={(e) => onHoldReasonChange?.(e.target.value)}
+                            onChange={(e) =>
+                                onHoldReasonChange?.(e.target.value)
+                            }
                             placeholder="Note why this is being held…"
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                         />
@@ -261,13 +364,15 @@ export default function JlModal({
                 {/* Check (review) remarks textarea */}
                 {showCheckBox && (
                     <div className="mt-4">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                             Remarks (optional)
                         </label>
                         <textarea
                             rows={3}
                             value={checkRemarks}
-                            onChange={(e) => onCheckRemarksChange?.(e.target.value)}
+                            onChange={(e) =>
+                                onCheckRemarksChange?.(e.target.value)
+                            }
                             placeholder="Add a comment about this review…"
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
@@ -277,13 +382,15 @@ export default function JlModal({
                 {/* Approve remarks textarea */}
                 {showApproveBox && (
                     <div className="mt-4">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                             Remarks (optional)
                         </label>
                         <textarea
                             rows={3}
                             value={approveRemarks}
-                            onChange={(e) => onApproveRemarksChange?.(e.target.value)}
+                            onChange={(e) =>
+                                onApproveRemarksChange?.(e.target.value)
+                            }
                             placeholder="Add a comment about this approval…"
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
                         />
@@ -321,7 +428,8 @@ export default function JlModal({
                                     onClick={onCheckClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    <i class="fa-solid fa-check"></i> Mark as Reviewed
+                                    <i class="fa-solid fa-check"></i> Mark as
+                                    Reviewed
                                 </button>
                             )}
                             {(canApprove || canReapprove) && (
@@ -329,12 +437,16 @@ export default function JlModal({
                                     onClick={onApproveClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    <i class="fa-solid fa-check"></i> {canReapprove ? 'Re-Approve' : 'Approve'}
+                                    <i class="fa-solid fa-check"></i>{' '}
+                                    {canReapprove ? 'Re-Approve' : 'Approve'}
                                 </button>
                             )}
                             {canProcess && (
                                 <button
-                                    onClick={() => { onProcess?.(entry.id); onClose(); }}
+                                    onClick={() => {
+                                        onProcess?.(entry.id);
+                                        onClose();
+                                    }}
                                     className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
                                     <i class="fa-solid fa-play"></i> On Process
@@ -368,7 +480,8 @@ export default function JlModal({
                                 onClick={onConfirmApprove}
                                 className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
-                                <i class="fa-solid fa-check"></i> Confirm Approval
+                                <i class="fa-solid fa-check"></i> Confirm
+                                Approval
                             </button>
                         </>
                     ) : showCheckBox ? (
@@ -398,7 +511,8 @@ export default function JlModal({
                                 onClick={onConfirmHold}
                                 className="rounded-lg bg-amber-500 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
-                                <i class="fa-solid fa-pause"></i> Confirm On Hold
+                                <i class="fa-solid fa-pause"></i> Confirm On
+                                Hold
                             </button>
                         </>
                     )}

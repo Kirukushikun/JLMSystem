@@ -11,7 +11,7 @@ const INPUT =
 
 function Label({ children }: { children: React.ReactNode }) {
     return (
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <label className="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase">
             {children}
         </label>
     );
@@ -27,20 +27,23 @@ interface PageProps {
 }
 
 export default function Submit() {
-    const { flash, companies, departments, auth, editEntry } = usePage<PageProps>().props;
-    const [fileKey, setFileKey]       = useState(0);
+    const { flash, companies, departments, auth, editEntry } =
+        usePage<PageProps>().props;
+    const [fileKey, setFileKey] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
 
     const isRequestor = auth.user.role === 'requestor';
-    const isEdit       = !!editEntry;
+    const isEdit = !!editEntry;
 
     const form = useForm({
-        title:      editEntry?.title ?? '',
-        date:       editEntry?.date ?? new Date().toISOString().slice(0, 10),
-        company:    editEntry?.company ?? (isRequestor ? (auth.user.company ?? '') : ''),
-        manager:    editEntry?.manager ?? '',
-        dept:       editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
-        amount:     editEntry ? String(editEntry.amount) : '',
+        title: editEntry?.title ?? '',
+        date: editEntry?.date ?? new Date().toISOString().slice(0, 10),
+        company:
+            editEntry?.company ??
+            (isRequestor ? (auth.user.company ?? '') : ''),
+        manager: editEntry?.manager ?? '',
+        dept: editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
+        amount: editEntry ? String(editEntry.amount) : '',
         attachment: null as File | null,
     });
 
@@ -58,7 +61,11 @@ export default function Submit() {
         } else {
             form.post('/jl', {
                 forceFormData: true,
-                onSuccess: () => { form.reset(); setFileKey((k) => k + 1); setShowSummary(false); },
+                onSuccess: () => {
+                    form.reset();
+                    setFileKey((k) => k + 1);
+                    setShowSummary(false);
+                },
             });
         }
     }
@@ -67,53 +74,100 @@ export default function Submit() {
         <AppLayout>
             <Head title={isEdit ? 'Edit & Resubmit' : 'Submit Form'} />
 
-            <InfoPanel type="help" title={isEdit ? 'Editing a Cancelled Request' : 'Submitting a JL Form'}>
+            <InfoPanel
+                type="help"
+                title={
+                    isEdit
+                        ? 'Editing a Cancelled Request'
+                        : 'Submitting a JL Form'
+                }
+            >
                 {isEdit ? (
                     <p>
-                        You're correcting <strong>{editEntry!.reference}</strong>. Fix whatever was wrong and resubmit —
-                        it keeps the same reference number and goes back into the review queue as Pending.
+                        You're correcting{' '}
+                        <strong>{editEntry!.reference}</strong>. Fix whatever
+                        was wrong and resubmit — it keeps the same reference
+                        number and goes back into the review queue as Pending.
                     </p>
                 ) : (
-                    <p>Fill in all required fields and click <strong>Submit Form</strong> when ready. Your entry will be queued for reviewer approval.</p>
+                    <p>
+                        Fill in all required fields and click{' '}
+                        <strong>Submit Form</strong> when ready. Your entry will
+                        be queued for reviewer approval.
+                    </p>
                 )}
                 <ul className="mt-2 list-disc pl-4">
-                    <li><strong>Title</strong> — brief description of the job labor cost.</li>
-                    <li><strong>Date Prepared</strong> — the date the cost was incurred.</li>
                     <li>
-                        <strong>Company / Farm</strong> — {isRequestor ? "pre-filled from your account, but you can pick a different farm if this request is for one." : 'select from the available options.'}
+                        <strong>Title</strong> — brief description of the job
+                        labor cost.
                     </li>
                     <li>
-                        <strong>Department</strong> — {isRequestor ? 'pre-filled from your account and locked to prevent mistakes.' : 'select from the available options.'}
+                        <strong>Date Prepared</strong> — the date the cost was
+                        incurred.
                     </li>
-                    <li><strong>Manager / Supervisor</strong> — name of the person responsible.</li>
-                    <li><strong>Estimated Amount</strong> — must be greater than zero.</li>
-                    <li><strong>Attachment</strong> — optional supporting document (PDF, image, or Office file, max 10 MB).</li>
-                    <li>Before submitting you'll see a quick summary to review — catch mistakes there before they go out.</li>
+                    <li>
+                        <strong>Company / Farm</strong> —{' '}
+                        {isRequestor
+                            ? 'pre-filled from your account, but you can pick a different farm if this request is for one.'
+                            : 'select from the available options.'}
+                    </li>
+                    <li>
+                        <strong>Department</strong> —{' '}
+                        {isRequestor
+                            ? 'pre-filled from your account and locked to prevent mistakes.'
+                            : 'select from the available options.'}
+                    </li>
+                    <li>
+                        <strong>Manager / Supervisor</strong> — name of the
+                        person responsible.
+                    </li>
+                    <li>
+                        <strong>Estimated Amount</strong> — must be greater than
+                        zero.
+                    </li>
+                    <li>
+                        <strong>Attachment</strong> — optional supporting
+                        document (PDF, image, or Office file, max 10 MB).
+                    </li>
+                    <li>
+                        Before submitting you'll see a quick summary to review —
+                        catch mistakes there before they go out.
+                    </li>
                 </ul>
                 {!isEdit && (
-                    <p className="mt-2">After submission you will receive a reference number. A serial number is only assigned once the VP approves.</p>
+                    <p className="mt-2">
+                        After submission you will receive a reference number. A
+                        serial number is only assigned once the VP approves.
+                    </p>
                 )}
             </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
-                    {isEdit ? `Edit & Resubmit — ${editEntry!.reference}` : 'JL Monitoring Form'}
+                    {isEdit
+                        ? `Edit & Resubmit — ${editEntry!.reference}`
+                        : 'JL Monitoring Form'}
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">
-                    {isEdit ? 'Fix the mistake and resubmit for review.' : 'Fill in all required fields and submit for review.'}
+                    {isEdit
+                        ? 'Fix the mistake and resubmit for review.'
+                        : 'Fill in all required fields and submit for review.'}
                 </p>
             </div>
 
             {flash.success && (
                 <div className="mb-5 rounded-xl border-l-4 border-green-500 bg-green-50 p-5">
-                    <p className="font-semibold text-green-700"><i class="fa-solid fa-check"></i> {flash.success}</p>
+                    <p className="font-semibold text-green-700">
+                        <i class="fa-solid fa-check"></i> {flash.success}
+                    </p>
                     <p className="mt-1 text-sm text-green-800">
-                        Your submission is now pending review. A serial number will be assigned after VP approval.
+                        Your submission is now pending review. A serial number
+                        will be assigned after VP approval.
                     </p>
                 </div>
             )}
 
-            <div className="rounded-xl bg-white p-4 sm:p-7 shadow-sm">
+            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-7">
                 {Object.keys(form.errors).length > 0 && (
                     <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
                         {Object.values(form.errors).map((e) => (
@@ -122,13 +176,15 @@ export default function Submit() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                         <Label>JL Title *</Label>
                         <input
                             className={INPUT}
                             value={form.data.title}
-                            onChange={(e) => form.setData('title', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('title', e.target.value)
+                            }
                             placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026"
                             disabled={form.processing}
                         />
@@ -140,7 +196,9 @@ export default function Submit() {
                             className={INPUT}
                             type="date"
                             value={form.data.date}
-                            onChange={(e) => form.setData('date', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('date', e.target.value)
+                            }
                             disabled={form.processing}
                         />
                     </div>
@@ -150,12 +208,16 @@ export default function Submit() {
                         <select
                             className={INPUT}
                             value={form.data.company}
-                            onChange={(e) => form.setData('company', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('company', e.target.value)
+                            }
                             disabled={form.processing}
                         >
                             <option value="">— Select company —</option>
                             {companies.map((c) => (
-                                <option key={c.id} value={c.name}>{c.name}</option>
+                                <option key={c.id} value={c.name}>
+                                    {c.name}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -165,7 +227,9 @@ export default function Submit() {
                         <input
                             className={INPUT}
                             value={form.data.manager}
-                            onChange={(e) => form.setData('manager', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('manager', e.target.value)
+                            }
                             placeholder="Full name"
                             disabled={form.processing}
                         />
@@ -174,17 +238,25 @@ export default function Submit() {
                     <div>
                         <Label>Department *</Label>
                         {isRequestor ? (
-                            <input className={INPUT} value={form.data.dept} disabled />
+                            <input
+                                className={INPUT}
+                                value={form.data.dept}
+                                disabled
+                            />
                         ) : (
                             <select
                                 className={INPUT}
                                 value={form.data.dept}
-                                onChange={(e) => form.setData('dept', e.target.value)}
+                                onChange={(e) =>
+                                    form.setData('dept', e.target.value)
+                                }
                                 disabled={form.processing}
                             >
                                 <option value="">— Select department —</option>
                                 {departments.map((d) => (
-                                    <option key={d.id} value={d.name}>{d.name}</option>
+                                    <option key={d.id} value={d.name}>
+                                        {d.name}
+                                    </option>
                                 ))}
                             </select>
                         )}
@@ -196,7 +268,9 @@ export default function Submit() {
                             className={INPUT}
                             type="number"
                             value={form.data.amount}
-                            onChange={(e) => form.setData('amount', e.target.value)}
+                            onChange={(e) =>
+                                form.setData('amount', e.target.value)
+                            }
                             placeholder="0.00"
                             min="0"
                             step="0.01"
@@ -205,23 +279,42 @@ export default function Submit() {
                     </div>
 
                     <div className="sm:col-span-2">
-                        <Label>Supporting Document {isEdit ? '' : '(optional)'}</Label>
+                        <Label>
+                            Supporting Document {isEdit ? '' : '(optional)'}
+                        </Label>
                         {isEdit && editEntry!.attachment_name && (
                             <p className="mb-1.5 text-xs text-gray-400">
-                                Current: <span className="font-medium text-gray-600">{editEntry!.attachment_name}</span> — choose a new file below to replace it, or leave blank to keep it.
+                                Current:{' '}
+                                <span className="font-medium text-gray-600">
+                                    {editEntry!.attachment_name}
+                                </span>{' '}
+                                — choose a new file below to replace it, or
+                                leave blank to keep it.
                             </p>
                         )}
                         <input
                             key={fileKey}
-                            className={INPUT + ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'}
+                            className={
+                                INPUT +
+                                ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'
+                            }
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                            onChange={(e) => form.setData('attachment', e.target.files?.[0] ?? null)}
+                            onChange={(e) =>
+                                form.setData(
+                                    'attachment',
+                                    e.target.files?.[0] ?? null,
+                                )
+                            }
                             disabled={form.processing}
                         />
-                        <p className="mt-1 text-xs text-gray-400">PDF, image, or Office document — max 10 MB</p>
+                        <p className="mt-1 text-xs text-gray-400">
+                            PDF, image, or Office document — max 10 MB
+                        </p>
                         {form.errors.attachment && (
-                            <p className="mt-1 text-xs text-red-500">{form.errors.attachment}</p>
+                            <p className="mt-1 text-xs text-red-500">
+                                {form.errors.attachment}
+                            </p>
                         )}
                     </div>
                 </div>
@@ -241,7 +334,11 @@ export default function Submit() {
                             className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                             style={{ background: '#1e3a5f' }}
                         >
-                            {form.processing ? 'Submitting…' : isEdit ? '➤ Review & Resubmit' : '➤ Submit Form'}
+                            {form.processing
+                                ? 'Submitting…'
+                                : isEdit
+                                  ? '➤ Review & Resubmit'
+                                  : '➤ Submit Form'}
                         </button>
                     </div>
                 </div>

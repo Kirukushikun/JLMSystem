@@ -15,32 +15,34 @@ interface JlNotification {
 }
 
 const EVENT_ICON: Record<string, string> = {
-    submitted:   '📋',
-    reviewed:    '✅',
-    approved:    '🎉',
+    submitted: '📋',
+    reviewed: '✅',
+    approved: '🎉',
     vp_rejected: '❌',
-    on_hold:     '⏸',
-    on_process:  '⚙️',
+    on_hold: '⏸',
+    on_process: '⚙️',
 };
 
 function timeAgo(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (diff < 60)  return 'just now';
+    if (diff < 60) return 'just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
 export default function NotificationBell({ user }: { user: User }) {
-    const [open, setOpen]                   = useState(false);
+    const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState<JlNotification[]>([]);
-    const [unreadCount, setUnreadCount]     = useState(0);
-    const [loading, setLoading]             = useState(true);
-    const dropdownRef                       = useRef<HTMLDivElement>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Fetch existing notifications on mount
     useEffect(() => {
-        fetch('/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch('/notifications', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
             .then((r) => r.json())
             .then(({ notifications: list, unread_count }) => {
                 setNotifications(list);
@@ -51,25 +53,25 @@ export default function NotificationBell({ user }: { user: User }) {
 
     // Subscribe to real-time notifications
     useEffect(() => {
-        (window as any).Echo
-            ?.private(`App.Models.User.${user.id}`)
-            .notification((notif: any) => {
-                // Broadcast arrives flat; normalize to match the DB format
-                const normalized: JlNotification = {
-                    id:         notif.id ?? crypto.randomUUID(),
-                    read_at:    null,
-                    created_at: notif.created_at ?? new Date().toISOString(),
-                    data: {
-                        entry_id:  notif.data?.entry_id  ?? notif.entry_id,
-                        reference: notif.data?.reference ?? notif.reference,
-                        event:     notif.data?.event     ?? notif.event,
-                        title:     notif.data?.title     ?? notif.title,
-                        body:      notif.data?.body      ?? notif.body,
-                    },
-                };
-                setNotifications((prev) => [normalized, ...prev]);
-                setUnreadCount((c) => c + 1);
-            });
+        (window as any).Echo?.private(
+            `App.Models.User.${user.id}`,
+        ).notification((notif: any) => {
+            // Broadcast arrives flat; normalize to match the DB format
+            const normalized: JlNotification = {
+                id: notif.id ?? crypto.randomUUID(),
+                read_at: null,
+                created_at: notif.created_at ?? new Date().toISOString(),
+                data: {
+                    entry_id: notif.data?.entry_id ?? notif.entry_id,
+                    reference: notif.data?.reference ?? notif.reference,
+                    event: notif.data?.event ?? notif.event,
+                    title: notif.data?.title ?? notif.title,
+                    body: notif.data?.body ?? notif.body,
+                },
+            };
+            setNotifications((prev) => [normalized, ...prev]);
+            setUnreadCount((c) => c + 1);
+        });
 
         return () => {
             (window as any).Echo?.leave(`private-App.Models.User.${user.id}`);
@@ -79,7 +81,10 @@ export default function NotificationBell({ user }: { user: User }) {
     // Close dropdown on outside click
     useEffect(() => {
         function handleClick(e: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(e.target as Node)
+            ) {
                 setOpen(false);
             }
         }
@@ -89,21 +94,34 @@ export default function NotificationBell({ user }: { user: User }) {
 
     function markRead(id: string) {
         setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)),
+            prev.map((n) =>
+                n.id === id ? { ...n, read_at: new Date().toISOString() } : n,
+            ),
         );
         setUnreadCount((c) => Math.max(0, c - 1));
         fetch(`/notifications/${id}/read`, {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': getCsrf() },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrf(),
+            },
         });
     }
 
     function markAllRead() {
-        setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? new Date().toISOString() })));
+        setNotifications((prev) =>
+            prev.map((n) => ({
+                ...n,
+                read_at: n.read_at ?? new Date().toISOString(),
+            })),
+        );
         setUnreadCount(0);
         fetch('/notifications/read-all', {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': getCsrf() },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': getCsrf(),
+            },
         });
     }
 
@@ -115,12 +133,21 @@ export default function NotificationBell({ user }: { user: User }) {
                 className="relative rounded-md p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
                 aria-label="Notifications"
             >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
                 </svg>
                 {unreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
@@ -128,10 +155,12 @@ export default function NotificationBell({ user }: { user: User }) {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute right-0 top-10 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-xl bg-white shadow-xl ring-1 ring-black/5">
+                <div className="absolute top-10 right-0 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-xl bg-white shadow-xl ring-1 ring-black/5">
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-                        <span className="text-sm font-semibold text-gray-800">Notifications</span>
+                        <span className="text-sm font-semibold text-gray-800">
+                            Notifications
+                        </span>
                         {unreadCount > 0 && (
                             <button
                                 onClick={markAllRead}
@@ -145,9 +174,13 @@ export default function NotificationBell({ user }: { user: User }) {
                     {/* List */}
                     <div className="max-h-96 overflow-y-auto">
                         {loading ? (
-                            <p className="px-4 py-6 text-center text-sm text-gray-400">Loading…</p>
+                            <p className="px-4 py-6 text-center text-sm text-gray-400">
+                                Loading…
+                            </p>
                         ) : notifications.length === 0 ? (
-                            <p className="px-4 py-6 text-center text-sm text-gray-400">No notifications yet</p>
+                            <p className="px-4 py-6 text-center text-sm text-gray-400">
+                                No notifications yet
+                            </p>
                         ) : (
                             notifications.map((n) => (
                                 <div
@@ -162,11 +195,22 @@ export default function NotificationBell({ user }: { user: User }) {
                                         {EVENT_ICON[n.data.event] ?? '🔔'}
                                     </span>
                                     <div className="min-w-0 flex-1">
-                                        <p className={['text-sm', !n.read_at ? 'font-semibold text-gray-800' : 'text-gray-700'].join(' ')}>
+                                        <p
+                                            className={[
+                                                'text-sm',
+                                                !n.read_at
+                                                    ? 'font-semibold text-gray-800'
+                                                    : 'text-gray-700',
+                                            ].join(' ')}
+                                        >
                                             {n.data.title}
                                         </p>
-                                        <p className="mt-0.5 truncate text-xs text-gray-500">{n.data.body}</p>
-                                        <p className="mt-1 text-[10px] text-gray-400">{timeAgo(n.created_at)}</p>
+                                        <p className="mt-0.5 truncate text-xs text-gray-500">
+                                            {n.data.body}
+                                        </p>
+                                        <p className="mt-1 text-[10px] text-gray-400">
+                                            {timeAgo(n.created_at)}
+                                        </p>
                                     </div>
                                     {!n.read_at && (
                                         <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500" />
@@ -182,5 +226,8 @@ export default function NotificationBell({ user }: { user: User }) {
 }
 
 function getCsrf(): string {
-    return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
+    return (
+        (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)
+            ?.content ?? ''
+    );
 }

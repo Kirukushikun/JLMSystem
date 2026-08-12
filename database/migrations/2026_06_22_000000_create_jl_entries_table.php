@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('dept');
             $table->decimal('amount', 12, 2);
             $table->enum('status', ['Pending', 'Checked', 'Rejected', 'Approved', 'VP Rejected'])
-                  ->default('Pending');
+                ->default('Pending');
             $table->string('serial')->nullable()->unique();
             $table->date('submitted_at');
             $table->date('reviewed_at')->nullable();

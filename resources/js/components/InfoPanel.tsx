@@ -4,8 +4,8 @@ type PanelType = 'overview' | 'help' | 'about';
 
 const LABELS: Record<PanelType, string> = {
     overview: 'What am I looking at?',
-    help:     'Help / Required Fields',
-    about:    'About this Module',
+    help: 'Help / Required Fields',
+    about: 'About this Module',
 };
 
 interface Props {
@@ -40,7 +40,7 @@ export default function InfoPanel({ type, title, children }: Props) {
                         </div>
                         <button
                             onClick={() => setOpen(false)}
-                            className="text-lg font-bold leading-none text-cyan-400 hover:text-cyan-700"
+                            className="text-lg leading-none font-bold text-cyan-400 hover:text-cyan-700"
                         >
                             ×
                         </button>

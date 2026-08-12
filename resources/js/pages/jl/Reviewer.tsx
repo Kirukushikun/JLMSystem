@@ -15,9 +15,20 @@ interface Props {
     entries: JlEntry[];
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+function StatCard({
+    label,
+    value,
+    color,
+}: {
+    label: string;
+    value: number;
+    color: string;
+}) {
     return (
-        <div className="rounded-xl bg-white p-5 shadow-sm" style={{ borderLeft: `4px solid ${color}` }}>
+        <div
+            className="rounded-xl bg-white p-5 shadow-sm"
+            style={{ borderLeft: `4px solid ${color}` }}
+        >
             <div className="text-3xl font-extrabold text-gray-900">{value}</div>
             <div className="mt-1 text-xs text-gray-500">{label}</div>
         </div>
@@ -25,19 +36,19 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 }
 
 export default function Reviewer({ entries }: Props) {
-    const [search, setSearch]             = useState('');
+    const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-    const [modal, setModal]               = useState<JlEntry | null>(null);
+    const [modal, setModal] = useState<JlEntry | null>(null);
     const [showCheckBox, setShowCheckBox] = useState(false);
     const [checkRemarks, setCheckRemarks] = useState('');
     const [showRejectBox, setShowRejectBox] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
-    const [rejectEntry, setRejectEntry]   = useState<JlEntry | null>(null);
-    const [holdEntry, setHoldEntry]       = useState<JlEntry | null>(null);
-    const [showHoldBox, setShowHoldBox]   = useState(false);
+    const [rejectEntry, setRejectEntry] = useState<JlEntry | null>(null);
+    const [holdEntry, setHoldEntry] = useState<JlEntry | null>(null);
+    const [showHoldBox, setShowHoldBox] = useState(false);
     const [holdReasonModal, setHoldReasonModal] = useState('');
-    const [showExport, setShowExport]     = useState(false);
-    const [toast, setToast]               = useState('');
+    const [showExport, setShowExport] = useState(false);
+    const [toast, setToast] = useState('');
 
     function showToast(msg: string) {
         setToast(msg);
@@ -45,97 +56,199 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function closeModal() {
-        setModal(null); setShowCheckBox(false); setCheckRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal('');
+        setModal(null);
+        setShowCheckBox(false);
+        setCheckRemarks('');
+        setShowRejectBox(false);
+        setRejectReason('');
+        setShowHoldBox(false);
+        setHoldReasonModal('');
     }
 
     function handleConfirmCheck() {
         if (!modal) return;
-        router.patch(`/jl/${modal.id}/review`, { review_remarks: checkRemarks }, {
-            preserveScroll: true,
-            onSuccess: () => { closeModal(); showToast('Marked as Reviewed — forwarded to VP Approver.'); },
-        });
+        router.patch(
+            `/jl/${modal.id}/review`,
+            { review_remarks: checkRemarks },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    closeModal();
+                    showToast('Marked as Reviewed — forwarded to VP Approver.');
+                },
+            },
+        );
     }
 
     function handleConfirmReject() {
         if (!modal) return;
-        router.patch(`/jl/${modal.id}/reject`, { reject_reason: rejectReason }, {
-            preserveScroll: true,
-            onSuccess: () => { closeModal(); showToast('Form rejected.'); },
-        });
+        router.patch(
+            `/jl/${modal.id}/reject`,
+            { reject_reason: rejectReason },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    closeModal();
+                    showToast('Form rejected.');
+                },
+            },
+        );
     }
 
     function handleConfirmHoldModal() {
         if (!modal) return;
-        router.patch(`/jl/${modal.id}/hold`, { reason: holdReasonModal }, {
-            preserveScroll: true,
-            onSuccess: () => { closeModal(); showToast('Entry put on hold.'); },
-        });
+        router.patch(
+            `/jl/${modal.id}/hold`,
+            { reason: holdReasonModal },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    closeModal();
+                    showToast('Entry put on hold.');
+                },
+            },
+        );
     }
 
     function handleDirectReject(id: number, reason: string) {
-        router.patch(`/jl/${id}/reject`, { reject_reason: reason }, {
-            preserveScroll: true,
-            onSuccess: () => { setRejectEntry(null); showToast('Form rejected.'); },
-        });
+        router.patch(
+            `/jl/${id}/reject`,
+            { reject_reason: reason },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setRejectEntry(null);
+                    showToast('Form rejected.');
+                },
+            },
+        );
     }
 
     function handleDirectHold(id: number, reason: string) {
-        router.patch(`/jl/${id}/hold`, { reason }, {
-            preserveScroll: true,
-            onSuccess: () => { setHoldEntry(null); showToast('Entry put on hold.'); },
-        });
+        router.patch(
+            `/jl/${id}/hold`,
+            { reason },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setHoldEntry(null);
+                    showToast('Entry put on hold.');
+                },
+            },
+        );
     }
 
     const filtered = entries.filter((e) => {
         const q = search.toLowerCase();
         return (
-            (!q || `${e.title} ${e.company} ${e.manager}`.toLowerCase().includes(q)) &&
+            (!q ||
+                `${e.title} ${e.company} ${e.manager}`
+                    .toLowerCase()
+                    .includes(q)) &&
             (!statusFilter || e.status === statusFilter)
         );
     });
 
-    const { page, setPage, pageSize, setPageSize, pageItems, totalItems, totalPages } = usePagination(filtered);
+    const {
+        page,
+        setPage,
+        pageSize,
+        setPageSize,
+        pageItems,
+        totalItems,
+        totalPages,
+    } = usePagination(filtered);
 
-    const total            = entries.length;
-    const pending          = entries.filter((e) => e.status === 'Pending').length;
-    const checked          = entries.filter((e) => e.status === 'Reviewed').length;
-    const approved         = entries.filter((e) => e.status === 'Approved').length;
-    const reviewerRejected = entries.filter((e) => e.status === 'Rejected').length;
-    const vpRejected       = entries.filter((e) => e.status === 'VP Rejected').length;
-    const onHold           = entries.filter((e) => e.status === 'On Hold').length;
+    const total = entries.length;
+    const pending = entries.filter((e) => e.status === 'Pending').length;
+    const checked = entries.filter((e) => e.status === 'Reviewed').length;
+    const approved = entries.filter((e) => e.status === 'Approved').length;
+    const reviewerRejected = entries.filter(
+        (e) => e.status === 'Rejected',
+    ).length;
+    const vpRejected = entries.filter((e) => e.status === 'VP Rejected').length;
+    const onHold = entries.filter((e) => e.status === 'On Hold').length;
 
     return (
         <AppLayout>
             <Head title="Reviewer Dashboard" />
 
             <InfoPanel type="overview" title="Reviewer Dashboard">
-                <p>This is your queue of all submitted JL forms. You are the first approval step before forms reach the VP Approver.</p>
+                <p>
+                    This is your queue of all submitted JL forms. You are the
+                    first approval step before forms reach the VP Approver.
+                </p>
                 <ul className="mt-2 list-disc pl-4">
-                    <li>Forms with status <strong>Pending</strong> require your action — use the kebab menu (⋮) to act.</li>
-                    <li><strong>For Review</strong> — opens the form details for you to inspect and mark as Reviewed, with optional remarks visible to every role.</li>
-                    <li><strong>Reject</strong> — opens a quick confirmation where you can enter an optional rejection reason.</li>
-                    <li><strong>On Hold</strong> — pauses the form with an optional reason so you can come back to it later. Use <strong>View Details</strong> on any held entry to see why it was held.</li>
-                    <li>Once marked as Reviewed, the form moves to the VP Approver's queue automatically.</li>
+                    <li>
+                        Forms with status <strong>Pending</strong> require your
+                        action — use the kebab menu (⋮) to act.
+                    </li>
+                    <li>
+                        <strong>For Review</strong> — opens the form details for
+                        you to inspect and mark as Reviewed, with optional
+                        remarks visible to every role.
+                    </li>
+                    <li>
+                        <strong>Reject</strong> — opens a quick confirmation
+                        where you can enter an optional rejection reason.
+                    </li>
+                    <li>
+                        <strong>On Hold</strong> — pauses the form with an
+                        optional reason so you can come back to it later. Use{' '}
+                        <strong>View Details</strong> on any held entry to see
+                        why it was held.
+                    </li>
+                    <li>
+                        Once marked as Reviewed, the form moves to the VP
+                        Approver's queue automatically.
+                    </li>
                 </ul>
             </InfoPanel>
 
             <div className="mb-7">
-                <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>Reviewer Dashboard</h1>
+                <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
+                    Reviewer Dashboard
+                </h1>
                 <p className="mt-1 text-sm text-gray-500">
-                    Review submitted JL forms, mark as checked or reject before forwarding to VP Approver.
+                    Review submitted JL forms, mark as checked or reject before
+                    forwarding to VP Approver.
                 </p>
             </div>
 
             <div className="mb-3 grid grid-cols-4 gap-4">
-                <StatCard label="Total Submissions"    value={total}    color="#1e3a5f" />
-                <StatCard label="Pending Review"       value={pending}  color="#d97706" />
-                <StatCard label="Reviewed / Forwarded" value={checked}  color="#2563eb" />
-                <StatCard label="VP Approved"          value={approved} color="#16a34a" />
+                <StatCard
+                    label="Total Submissions"
+                    value={total}
+                    color="#1e3a5f"
+                />
+                <StatCard
+                    label="Pending Review"
+                    value={pending}
+                    color="#d97706"
+                />
+                <StatCard
+                    label="Reviewed / Forwarded"
+                    value={checked}
+                    color="#2563eb"
+                />
+                <StatCard
+                    label="VP Approved"
+                    value={approved}
+                    color="#16a34a"
+                />
             </div>
             <div className="mb-7 grid grid-cols-3 gap-4">
-                <StatCard label="Rejected by Reviewer" value={reviewerRejected} color="#dc2626" />
-                <StatCard label="Rejected by VP"       value={vpRejected}       color="#dc2626" />
-                <StatCard label="On Hold"              value={onHold}           color="#d97706" />
+                <StatCard
+                    label="Rejected by Reviewer"
+                    value={reviewerRejected}
+                    color="#dc2626"
+                />
+                <StatCard
+                    label="Rejected by VP"
+                    value={vpRejected}
+                    color="#dc2626"
+                />
+                <StatCard label="On Hold" value={onHold} color="#d97706" />
             </div>
 
             <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -168,11 +281,22 @@ export default function Reviewer({ entries }: Props) {
                 </button>
             </div>
 
-            <div className="rounded-xl bg-white shadow-sm" style={{ overflow: 'clip' }}>
+            <div
+                className="rounded-xl bg-white shadow-sm"
+                style={{ overflow: 'clip' }}
+            >
                 <JlTable
                     entries={pageItems}
                     context="reviewer"
-                    onView={(e) => { setModal(e); setShowCheckBox(false); setCheckRemarks(''); setShowRejectBox(false); setRejectReason(''); setShowHoldBox(false); setHoldReasonModal(''); }}
+                    onView={(e) => {
+                        setModal(e);
+                        setShowCheckBox(false);
+                        setCheckRemarks('');
+                        setShowRejectBox(false);
+                        setRejectReason('');
+                        setShowHoldBox(false);
+                        setHoldReasonModal('');
+                    }}
                     onReject={setRejectEntry}
                     onHold={setHoldEntry}
                 />
@@ -222,7 +346,16 @@ export default function Reviewer({ entries }: Props) {
             <ExportModal
                 open={showExport}
                 onClose={() => setShowExport(false)}
-                allowedStatuses={['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled']}
+                allowedStatuses={[
+                    'Pending',
+                    'Reviewed',
+                    'Rejected',
+                    'Approved',
+                    'VP Rejected',
+                    'On Hold',
+                    'On Process',
+                    'Cancelled',
+                ]}
             />
 
             {toast && (

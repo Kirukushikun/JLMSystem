@@ -10,10 +10,14 @@ interface Props {
 export default function HoldModal({ entry, onClose, onConfirm }: Props) {
     const [reason, setReason] = useState('');
 
-    useEffect(() => { setReason(''); }, [entry?.id]);
+    useEffect(() => {
+        setReason('');
+    }, [entry?.id]);
 
     useEffect(() => {
-        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+        }
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
@@ -36,12 +40,14 @@ export default function HoldModal({ entry, onClose, onConfirm }: Props) {
                     <i class="fa-solid fa-xmark"></i>
                 </button>
 
-                <h2 className="mb-0.5 text-lg font-bold text-amber-600">Put On Hold</h2>
+                <h2 className="mb-0.5 text-lg font-bold text-amber-600">
+                    Put On Hold
+                </h2>
                 <p className="mb-5 text-sm text-gray-400">
                     {entry.reference} — {entry.title}
                 </p>
 
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <label className="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase">
                     Reason (optional)
                 </label>
                 <textarea

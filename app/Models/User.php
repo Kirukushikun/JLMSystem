@@ -11,10 +11,10 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 
 /**
- * @property int    $id
+ * @property int $id
  * @property string $name
  * @property string $email
- * @property string $role  reviewer | vp | purchasing | requestor | admin
+ * @property string $role reviewer | vp | purchasing | purchasing_viewer | requestor | admin
  * @property string|null $company
  * @property string|null $dept
  * @property string $password

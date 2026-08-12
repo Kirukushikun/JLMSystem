@@ -1,4 +1,10 @@
-export type UserRole = 'reviewer' | 'vp' | 'admin' | 'purchasing' | 'requestor';
+export type UserRole =
+    | 'reviewer'
+    | 'vp'
+    | 'admin'
+    | 'purchasing'
+    | 'purchasing_viewer'
+    | 'requestor';
 
 export type User = {
     id: number;

@@ -10,14 +10,16 @@ interface Props {
 export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
     const [selected, setSelected] = useState<JlStatus[]>([...allowedStatuses]);
     const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo]     = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     useEffect(() => {
         setSelected([...allowedStatuses]);
     }, [open]);
 
     useEffect(() => {
-        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+        }
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
@@ -34,7 +36,7 @@ export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
         const params = new URLSearchParams();
         selected.forEach((s) => params.append('statuses[]', s));
         if (dateFrom) params.set('date_from', dateFrom);
-        if (dateTo)   params.set('date_to', dateTo);
+        if (dateTo) params.set('date_to', dateTo);
         window.location.href = `/jl/export?${params.toString()}`;
         onClose();
     }
@@ -55,16 +57,26 @@ export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
                     <i class="fa-solid fa-xmark"></i>
                 </button>
 
-                <h2 className="mb-1 text-lg font-bold" style={{ color: '#1e3a5f' }}>Export to CSV</h2>
+                <h2
+                    className="mb-1 text-lg font-bold"
+                    style={{ color: '#1e3a5f' }}
+                >
+                    Export to CSV
+                </h2>
                 <p className="mb-5 text-sm text-gray-400">
                     Filter entries before downloading. The file opens in Excel.
                 </p>
 
                 {/* Status checkboxes */}
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Include Statuses</p>
-                <div className="mb-5 grid grid-cols-2 gap-y-2 gap-x-4">
+                <p className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    Include Statuses
+                </p>
+                <div className="mb-5 grid grid-cols-2 gap-x-4 gap-y-2">
                     {allowedStatuses.map((s) => (
-                        <label key={s} className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                        <label
+                            key={s}
+                            className="flex cursor-pointer items-center gap-2 text-sm text-gray-700"
+                        >
                             <input
                                 type="checkbox"
                                 checked={selected.includes(s)}
@@ -77,10 +89,14 @@ export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
                 </div>
 
                 {/* Date range */}
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Submission Date Range</p>
+                <p className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                    Submission Date Range
+                </p>
                 <div className="mb-6 flex gap-3">
                     <div className="flex-1">
-                        <label className="mb-1 block text-xs text-gray-400">From</label>
+                        <label className="mb-1 block text-xs text-gray-400">
+                            From
+                        </label>
                         <input
                             type="date"
                             value={dateFrom}
@@ -89,7 +105,9 @@ export default function ExportModal({ open, onClose, allowedStatuses }: Props) {
                         />
                     </div>
                     <div className="flex-1">
-                        <label className="mb-1 block text-xs text-gray-400">To</label>
+                        <label className="mb-1 block text-xs text-gray-400">
+                            To
+                        </label>
                         <input
                             type="date"
                             value={dateTo}

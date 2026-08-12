@@ -22,7 +22,7 @@ export default function Pagination({
     if (totalItems === 0) return null;
 
     const start = (page - 1) * pageSize + 1;
-    const end   = Math.min(page * pageSize, totalItems);
+    const end = Math.min(page * pageSize, totalItems);
 
     return (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-xs text-gray-500">
@@ -34,13 +34,17 @@ export default function Pagination({
                     onChange={(e) => onPageSizeChange(Number(e.target.value))}
                 >
                     {pageSizeOptions.map((n) => (
-                        <option key={n} value={n}>{n}</option>
+                        <option key={n} value={n}>
+                            {n}
+                        </option>
                     ))}
                 </select>
             </div>
 
             <div className="flex items-center gap-3">
-                <span>{start}–{end} of {totalItems}</span>
+                <span>
+                    {start}–{end} of {totalItems}
+                </span>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => onPageChange(page - 1)}
@@ -49,7 +53,9 @@ export default function Pagination({
                     >
                         ‹ Prev
                     </button>
-                    <span className="px-2">Page {page} of {totalPages}</span>
+                    <span className="px-2">
+                        Page {page} of {totalPages}
+                    </span>
                     <button
                         onClick={() => onPageChange(page + 1)}
                         disabled={page >= totalPages}

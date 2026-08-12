@@ -5,20 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property string $title
- * @property \Illuminate\Support\Carbon $date
+ * @property Carbon $date
  * @property string $company
  * @property string $manager
  * @property string $dept
  * @property float $amount
  * @property string $status
  * @property string|null $serial
- * @property \Illuminate\Support\Carbon $submitted_at
- * @property \Illuminate\Support\Carbon|null $reviewed_at
- * @property \Illuminate\Support\Carbon|null $approved_at
+ * @property Carbon $submitted_at
+ * @property Carbon|null $reviewed_at
+ * @property Carbon|null $approved_at
  * @property string|null $reject_reason
  * @property string|null $review_remarks
  * @property string|null $approve_remarks
@@ -40,11 +41,11 @@ class JlEntry extends Model
     protected function casts(): array
     {
         return [
-            'amount'       => 'float',
-            'date'         => 'date:Y-m-d',
+            'amount' => 'float',
+            'date' => 'date:Y-m-d',
             'submitted_at' => 'date:Y-m-d',
-            'reviewed_at'  => 'date:Y-m-d',
-            'approved_at'  => 'date:Y-m-d',
+            'reviewed_at' => 'date:Y-m-d',
+            'approved_at' => 'date:Y-m-d',
         ];
     }
 
@@ -52,8 +53,8 @@ class JlEntry extends Model
     protected function reference(): Attribute
     {
         return Attribute::get(
-            fn () => 'JL-' . str_pad((string) $this->id, 3, '0', STR_PAD_LEFT)
-                   . '-' . ($this->submitted_at?->year ?? now()->year)
+            fn () => 'JL-'.str_pad((string) $this->id, 3, '0', STR_PAD_LEFT)
+                   .'-'.($this->submitted_at?->year ?? now()->year)
         );
     }
 

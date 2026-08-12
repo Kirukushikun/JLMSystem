@@ -9,7 +9,9 @@ interface Props {
 
 export default function CancelModal({ entry, onClose, onConfirm }: Props) {
     useEffect(() => {
-        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+        }
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
@@ -32,14 +34,17 @@ export default function CancelModal({ entry, onClose, onConfirm }: Props) {
                     ✕
                 </button>
 
-                <h2 className="mb-0.5 text-lg font-bold text-red-600">Cancel Request?</h2>
+                <h2 className="mb-0.5 text-lg font-bold text-red-600">
+                    Cancel Request?
+                </h2>
                 <p className="mb-5 text-sm text-gray-400">
                     {entry.reference} — {entry.title}
                 </p>
 
                 <p className="text-sm text-gray-600">
-                    This pulls the request back before any reviewer sees it. You can edit and resubmit it
-                    afterward from My Requests — nothing is permanently lost.
+                    This pulls the request back before any reviewer sees it. You
+                    can edit and resubmit it afterward from My Requests —
+                    nothing is permanently lost.
                 </p>
 
                 <div className="mt-5 flex justify-end gap-2">

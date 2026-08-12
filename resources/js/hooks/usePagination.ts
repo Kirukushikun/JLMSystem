@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 
 export function usePagination<T>(items: T[], initialPageSize = 10) {
-    const [page, setPage]         = useState(1);
+    const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(initialPageSize);
 
     const totalItems = items.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-    const safePage   = Math.min(page, totalPages);
+    const safePage = Math.min(page, totalPages);
 
     const pageItems = useMemo(() => {
         const start = (safePage - 1) * pageSize;

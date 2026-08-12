@@ -10,7 +10,7 @@ interface KebabState {
 
 interface Props {
     entries: JlEntry[];
-    context: 'reviewer' | 'vp' | 'purchasing';
+    context: 'reviewer' | 'vp' | 'purchasing' | 'viewer';
     onView: (entry: JlEntry) => void;
     onReject?: (entry: JlEntry) => void;
     onHold?: (entry: JlEntry) => void;
@@ -36,48 +36,86 @@ const HEADERS = [
 const TH_BASE =
     'whitespace-nowrap px-3.5 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 bg-gray-50';
 
-export default function JlTable({ entries, context, onView, onReject, onHold, onProcess }: Props) {
+export default function JlTable({
+    entries,
+    context,
+    onView,
+    onReject,
+    onHold,
+    onProcess,
+}: Props) {
     const [kebab, setKebab] = useState<KebabState | null>(null);
 
     useEffect(() => {
-        function close() { setKebab(null); }
+        function close() {
+            setKebab(null);
+        }
         document.addEventListener('click', close);
         document.addEventListener('scroll', close, true);
+
         return () => {
             document.removeEventListener('click', close);
             document.removeEventListener('scroll', close, true);
         };
     }, []);
 
-    function toggleKebab(e: React.MouseEvent<HTMLButtonElement>, entry: JlEntry) {
+    function toggleKebab(
+        e: React.MouseEvent<HTMLButtonElement>,
+        entry: JlEntry,
+    ) {
         e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
-        setKebab((prev) => (prev?.entry.id === entry.id ? null : { entry, rect }));
+        setKebab((prev) =>
+            prev?.entry.id === entry.id ? null : { entry, rect },
+        );
     }
 
     function isReviewerActionable(e: JlEntry) {
-        return e.status === 'Pending' || (e.status === 'On Hold' && e.held_at === 'Pending');
+        return (
+            e.status === 'Pending' ||
+            (e.status === 'On Hold' && e.held_at === 'Pending')
+        );
     }
     function isVpActionable(e: JlEntry) {
-        return e.status === 'Reviewed' || (e.status === 'On Hold' && e.held_at === 'Reviewed');
+        return (
+            e.status === 'Reviewed' ||
+            (e.status === 'On Hold' && e.held_at === 'Reviewed')
+        );
     }
     function isPurchasingActionable(e: JlEntry) {
-        return e.status === 'Approved'
-            || e.status === 'On Process'
-            || (e.status === 'On Hold' && (e.held_at === 'Approved' || e.held_at === 'On Process'));
+        return (
+            e.status === 'Approved' ||
+            e.status === 'On Process' ||
+            (e.status === 'On Hold' &&
+                (e.held_at === 'Approved' || e.held_at === 'On Process'))
+        );
     }
 
     function canAct(e: JlEntry) {
-        if (context === 'reviewer')   return isReviewerActionable(e);
-        if (context === 'vp')         return isVpActionable(e);
-        if (context === 'purchasing') return isPurchasingActionable(e);
+        if (context === 'reviewer') {
+            return isReviewerActionable(e);
+        }
+
+        if (context === 'vp') {
+            return isVpActionable(e);
+        }
+
+        if (context === 'purchasing') {
+            return isPurchasingActionable(e);
+        }
+
         return false;
     }
 
     function renderKebabItems(entry: JlEntry) {
         if (!canAct(entry)) {
             return (
-                <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                <KebabItem
+                    onClick={() => {
+                        onView(entry);
+                        setKebab(null);
+                    }}
+                >
                     <i class="fa-solid fa-eye"></i> View Details
                 </KebabItem>
             );
@@ -88,17 +126,35 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
         if (context === 'reviewer') {
             return (
                 <>
-                    <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
+                    <KebabItem
+                        color="green"
+                        onClick={() => {
+                            onView(entry);
+                            setKebab(null);
+                        }}
+                    >
                         <i class="fa-solid fa-check"></i> For Review
                     </KebabItem>
                     <div className="mx-1 h-px bg-gray-100" />
-                    <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
+                    <KebabItem
+                        color="red"
+                        onClick={() => {
+                            onReject?.(entry);
+                            setKebab(null);
+                        }}
+                    >
                         <i class="fa-solid fa-xmark"></i> Reject
                     </KebabItem>
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                            <KebabItem
+                                color="amber"
+                                onClick={() => {
+                                    onHold?.(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
@@ -106,7 +162,12 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                     {alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                            <KebabItem
+                                onClick={() => {
+                                    onView(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-eye"></i> View Details
                             </KebabItem>
                         </>
@@ -118,17 +179,35 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
         if (context === 'vp') {
             return (
                 <>
-                    <KebabItem color="green" onClick={() => { onView(entry); setKebab(null); }}>
+                    <KebabItem
+                        color="green"
+                        onClick={() => {
+                            onView(entry);
+                            setKebab(null);
+                        }}
+                    >
                         <i class="fa-solid fa-check"></i> For Approval
                     </KebabItem>
                     <div className="mx-1 h-px bg-gray-100" />
-                    <KebabItem color="red" onClick={() => { onReject?.(entry); setKebab(null); }}>
+                    <KebabItem
+                        color="red"
+                        onClick={() => {
+                            onReject?.(entry);
+                            setKebab(null);
+                        }}
+                    >
                         <i class="fa-solid fa-xmark"></i> Reject
                     </KebabItem>
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                            <KebabItem
+                                color="amber"
+                                onClick={() => {
+                                    onHold?.(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
@@ -136,7 +215,12 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                     {alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                            <KebabItem
+                                onClick={() => {
+                                    onView(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-eye"></i> View Details
                             </KebabItem>
                         </>
@@ -146,14 +230,23 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
         }
 
         if (context === 'purchasing') {
-            const canProcess = entry.status === 'Approved'
-                || (entry.status === 'On Hold' && (entry.held_at === 'Approved' || entry.held_at === 'On Process'));
+            const canProcess =
+                entry.status === 'Approved' ||
+                (entry.status === 'On Hold' &&
+                    (entry.held_at === 'Approved' ||
+                        entry.held_at === 'On Process'));
 
             return (
                 <>
                     {canProcess && (
                         <>
-                            <KebabItem color="green" onClick={() => { onProcess?.(entry); setKebab(null); }}>
+                            <KebabItem
+                                color="green"
+                                onClick={() => {
+                                    onProcess?.(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-play"></i> On Process
                             </KebabItem>
                             <div className="mx-1 h-px bg-gray-100" />
@@ -162,12 +255,23 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                     {!alreadyOnHold && (
                         <>
                             <div className="mx-1 h-px bg-gray-100" />
-                            <KebabItem color="amber" onClick={() => { onHold?.(entry); setKebab(null); }}>
+                            <KebabItem
+                                color="amber"
+                                onClick={() => {
+                                    onHold?.(entry);
+                                    setKebab(null);
+                                }}
+                            >
                                 <i class="fa-solid fa-pause"></i> On Hold
                             </KebabItem>
                         </>
                     )}
-                    <KebabItem onClick={() => { onView(entry); setKebab(null); }}>
+                    <KebabItem
+                        onClick={() => {
+                            onView(entry);
+                            setKebab(null);
+                        }}
+                    >
                         <i class="fa-solid fa-eye"></i> View Details
                     </KebabItem>
                 </>
@@ -202,7 +306,10 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                     <tbody>
                         {entries.length === 0 && (
                             <tr>
-                                <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
+                                <td
+                                    colSpan={9}
+                                    className="px-4 py-8 text-center text-sm text-gray-400"
+                                >
                                     No records found.
                                 </td>
                             </tr>
@@ -215,7 +322,7 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                                 {/* ── STICKY FIRST: Serial No. ── */}
                                 <td
                                     className={cn(
-                                        'sticky left-0 z-[3] whitespace-nowrap px-3.5 py-3',
+                                        'sticky left-0 z-[3] px-3.5 py-3 whitespace-nowrap',
                                         'bg-white [box-shadow:2px_0_5px_rgba(0,0,0,.06)]',
                                         'group-hover:bg-gray-50',
                                     )}
@@ -228,30 +335,38 @@ export default function JlTable({ entries, context, onView, onReject, onHold, on
                                             {e.serial}
                                         </span>
                                     ) : (
-                                        <span className="text-xs italic text-gray-400">
+                                        <span className="text-xs text-gray-400 italic">
                                             Pending approval
                                         </span>
                                     )}
                                 </td>
 
-                                <td className="max-w-xs truncate whitespace-nowrap px-3.5 py-3 font-medium">
+                                <td className="max-w-xs truncate px-3.5 py-3 font-medium whitespace-nowrap">
                                     {e.title}
                                 </td>
-                                <td className="whitespace-nowrap px-3.5 py-3">
+                                <td className="px-3.5 py-3 whitespace-nowrap">
                                     <StatusBadge status={e.status} />
                                 </td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.company}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.dept}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3">{e.manager}</td>
-                                <td className="whitespace-nowrap px-3.5 py-3 tabular-nums">
+                                <td className="px-3.5 py-3 whitespace-nowrap">
+                                    {e.company}
+                                </td>
+                                <td className="px-3.5 py-3 whitespace-nowrap">
+                                    {e.dept}
+                                </td>
+                                <td className="px-3.5 py-3 whitespace-nowrap">
+                                    {e.manager}
+                                </td>
+                                <td className="px-3.5 py-3 whitespace-nowrap tabular-nums">
                                     {fmtAmt(e.amount)}
                                 </td>
-                                <td className="whitespace-nowrap px-3.5 py-3 text-gray-500">{e.date}</td>
+                                <td className="px-3.5 py-3 whitespace-nowrap text-gray-500">
+                                    {e.date}
+                                </td>
 
                                 {/* ── STICKY LAST: Action ── */}
                                 <td
                                     className={cn(
-                                        'sticky right-0 z-[3] whitespace-nowrap px-3.5 py-3 text-center',
+                                        'sticky right-0 z-[3] px-3.5 py-3 text-center whitespace-nowrap',
                                         'bg-white [box-shadow:-2px_0_5px_rgba(0,0,0,.06)]',
                                         'group-hover:bg-gray-50',
                                     )}
@@ -305,6 +420,7 @@ function KebabItem({
               : color === 'amber'
                 ? 'text-amber-600 hover:bg-amber-50'
                 : 'text-gray-700 hover:bg-gray-50';
+
     return (
         <button
             onClick={onClick}

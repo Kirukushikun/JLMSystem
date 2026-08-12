@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\JlController;
+use App\Models\JlEntry;
+use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -10,24 +14,24 @@ Artisan::command('inspire', function () {
 
 // One-off: manually test the VP approval webhook end-to-end. Remove after the test.
 Artisan::command('test:vp-webhook', function () {
-    $admin = \App\Models\User::where('role', 'admin')->firstOrFail();
-    \Illuminate\Support\Facades\Auth::loginUsingId($admin->id);
+    $admin = User::where('role', 'admin')->firstOrFail();
+    Auth::loginUsingId($admin->id);
 
-    $entry = \App\Models\JlEntry::create([
-        'user_id'      => $admin->id,
-        'title'        => 'TEST - webhook trigger, please ignore',
-        'date'         => now(),
-        'company'      => 'BFC',
-        'manager'      => 'Test Manager',
-        'dept'         => 'IT and Security Services',
-        'amount'       => 1,
-        'status'       => 'Pending',
+    $entry = JlEntry::create([
+        'user_id' => $admin->id,
+        'title' => 'TEST - webhook trigger, please ignore',
+        'date' => now(),
+        'company' => 'BFC',
+        'manager' => 'Test Manager',
+        'dept' => 'IT and Security Services',
+        'amount' => 1,
+        'status' => 'Pending',
         'submitted_at' => now(),
     ]);
 
     $this->info("Created test entry: {$entry->reference} (id={$entry->id})");
 
-    app(\App\Http\Controllers\JlController::class)->review($entry);
+    app(JlController::class)->review($entry);
 
     $this->info('Triggered review() -> webhook should have fired.');
     $this->info("TEST_ENTRY_ID={$entry->id}");

@@ -20,17 +20,17 @@ class UserManagementController extends Controller
 {
     public function index(): Response
     {
-        $apiUsers   = $this->fetchApiUsers();
-        $localUsers = User::all()->keyBy('id')->map(fn($u) => [
-            'role'    => $u->role,
+        $apiUsers = $this->fetchApiUsers();
+        $localUsers = User::all()->keyBy('id')->map(fn ($u) => [
+            'role' => $u->role,
             'company' => $u->company,
-            'dept'    => $u->dept,
+            'dept' => $u->dept,
         ]);
 
         return Inertia::render('admin/Users', [
-            'apiUsers'    => $apiUsers,
-            'localUsers'  => $localUsers,
-            'companies'   => Company::orderBy('name')->pluck('name'),
+            'apiUsers' => $apiUsers,
+            'localUsers' => $localUsers,
+            'companies' => Company::orderBy('name')->pluck('name'),
             'departments' => Department::orderBy('name')->pluck('name'),
         ]);
     }
@@ -38,17 +38,17 @@ class UserManagementController extends Controller
     public function assign(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'id'      => 'required|integer',
-            'name'    => 'required|string|max:255',
-            'email'   => 'required|email|max:255',
-            'role'    => 'required|in:reviewer,vp,purchasing,admin,requestor',
+            'id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'role' => 'required|in:reviewer,vp,purchasing,purchasing_viewer,admin,requestor',
             'company' => ['required_if:role,requestor', 'nullable', 'string', Rule::exists('companies', 'name')],
-            'dept'    => ['required_if:role,requestor', 'nullable', 'string', Rule::exists('departments', 'name')],
+            'dept' => ['required_if:role,requestor', 'nullable', 'string', Rule::exists('departments', 'name')],
         ]);
 
         // Company/department only apply to requestors — clear them for every other role.
         $company = $data['role'] === 'requestor' ? $data['company'] : null;
-        $dept    = $data['role'] === 'requestor' ? $data['dept'] : null;
+        $dept = $data['role'] === 'requestor' ? $data['dept'] : null;
 
         $user = User::find($data['id']);
 
@@ -56,24 +56,25 @@ class UserManagementController extends Controller
             $user->update(['name' => $data['name'], 'role' => $data['role'], 'company' => $company, 'dept' => $dept]);
         } else {
             DB::table('users')->insert([
-                'id'         => $data['id'],
-                'name'       => $data['name'],
-                'email'      => $data['email'],
-                'role'       => $data['role'],
-                'company'    => $company,
-                'dept'       => $dept,
-                'password'   => Hash::make(Str::random(32)),
+                'id' => $data['id'],
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'role' => $data['role'],
+                'company' => $company,
+                'dept' => $dept,
+                'password' => Hash::make(Str::random(32)),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
 
         $label = match ($data['role']) {
-            'vp'         => 'VP Approver',
+            'vp' => 'VP Approver',
             'purchasing' => 'Purchasing',
-            'admin'      => 'Admin',
-            'requestor'  => 'Requestor',
-            default      => 'Reviewer',
+            'purchasing_viewer' => 'Purchasing (View Only)',
+            'admin' => 'Admin',
+            'requestor' => 'Requestor',
+            default => 'Reviewer',
         };
 
         return back()->with('success', "{$data['name']} has been granted {$label} access.");
@@ -106,7 +107,7 @@ class UserManagementController extends Controller
                 return [];
             }
 
-            $raw   = $response->json();
+            $raw = $response->json();
             $users = $raw['data'] ?? $raw;
 
             $decrypted = [];

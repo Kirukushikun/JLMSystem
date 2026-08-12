@@ -36,30 +36,30 @@ return [
     ],
 
     'auth_api' => [
-        'base_uri'          => env('AUTH_API_BASE_URI', ''),
-        'api_key'           => env('AUTH_API_KEY', ''),
+        'base_uri' => env('AUTH_API_BASE_URI', ''),
+        'api_key' => env('AUTH_API_KEY', ''),
         'auth_user_api_key' => env('AUTH_USER_API_KEY', ''),
     ],
 
     'user_api' => [
         'endpoint' => env('USER_API_ENDPOINT', ''),
-        'key'      => env('USER_API_KEY', ''),
+        'key' => env('USER_API_KEY', ''),
     ],
 
     'firebase' => [
-        'project_id'   => env('FIREBASE_PROJECT_ID'),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
         'client_email' => env('FIREBASE_CLIENT_EMAIL'),
-        'private_key'  => str_replace('\\n', "\n", env('FIREBASE_PRIVATE_KEY', '')),
+        'private_key' => str_replace('\\n', "\n", env('FIREBASE_PRIVATE_KEY', '')),
     ],
 
     'turnstile' => [
         'site_key' => env('TURNSTILE_SITE_KEY', ''),
-        'secret'   => env('TURNSTILE_SECRET_KEY', ''),
-        'verify'   => env('TURNSTILE_VERIFY', true),
+        'secret' => env('TURNSTILE_SECRET_KEY', ''),
+        'verify' => env('TURNSTILE_VERIFY', true),
     ],
 
     'vp_approval_webhook' => [
-        'url'     => env('VP_APPROVAL_WEBHOOK_URL', ''),
+        'url' => env('VP_APPROVAL_WEBHOOK_URL', ''),
         'api_key' => env('VP_APPROVAL_WEBHOOK_API_KEY', ''),
     ],
 

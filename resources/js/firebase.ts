@@ -2,11 +2,11 @@ import { initializeApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 const app = initializeApp({
-    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 });
 
 export const messaging = getMessaging(app);
@@ -17,18 +17,23 @@ export async function registerFcmToken(): Promise<void> {
         if (permission !== 'granted') return;
 
         const token = await getToken(messaging, {
-            vapidKey:           import.meta.env.VITE_FIREBASE_VAPID_KEY,
-            serviceWorkerRegistration: await navigator.serviceWorker.register('/firebase-messaging-sw.js'),
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+            serviceWorkerRegistration: await navigator.serviceWorker.register(
+                '/firebase-messaging-sw.js',
+            ),
         });
 
         if (!token) return;
 
         await fetch('/fcm-token', {
-            method:  'POST',
+            method: 'POST',
             headers: {
-                'Content-Type':     'application/json',
+                'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN':     document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+                'X-CSRF-TOKEN':
+                    document.querySelector<HTMLMetaElement>(
+                        'meta[name="csrf-token"]',
+                    )?.content ?? '',
             },
             body: JSON.stringify({ token }),
         });
@@ -38,10 +43,15 @@ export async function registerFcmToken(): Promise<void> {
 }
 
 // Handle foreground messages (tab is open and focused)
-export function listenForeground(callback: (title: string, body: string) => void): void {
+export function listenForeground(
+    callback: (title: string, body: string) => void,
+): void {
     onMessage(messaging, (payload) => {
-        const title = payload.notification?.title ?? payload.data?.['title'] ?? 'JL Monitoring';
-        const body  = payload.notification?.body  ?? payload.data?.['body']  ?? '';
+        const title =
+            payload.notification?.title ??
+            payload.data?.['title'] ??
+            'JL Monitoring';
+        const body = payload.notification?.body ?? payload.data?.['body'] ?? '';
         callback(title, body);
     });
 }

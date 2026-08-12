@@ -27,14 +27,24 @@ function Row({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-start justify-between gap-4 py-2 text-sm">
             <span className="text-gray-400">{label}</span>
-            <span className="text-right font-medium text-gray-800">{value || '—'}</span>
+            <span className="text-right font-medium text-gray-800">
+                {value || '—'}
+            </span>
         </div>
     );
 }
 
-export default function SubmitSummaryModal({ open, data, processing, onClose, onConfirm }: Props) {
+export default function SubmitSummaryModal({
+    open,
+    data,
+    processing,
+    onClose,
+    onConfirm,
+}: Props) {
     useEffect(() => {
-        function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+        function onKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+        }
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
@@ -43,11 +53,11 @@ export default function SubmitSummaryModal({ open, data, processing, onClose, on
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center"
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white p-6 sm:p-7 shadow-2xl"
+                className="relative w-full max-w-md rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl sm:p-7"
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
@@ -57,11 +67,15 @@ export default function SubmitSummaryModal({ open, data, processing, onClose, on
                     ✕
                 </button>
 
-                <h2 className="mb-0.5 text-lg font-bold" style={{ color: '#1e3a5f' }}>
+                <h2
+                    className="mb-0.5 text-lg font-bold"
+                    style={{ color: '#1e3a5f' }}
+                >
                     Review Before Submitting
                 </h2>
                 <p className="mb-4 text-sm text-gray-400">
-                    Please double-check these details — you can still go back and fix anything.
+                    Please double-check these details — you can still go back
+                    and fix anything.
                 </p>
 
                 <div className="divide-y divide-gray-100 rounded-xl bg-gray-50 px-4">
@@ -71,7 +85,10 @@ export default function SubmitSummaryModal({ open, data, processing, onClose, on
                     <Row label="Department" value={data.dept} />
                     <Row label="Manager / Supervisor" value={data.manager} />
                     <Row label="Estimated Amount" value={fmtAmt(data.amount)} />
-                    <Row label="Attachment" value={data.attachment?.name ?? 'None'} />
+                    <Row
+                        label="Attachment"
+                        value={data.attachment?.name ?? 'None'}
+                    />
                 </div>
 
                 <div className="mt-6 flex justify-end gap-2">
