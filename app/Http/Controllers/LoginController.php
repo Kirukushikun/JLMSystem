@@ -119,7 +119,7 @@ class LoginController extends Controller
 
             return match ($user->role) {
                 'vp' => redirect()->route('jl.vp'),
-                'purchasing' => redirect()->route('jl.purchasing'),
+                'purchasing', 'purchasing_viewer' => redirect()->route('jl.purchasing'),
                 'requestor' => redirect()->route('jl.submit'),
                 default => redirect()->route('jl.reviewer'), // reviewer + admin
             };
