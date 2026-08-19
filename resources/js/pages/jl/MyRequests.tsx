@@ -20,7 +20,7 @@ function fmtAmt(n: number) {
 
 export default function MyRequests({ entries }: Props) {
     const { props } = usePage<{
-        flash: { success?: string };
+        flash: { success?: string; error?: string };
         [key: string]: unknown;
     }>();
     const [modal, setModal] = useState<JlEntry | null>(null);
@@ -95,6 +95,11 @@ export default function MyRequests({ entries }: Props) {
             {props.flash?.success && (
                 <div className="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
                     {props.flash.success}
+                </div>
+            )}
+            {props.flash?.error && (
+                <div className="mb-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {props.flash.error}
                 </div>
             )}
 

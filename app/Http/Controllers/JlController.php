@@ -127,7 +127,10 @@ class JlController extends Controller
     public function cancel(JlEntry $entry): RedirectResponse
     {
         abort_if($entry->user_id !== auth()->id(), 403);
-        abort_if($entry->status !== 'Pending', 422, 'Only pending requests can be cancelled.');
+
+        if ($entry->status !== 'Pending') {
+            return back()->with('error', 'Only pending requests can be cancelled.');
+        }
 
         $entry->update(['status' => 'Cancelled']);
 
@@ -140,10 +143,13 @@ class JlController extends Controller
         return back()->with('success', "{$entry->reference} has been cancelled. Edit and resubmit it anytime from My Requests.");
     }
 
-    public function edit(JlEntry $entry): Response
+    public function edit(JlEntry $entry): Response|RedirectResponse
     {
         abort_if($entry->user_id !== auth()->id(), 403);
-        abort_if($entry->status !== 'Cancelled', 422, 'Only cancelled requests can be edited.');
+
+        if ($entry->status !== 'Cancelled') {
+            return redirect()->route('jl.myRequests')->with('error', 'Only cancelled requests can be edited.');
+        }
 
         return Inertia::render('jl/Submit', [
             'companies' => Company::orderBy('name')->get(['id', 'name']),
@@ -155,7 +161,10 @@ class JlController extends Controller
     public function resubmit(StoreJlRequest $request, JlEntry $entry): RedirectResponse
     {
         abort_if($entry->user_id !== auth()->id(), 403);
-        abort_if($entry->status !== 'Cancelled', 422, 'Only cancelled requests can be resubmitted.');
+
+        if ($entry->status !== 'Cancelled') {
+            return back()->with('error', 'Only cancelled requests can be resubmitted.');
+        }
 
         $data = $request->safe()->except(['attachment']);
         $user = auth()->user();
@@ -201,7 +210,10 @@ class JlController extends Controller
     public function uploadAttachment(Request $request, JlEntry $entry): RedirectResponse
     {
         abort_if($entry->user_id !== auth()->id(), 403);
-        abort_if($entry->attachment, 422, 'This request already has an attachment.');
+
+        if ($entry->attachment) {
+            return back()->with('error', 'This request already has an attachment.');
+        }
 
         $request->validate([
             'attachment' => ['required', 'file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
@@ -237,7 +249,10 @@ class JlController extends Controller
     public function review(Request $request, JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
-        abort_if($effective !== 'Pending', 422, 'Entry is not pending.');
+
+        if ($effective !== 'Pending') {
+            return back()->with('error', 'This entry is no longer pending — it may have already been reviewed.');
+        }
 
         $remarks = $request->input('review_remarks') ?: null;
 
@@ -272,7 +287,9 @@ class JlController extends Controller
 
         // VP Rejected is included so the VP can re-approve their own past rejection —
         // this is the only re-entry point into Approved besides the normal Reviewed path.
-        abort_if(! in_array($effective, ['Reviewed', 'VP Rejected']), 422, 'Entry is not reviewed.');
+        if (! in_array($effective, ['Reviewed', 'VP Rejected'])) {
+            return back()->with('error', 'This entry is no longer reviewed — it may have already been approved.');
+        }
 
         $isReapproval = $effective === 'VP Rejected';
         $remarks = $request->input('approve_remarks') ?: null;
@@ -318,11 +335,9 @@ class JlController extends Controller
         // distinct from the normal Pending/Reviewed rejection every role above can do.
         $canRejectApproved = in_array($user->role, ['vp', 'admin'], true) && $entry->status === 'Approved';
 
-        abort_if(
-            ! in_array($effective, ['Pending', 'Reviewed'], true) && ! $canRejectApproved,
-            422,
-            'Entry cannot be rejected.'
-        );
+        if (! in_array($effective, ['Pending', 'Reviewed'], true) && ! $canRejectApproved) {
+            return back()->with('error', 'This entry can no longer be rejected — its status may have already changed.');
+        }
 
         $isVpReject = $canRejectApproved || $effective === 'Reviewed';
         $reason = $request->input('reject_reason') ?: 'No reason provided.';
@@ -366,7 +381,9 @@ class JlController extends Controller
 
     public function hold(Request $request, JlEntry $entry): RedirectResponse
     {
-        abort_if($entry->status === 'On Hold', 422, 'Entry is already on hold.');
+        if ($entry->status === 'On Hold') {
+            return back()->with('error', 'This entry is already on hold.');
+        }
 
         $previousStatus = $entry->status;
 
@@ -403,7 +420,10 @@ class JlController extends Controller
     public function process(JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
-        abort_if(! in_array($effective, ['Approved', 'On Process']), 422, 'Entry cannot be marked as On Process.');
+
+        if (! in_array($effective, ['Approved', 'On Process'])) {
+            return back()->with('error', 'This entry cannot be marked as On Process — its status may have already changed.');
+        }
 
         $entry->update([
             'status' => 'On Process',

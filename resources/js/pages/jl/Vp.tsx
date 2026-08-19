@@ -55,6 +55,18 @@ export default function Vp({ entries }: Props) {
         setTimeout(() => setToast(''), 3000);
     }
 
+    // A guard rejected on the server (e.g. the entry was already acted on by
+    // someone else) still comes back as a normal redirect, not a failed
+    // request — so onSuccess always fires. Check flash.error first so we
+    // don't show a false "success" toast when the action didn't happen.
+    function onFlash(successMsg: string, after?: () => void) {
+        return (page: { props: Record<string, unknown> }) => {
+            const flash = page.props.flash as { error?: string } | undefined;
+            after?.();
+            showToast(flash?.error ?? successMsg);
+        };
+    }
+
     function closeModal() {
         setModal(null);
         setShowApproveBox(false);
@@ -72,10 +84,10 @@ export default function Vp({ entries }: Props) {
             { approve_remarks: approveRemarks },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    closeModal();
-                    showToast('Entry approved and serial number assigned.');
-                },
+                onSuccess: onFlash(
+                    'Entry approved and serial number assigned.',
+                    closeModal,
+                ),
             },
         );
     }
@@ -87,10 +99,7 @@ export default function Vp({ entries }: Props) {
             { reject_reason: rejectReason },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    closeModal();
-                    showToast('Form rejected by VP.');
-                },
+                onSuccess: onFlash('Form rejected by VP.', closeModal),
             },
         );
     }
@@ -102,10 +111,7 @@ export default function Vp({ entries }: Props) {
             { reason: holdReasonModal },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    closeModal();
-                    showToast('Entry put on hold.');
-                },
+                onSuccess: onFlash('Entry put on hold.', closeModal),
             },
         );
     }
@@ -116,10 +122,9 @@ export default function Vp({ entries }: Props) {
             { reject_reason: reason },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    setRejectEntry(null);
-                    showToast('Form rejected by VP.');
-                },
+                onSuccess: onFlash('Form rejected by VP.', () =>
+                    setRejectEntry(null),
+                ),
             },
         );
     }
@@ -130,10 +135,9 @@ export default function Vp({ entries }: Props) {
             { reason },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    setHoldEntry(null);
-                    showToast('Entry put on hold.');
-                },
+                onSuccess: onFlash('Entry put on hold.', () =>
+                    setHoldEntry(null),
+                ),
             },
         );
     }

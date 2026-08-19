@@ -56,6 +56,18 @@ export default function Purchasing({ entries }: Props) {
         setTimeout(() => setToast(''), 3000);
     }
 
+    // A guard rejected on the server (e.g. the entry was already acted on by
+    // someone else) still comes back as a normal redirect, not a failed
+    // request — so onSuccess always fires. Check flash.error first so we
+    // don't show a false "success" toast when the action didn't happen.
+    function onFlash(successMsg: string, after?: () => void) {
+        return (page: { props: Record<string, unknown> }) => {
+            const flash = page.props.flash as { error?: string } | undefined;
+            after?.();
+            showToast(flash?.error ?? successMsg);
+        };
+    }
+
     function closeModal() {
         setViewEntry(null);
         setShowHoldBox(false);
@@ -68,7 +80,7 @@ export default function Purchasing({ entries }: Props) {
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => showToast('Marked as On Process.'),
+                onSuccess: onFlash('Marked as On Process.'),
             },
         );
     }
@@ -79,10 +91,9 @@ export default function Purchasing({ entries }: Props) {
             { reason },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    setHoldEntry(null);
-                    showToast('Entry put on hold.');
-                },
+                onSuccess: onFlash('Entry put on hold.', () =>
+                    setHoldEntry(null),
+                ),
             },
         );
     }
@@ -97,10 +108,7 @@ export default function Purchasing({ entries }: Props) {
             { reason: holdReasonModal },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    closeModal();
-                    showToast('Entry put on hold.');
-                },
+                onSuccess: onFlash('Entry put on hold.', closeModal),
             },
         );
     }
