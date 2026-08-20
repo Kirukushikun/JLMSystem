@@ -32,7 +32,7 @@ export default function Submit() {
     const [fileKey, setFileKey] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
 
-    const isRequestor = auth.user.role === 'requestor';
+    const isRequestor = auth.user.roles.includes('requestor');
     const isEdit = !!editEntry;
 
     const form = useForm({

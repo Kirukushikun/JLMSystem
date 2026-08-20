@@ -88,7 +88,7 @@ class JlController extends Controller
         // Requestors can pick a different farm than their account's default, but
         // department stays locked to the account — the field is disabled client-side,
         // which isn't a security boundary, so the account's value always wins here.
-        if ($user->role === 'requestor') {
+        if ($user->hasRole('requestor')) {
             $data['dept'] = $user->dept;
         }
 
@@ -169,7 +169,7 @@ class JlController extends Controller
         $data = $request->safe()->except(['attachment']);
         $user = auth()->user();
 
-        if ($user->role === 'requestor') {
+        if ($user->hasRole('requestor')) {
             $data['dept'] = $user->dept;
         }
 
@@ -333,7 +333,7 @@ class JlController extends Controller
         // Approved — the instant Purchasing does anything to it (On Process, On Hold,
         // whatever), that window closes. This is a separate, VP-only reject path,
         // distinct from the normal Pending/Reviewed rejection every role above can do.
-        $canRejectApproved = in_array($user->role, ['vp', 'admin'], true) && $entry->status === 'Approved';
+        $canRejectApproved = $user->hasAnyRole(['vp', 'admin']) && $entry->status === 'Approved';
 
         if (! in_array($effective, ['Pending', 'Reviewed'], true) && ! $canRejectApproved) {
             return back()->with('error', 'This entry can no longer be rejected — its status may have already changed.');
@@ -400,14 +400,15 @@ class JlController extends Controller
             'notes' => $request->input('reason') ?: null,
         ]);
 
-        $actorRole = auth()->user()->role;
-
-        if ($actorRole === 'vp') {
+        // Which message fires is driven by the stage the entry was held at, not
+        // the actor's role — a role check here would be ambiguous now that a
+        // user can hold more than one role (e.g. requestor + purchasing).
+        if ($previousStatus === 'Reviewed') {
             $this->notifyRoles(['reviewer', 'admin'], $entry, 'on_hold',
                 'JL Form Put On Hold by VP',
                 "{$entry->reference} has been put on hold"
             );
-        } elseif ($actorRole === 'purchasing') {
+        } elseif (in_array($previousStatus, ['Approved', 'On Process'], true)) {
             $this->notifyRoles(['reviewer', 'vp', 'admin'], $entry, 'on_hold',
                 'JL Form Put On Hold by Purchasing',
                 "{$entry->reference} has been put on hold by Purchasing"
@@ -448,7 +449,11 @@ class JlController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $user = auth()->user();
-        $allowed = $this->allowedExportStatuses($user->role);
+        $allowed = collect($user->roles)
+            ->flatMap(fn ($role) => $this->allowedExportStatuses($role))
+            ->unique()
+            ->values()
+            ->all();
 
         $requested = $request->input('statuses', $allowed);
         $statuses = array_values(array_filter($requested, fn ($s) => in_array($s, $allowed)));

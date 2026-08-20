@@ -117,11 +117,14 @@ class LoginController extends Controller
             $this->logAccess($email, true, $request);
             Auth::loginUsingId($user->id);
 
-            return match ($user->role) {
+            // A user can hold more than one role now — land them on whichever
+            // is highest-priority per User::ALL_ROLES rather than assuming one.
+            return match ($user->primaryRole()) {
+                'admin', 'reviewer' => redirect()->route('jl.reviewer'),
                 'vp' => redirect()->route('jl.vp'),
                 'purchasing', 'purchasing_viewer' => redirect()->route('jl.purchasing'),
                 'requestor' => redirect()->route('jl.submit'),
-                default => redirect()->route('jl.reviewer'), // reviewer + admin
+                default => back()->withErrors(['email' => 'You are not authorized to access this system.'])->withInput(),
             };
 
         } catch (\Exception $e) {

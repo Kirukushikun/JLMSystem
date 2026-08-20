@@ -10,7 +10,10 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    /** Legacy primary role — kept for display; prefer `roles` for access checks. */
     role: UserRole;
+    /** Every role this user currently holds; a user can have more than one. */
+    roles: UserRole[];
     company: string | null;
     dept: string | null;
     created_at: string;

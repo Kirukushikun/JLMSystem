@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     const { url, props } = usePage<PageProps>();
     const pathname = url.split('?')[0];
     const user = props.auth?.user ?? null;
-    const role = user?.role ?? '';
+    const roles = user?.roles ?? [];
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [toast, setToast] = useState<{ title: string; body: string } | null>(
@@ -63,8 +63,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         });
     }, [user?.id]);
 
+    const roleStrings = roles as readonly string[];
     const visibleItems = NAV_ITEMS.filter((item) =>
-        (item.roles as readonly string[]).includes(role),
+        (item.roles as readonly string[]).some((r) => roleStrings.includes(r)),
     );
 
     function handleLogout() {

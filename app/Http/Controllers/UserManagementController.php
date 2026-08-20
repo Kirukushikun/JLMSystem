@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\RoleUser;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +22,8 @@ class UserManagementController extends Controller
     public function index(): Response
     {
         $apiUsers = $this->fetchApiUsers();
-        $localUsers = User::all()->keyBy('id')->map(fn ($u) => [
-            'role' => $u->role,
+        $localUsers = User::with('roleRows')->get()->keyBy('id')->map(fn ($u) => [
+            'roles' => $u->roles,
             'company' => $u->company,
             'dept' => $u->dept,
         ]);
@@ -41,25 +42,38 @@ class UserManagementController extends Controller
             'id' => 'required|integer',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'role' => 'required|in:reviewer,vp,purchasing,purchasing_viewer,admin,requestor',
-            'company' => ['required_if:role,requestor', 'nullable', 'string', Rule::exists('companies', 'name')],
-            'dept' => ['required_if:role,requestor', 'nullable', 'string', Rule::exists('departments', 'name')],
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'in:reviewer,vp,purchasing,purchasing_viewer,admin,requestor',
+            'company' => ['nullable', 'string', Rule::exists('companies', 'name')],
+            'dept' => ['nullable', 'string', Rule::exists('departments', 'name')],
         ]);
 
-        // Company/department only apply to requestors — clear them for every other role.
-        $company = $data['role'] === 'requestor' ? $data['company'] : null;
-        $dept = $data['role'] === 'requestor' ? $data['dept'] : null;
+        $roles = array_values(array_unique($data['roles']));
+        $isRequestor = in_array('requestor', $roles, true);
+
+        if ($isRequestor && (empty($data['company']) || empty($data['dept']))) {
+            return back()->withErrors(['company' => 'Farm and department are required for the Requestor role.'])->withInput();
+        }
+
+        // Company/department only apply to requestors — clear them if that role isn't assigned.
+        $company = $isRequestor ? $data['company'] : null;
+        $dept = $isRequestor ? $data['dept'] : null;
+
+        // `role` stays as a single legacy column — the highest-priority role
+        // held, per User::ALL_ROLES — used for the post-login landing page
+        // and anywhere else that can only reasonably act on one role.
+        $primaryRole = collect(User::ALL_ROLES)->first(fn ($r) => in_array($r, $roles, true));
 
         $user = User::find($data['id']);
 
         if ($user) {
-            $user->update(['name' => $data['name'], 'role' => $data['role'], 'company' => $company, 'dept' => $dept]);
+            $user->update(['name' => $data['name'], 'role' => $primaryRole, 'company' => $company, 'dept' => $dept]);
         } else {
             DB::table('users')->insert([
                 'id' => $data['id'],
                 'name' => $data['name'],
                 'email' => $data['email'],
-                'role' => $data['role'],
+                'role' => $primaryRole,
                 'company' => $company,
                 'dept' => $dept,
                 'password' => Hash::make(Str::random(32)),
@@ -68,16 +82,21 @@ class UserManagementController extends Controller
             ]);
         }
 
-        $label = match ($data['role']) {
+        RoleUser::where('user_id', $data['id'])->whereNotIn('role', $roles)->delete();
+        foreach ($roles as $role) {
+            RoleUser::firstOrCreate(['user_id' => $data['id'], 'role' => $role]);
+        }
+
+        $labels = collect($roles)->map(fn ($r) => match ($r) {
             'vp' => 'VP Approver',
             'purchasing' => 'Purchasing',
             'purchasing_viewer' => 'Purchasing (View Only)',
             'admin' => 'Admin',
             'requestor' => 'Requestor',
             default => 'Reviewer',
-        };
+        })->implode(', ');
 
-        return back()->with('success', "{$data['name']} has been granted {$label} access.");
+        return back()->with('success', "{$data['name']} has been granted access as: {$labels}.");
     }
 
     public function revoke(int $id): RedirectResponse

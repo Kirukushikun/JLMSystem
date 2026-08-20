@@ -15,7 +15,7 @@ type ApiUser = {
 
 type LocalUsers = Record<
     string,
-    { role: UserRole; company: string | null; dept: string | null }
+    { roles: UserRole[]; company: string | null; dept: string | null }
 >;
 
 interface Props {
@@ -45,43 +45,65 @@ const BADGE: Record<string, string> = {
     '': 'bg-gray-100 text-gray-400',
 };
 
+const ASSIGNABLE_ROLES: UserRole[] = [
+    'requestor',
+    'reviewer',
+    'vp',
+    'purchasing',
+    'purchasing_viewer',
+    'admin',
+];
+
+function sameRoles(a: string[], b: string[]) {
+    return a.length === b.length && a.every((r) => b.includes(r));
+}
+
 function UserRow({
     user,
-    localRole,
+    localRoles,
     localCompany,
     localDept,
     companies,
     departments,
 }: {
     user: ApiUser;
-    localRole: string;
+    localRoles: string[];
     localCompany: string | null;
     localDept: string | null;
     companies: string[];
     departments: string[];
 }) {
-    const [selected, setSelected] = useState(localRole);
+    const [selected, setSelected] = useState<string[]>(localRoles);
     const [company, setCompany] = useState(localCompany ?? '');
     const [dept, setDept] = useState(localDept ?? '');
     const [busy, setBusy] = useState(false);
 
     // Sync when parent data refreshes after Inertia visit
     useEffect(() => {
-        setSelected(localRole);
+        setSelected(localRoles);
         setCompany(localCompany ?? '');
         setDept(localDept ?? '');
-    }, [localRole, localCompany, localDept]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localRoles.join(','), localCompany, localDept]);
 
-    const isRequestor = selected === 'requestor';
+    const isRequestor = selected.includes('requestor');
     const changed =
-        selected !== localRole ||
+        !sameRoles(selected, localRoles) ||
         (isRequestor &&
             (company !== (localCompany ?? '') || dept !== (localDept ?? '')));
-    const hasAccess = localRole !== '';
+    const hasAccess = localRoles.length > 0;
     const fullName = `${user.first_name} ${user.last_name}`;
 
+    function toggleRole(role: string) {
+        setSelected((prev) =>
+            prev.includes(role)
+                ? prev.filter((r) => r !== role)
+                : [...prev, role],
+        );
+    }
+
     function save() {
-        if (!selected) {
+        if (selected.length === 0) {
             return;
         } // treat empty as revoke
 
@@ -91,7 +113,7 @@ function UserRow({
                 id: user.id,
                 name: fullName,
                 email: user.email,
-                role: selected,
+                roles: selected,
                 company: isRequestor ? company : null,
                 dept: isRequestor ? dept : null,
             },
@@ -122,30 +144,43 @@ function UserRow({
             </td>
             <td className="px-4 py-3 text-sm text-gray-500">{user.email}</td>
             <td className="px-4 py-3">
-                <span
-                    className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${BADGE[localRole] ?? BADGE['']}`}
-                >
-                    {ROLE_LABELS[localRole] ?? 'No Access'}
-                </span>
+                <div className="flex flex-wrap gap-1">
+                    {hasAccess ? (
+                        localRoles.map((r) => (
+                            <span
+                                key={r}
+                                className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${BADGE[r] ?? BADGE['']}`}
+                            >
+                                {ROLE_LABELS[r] ?? r}
+                            </span>
+                        ))
+                    ) : (
+                        <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${BADGE['']}`}
+                        >
+                            No Access
+                        </span>
+                    )}
+                </div>
             </td>
             <td className="px-4 py-3">
                 <div className="flex flex-col gap-1.5">
-                    <select
-                        value={selected}
-                        onChange={(e) => setSelected(e.target.value)}
-                        disabled={busy}
-                        className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue-400 disabled:opacity-50"
-                    >
-                        <option value="">No Access</option>
-                        <option value="requestor">Requestor</option>
-                        <option value="reviewer">Reviewer</option>
-                        <option value="vp">VP Approver</option>
-                        <option value="purchasing">Purchasing</option>
-                        <option value="purchasing_viewer">
-                            Purchasing (View Only)
-                        </option>
-                        <option value="admin">Admin</option>
-                    </select>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                        {ASSIGNABLE_ROLES.map((r) => (
+                            <label
+                                key={r}
+                                className="flex items-center gap-1.5 text-xs text-gray-600"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={selected.includes(r)}
+                                    onChange={() => toggleRole(r)}
+                                    disabled={busy}
+                                />
+                                {ROLE_LABELS[r]}
+                            </label>
+                        ))}
+                    </div>
                     {isRequestor && (
                         <>
                             <select
@@ -180,7 +215,7 @@ function UserRow({
             </td>
             <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
-                    {changed && selected !== '' && (
+                    {changed && selected.length > 0 && (
                         <button
                             onClick={save}
                             disabled={
@@ -192,7 +227,7 @@ function UserRow({
                             {hasAccess ? 'Update' : 'Grant'}
                         </button>
                     )}
-                    {changed && selected === '' && hasAccess && (
+                    {changed && selected.length === 0 && hasAccess && (
                         <button
                             onClick={revoke}
                             disabled={busy}
@@ -289,8 +324,9 @@ export default function Users({
                         Management, Maintenance, and Audit Trail.
                     </li>
                     <li>
-                        Each user can only have one role. Revoking access takes
-                        effect immediately.
+                        A user can hold more than one role at once (e.g.
+                        Requestor + Purchasing) — check every box that applies.
+                        Revoking access takes effect immediately.
                     </li>
                 </ul>
             </InfoPanel>
@@ -389,8 +425,8 @@ export default function Users({
                                     <UserRow
                                         key={user.id}
                                         user={user}
-                                        localRole={
-                                            localUsers[user.id]?.role ?? ''
+                                        localRoles={
+                                            localUsers[user.id]?.roles ?? []
                                         }
                                         localCompany={
                                             localUsers[user.id]?.company ?? null

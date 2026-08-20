@@ -40,7 +40,11 @@ export default function Purchasing({ entries }: Props) {
         auth: { user: User | null };
         [key: string]: unknown;
     }>();
-    const isViewer = pageProps.auth?.user?.role === 'purchasing_viewer';
+    const userRoles = pageProps.auth?.user?.roles ?? [];
+    const isViewer =
+        userRoles.includes('purchasing_viewer') &&
+        !userRoles.includes('purchasing') &&
+        !userRoles.includes('admin');
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
