@@ -276,6 +276,11 @@ class JlController extends Controller
             "{$entry->reference} has been reviewed and is awaiting your approval"
         );
 
+        $this->notifyOwner($entry, 'reviewed',
+            'Your JL Request Was Reviewed',
+            "{$entry->reference} has been reviewed and forwarded to the VP Approver"
+        );
+
         $this->notifyVpApprovalWebhook($entry);
 
         return back();
@@ -319,6 +324,11 @@ class JlController extends Controller
         $this->notifyRoles(['purchasing', 'admin'], $entry, 'approved',
             'JL Form Approved — Ready for Processing',
             "{$entry->reference} has been approved by VP and is ready for processing"
+        );
+
+        $this->notifyOwner($entry, 'approved',
+            'Your JL Request Was Approved',
+            "{$entry->reference} has been approved".($entry->serial ? " — serial {$entry->serial}" : '')
         );
 
         return back();
@@ -376,6 +386,11 @@ class JlController extends Controller
             );
         }
 
+        $this->notifyOwner($entry, $isVpReject ? 'vp_rejected' : 'rejected',
+            $isVpReject ? 'Your JL Request Was Rejected by VP' : 'Your JL Request Was Rejected',
+            "{$entry->reference} was rejected".($reason !== 'No reason provided.' ? ": {$reason}" : '')
+        );
+
         return back();
     }
 
@@ -415,6 +430,11 @@ class JlController extends Controller
             );
         }
 
+        $this->notifyOwner($entry, 'on_hold',
+            'Your JL Request Was Put On Hold',
+            "{$entry->reference} has been put on hold".($entry->hold_reason ? ": {$entry->hold_reason}" : '')
+        );
+
         return back();
     }
 
@@ -441,6 +461,11 @@ class JlController extends Controller
         $this->notifyRoles(['reviewer', 'vp', 'admin'], $entry, 'on_process',
             'JL Form Now On Process',
             "{$entry->reference} is currently being processed by Purchasing"
+        );
+
+        $this->notifyOwner($entry, 'on_process',
+            'Your JL Request Is Now Being Processed',
+            "{$entry->reference} is now being processed by Purchasing"
         );
 
         return back();
@@ -569,17 +594,37 @@ class JlController extends Controller
 
     private function notifyRoles(array $roles, JlEntry $entry, string $event, string $title, string $body): void
     {
-        $users = User::whereIn('role', $roles)->get();
+        // Recipients are resolved from role_user, not the legacy `role` column —
+        // that column only reflects a user's highest-priority role since users
+        // can hold more than one, so a role held secondarily would be missed.
+        $users = User::whereHas('roleRows', fn ($q) => $q->whereIn('role', $roles))->get();
         if ($users->isNotEmpty()) {
             Notification::send($users, new JlNotification($entry, $event, $title, $body));
         }
 
-        $this->sendFcmToRoles($roles, $title, $body);
+        $userIds = User::whereHas('roleRows', fn ($q) => $q->whereIn('role', $roles))->pluck('id');
+        $this->sendFcmToUserIds($userIds->all(), $title, $body);
     }
 
-    private function sendFcmToRoles(array $roles, string $title, string $body): void
+    /**
+     * Notify the requestor who owns this entry — a role blast never reaches
+     * them since "requestor" isn't one of the pipeline roles any event fans
+     * out to, so every status change needs an explicit owner notification.
+     */
+    private function notifyOwner(JlEntry $entry, string $event, string $title, string $body): void
     {
-        $userIds = User::whereIn('role', $roles)->pluck('id');
+        $owner = $entry->user;
+
+        if (! $owner) {
+            return;
+        }
+
+        Notification::send($owner, new JlNotification($entry, $event, $title, $body));
+        $this->sendFcmToUserIds([$owner->id], $title, $body);
+    }
+
+    private function sendFcmToUserIds(array $userIds, string $title, string $body): void
+    {
         $tokens = FcmToken::whereIn('user_id', $userIds)->pluck('token')->toArray();
 
         if (empty($tokens)) {

@@ -18,6 +18,7 @@ const EVENT_ICON: Record<string, string> = {
     submitted: '📋',
     reviewed: '✅',
     approved: '🎉',
+    rejected: '❌',
     vp_rejected: '❌',
     on_hold: '⏸',
     on_process: '⚙️',
