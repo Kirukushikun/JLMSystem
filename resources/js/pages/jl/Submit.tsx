@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import InfoPanel from '@/components/InfoPanel';
 import CostBreakdownTable, {
@@ -40,11 +40,13 @@ export default function Submit() {
         usePage<PageProps>().props;
     const [fileKey, setFileKey] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
-    const [mode, setMode] = useState<Mode>('document');
-    const [toast, setToast] = useState('');
 
     const isRequestor = auth.user.roles.includes('requestor');
     const isEdit = !!editEntry;
+
+    const [mode, setMode] = useState<Mode>(
+        editEntry?.entry_type === 'structured' ? 'structured' : 'document',
+    );
 
     const form = useForm({
         title: editEntry?.title ?? '',
@@ -58,45 +60,128 @@ export default function Submit() {
         attachment: null as File | null,
     });
 
-    // Structured-entry mode — UI only for now, not wired to the backend yet.
-    const [subject, setSubject] = useState('');
-    const [structCompany, setStructCompany] = useState(
-        isRequestor ? (auth.user.company ?? '') : '',
-    );
-    const [structDept, setStructDept] = useState(
-        isRequestor ? (auth.user.dept ?? '') : '',
-    );
-    const [structManager, setStructManager] = useState('');
-    const [dateNeeded, setDateNeeded] = useState('');
-    const [body, setBody] = useState('');
-    const [reason, setReason] = useState('');
-    const [items, setItems] = useState<JlItemRow[]>([newItemRow()]);
-    const [costRows, setCostRows] = useState<CostRow[]>([newCostRow()]);
-    const [showStructuredSummary, setShowStructuredSummary] = useState(false);
-
-    function showToast(msg: string) {
-        setToast(msg);
-        setTimeout(() => setToast(''), 4000);
+    // Structured-entry mode. Kept as separate local state (not Inertia's
+    // useForm) since it's posted with `router.post` directly — see
+    // doStructuredSubmit().
+    function defaultStructuredState() {
+        return {
+            subject: editEntry?.title ?? '',
+            structCompany:
+                editEntry?.company ??
+                (isRequestor ? (auth.user.company ?? '') : ''),
+            structDept:
+                editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
+            structManager: editEntry?.manager ?? '',
+            dateNeeded: editEntry?.date ?? '',
+            body: editEntry?.body ?? '',
+            reason: editEntry?.justification ?? '',
+            items:
+                editEntry?.items && editEntry.items.length > 0
+                    ? editEntry.items.map((i) => ({
+                          id: crypto.randomUUID(),
+                          itemName: i.item_name,
+                          quantity: i.quantity,
+                          purpose: i.purpose,
+                          // Existing images stay on the server unless a new
+                          // one is picked — a File can't be rehydrated from
+                          // a stored URL, so this starts blank on edit.
+                          image: null as File | null,
+                      }))
+                    : [newItemRow()],
+            costRows:
+                editEntry?.cost_breakdown && editEntry.cost_breakdown.length > 0
+                    ? editEntry.cost_breakdown.map((r) => ({
+                          id: crypto.randomUUID(),
+                          description: r.description,
+                          quantity: r.quantity,
+                          unitCost: r.unit_cost,
+                      }))
+                    : [newCostRow()],
+        };
     }
+
+    const structDefaults = defaultStructuredState();
+    const [subject, setSubject] = useState(structDefaults.subject);
+    const [structCompany, setStructCompany] = useState(
+        structDefaults.structCompany,
+    );
+    const [structDept, setStructDept] = useState(structDefaults.structDept);
+    const [structManager, setStructManager] = useState(
+        structDefaults.structManager,
+    );
+    const [dateNeeded, setDateNeeded] = useState(structDefaults.dateNeeded);
+    const [body, setBody] = useState(structDefaults.body);
+    const [reason, setReason] = useState(structDefaults.reason);
+    const [items, setItems] = useState<JlItemRow[]>(structDefaults.items);
+    const [costRows, setCostRows] = useState<CostRow[]>(
+        structDefaults.costRows,
+    );
+    const [showStructuredSummary, setShowStructuredSummary] = useState(false);
+    const [structProcessing, setStructProcessing] = useState(false);
+    const [structErrors, setStructErrors] = useState<Record<string, string>>(
+        {},
+    );
 
     function resetStructured() {
-        setSubject('');
-        setStructCompany(isRequestor ? (auth.user.company ?? '') : '');
-        setStructDept(isRequestor ? (auth.user.dept ?? '') : '');
-        setStructManager('');
-        setDateNeeded('');
-        setBody('');
-        setReason('');
-        setItems([newItemRow()]);
-        setCostRows([newCostRow()]);
+        const defaults = defaultStructuredState();
+        setSubject(defaults.subject);
+        setStructCompany(defaults.structCompany);
+        setStructDept(defaults.structDept);
+        setStructManager(defaults.structManager);
+        setDateNeeded(defaults.dateNeeded);
+        setBody(defaults.body);
+        setReason(defaults.reason);
+        setItems(defaults.items);
+        setCostRows(defaults.costRows);
     }
 
-    function handleStructuredConfirm() {
-        // No backend for this mode yet — this is a UI preview only.
-        setShowStructuredSummary(false);
-        showToast(
-            "Preview only — structured submission isn't saved to the server yet.",
-        );
+    function doStructuredSubmit() {
+        const payload = {
+            entry_type: 'structured',
+            subject,
+            company: structCompany,
+            dept: structDept,
+            manager: structManager,
+            date_needed: dateNeeded,
+            body,
+            justification: reason,
+            items: items
+                .filter((i) => i.itemName.trim() !== '')
+                .map((i) => ({
+                    item_name: i.itemName,
+                    quantity: i.quantity,
+                    purpose: i.purpose,
+                    image: i.image,
+                })),
+            cost_breakdown: costRows
+                .filter((r) => r.description.trim() !== '')
+                .map((r) => ({
+                    description: r.description,
+                    quantity: r.quantity,
+                    unit_cost: r.unitCost,
+                })),
+        };
+
+        const url = isEdit ? `/jl/${editEntry!.id}/resubmit` : '/jl';
+        const data = isEdit ? { ...payload, _method: 'patch' } : payload;
+
+        router.post(url, data, {
+            forceFormData: true,
+            onStart: () => setStructProcessing(true),
+            onFinish: () => setStructProcessing(false),
+            onSuccess: () => {
+                setShowStructuredSummary(false);
+                setStructErrors({});
+
+                if (!isEdit) {
+                    resetStructured();
+                }
+            },
+            onError: (errors) => {
+                setStructErrors(errors as Record<string, string>);
+                setShowStructuredSummary(false);
+            },
+        });
     }
 
     function doSubmit() {
@@ -149,7 +234,7 @@ export default function Submit() {
                         entry will be queued for reviewer approval.
                     </p>
                 )}
-                {mode === 'document' || isEdit ? (
+                {mode === 'document' ? (
                     <ul className="mt-2 list-disc pl-4">
                         <li>
                             <strong>Title</strong> — brief description of the
@@ -201,11 +286,12 @@ export default function Submit() {
                         </li>
                         <li>
                             <strong>Estimated Cost Breakdown</strong> — add a
-                            row per cost item; the total is calculated for you.
+                            row per cost item; the total is calculated for you
+                            and used as the request's estimated amount.
                         </li>
                         <li>
-                            This mode is a preview — submissions aren't saved to
-                            the server yet.
+                            Before submitting you'll see a quick summary to
+                            review — catch mistakes there before they go out.
                         </li>
                     </ul>
                 )}
@@ -277,13 +363,21 @@ export default function Submit() {
             )}
 
             <div className="rounded-xl bg-white p-4 shadow-sm sm:p-7">
-                {Object.keys(form.errors).length > 0 && (
-                    <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-                        {Object.values(form.errors).map((e) => (
-                            <p key={e}>{e}</p>
-                        ))}
-                    </div>
-                )}
+                {mode === 'document'
+                    ? Object.keys(form.errors).length > 0 && (
+                          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                              {Object.values(form.errors).map((e) => (
+                                  <p key={e}>{e}</p>
+                              ))}
+                          </div>
+                      )
+                    : Object.keys(structErrors).length > 0 && (
+                          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                              {Object.values(structErrors).map((e) => (
+                                  <p key={e}>{e}</p>
+                              ))}
+                          </div>
+                      )}
 
                 {mode === 'document' ? (
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -296,6 +390,7 @@ export default function Submit() {
                                     form.setData('title', e.target.value)
                                 }
                                 placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026"
+                                maxLength={255}
                                 disabled={form.processing}
                             />
                         </div>
@@ -341,6 +436,7 @@ export default function Submit() {
                                     form.setData('manager', e.target.value)
                                 }
                                 placeholder="Full name"
+                                maxLength={255}
                                 disabled={form.processing}
                             />
                         </div>
@@ -439,6 +535,7 @@ export default function Submit() {
                                 value={subject}
                                 onChange={(e) => setSubject(e.target.value)}
                                 placeholder="e.g. Purchase of Farm Tools for Q2 Maintenance"
+                                maxLength={255}
                             />
                         </div>
 
@@ -469,6 +566,7 @@ export default function Submit() {
                                     setStructManager(e.target.value)
                                 }
                                 placeholder="Full name"
+                                maxLength={255}
                             />
                         </div>
 
@@ -518,6 +616,7 @@ export default function Submit() {
                                 value={body}
                                 onChange={(e) => setBody(e.target.value)}
                                 placeholder="Describe the request in detail…"
+                                maxLength={2000}
                             />
                         </div>
 
@@ -534,6 +633,7 @@ export default function Submit() {
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                                 placeholder="Why is this needed?"
+                                maxLength={2000}
                             />
                         </div>
 
@@ -555,7 +655,11 @@ export default function Submit() {
                                     ? form.reset()
                                     : resetStructured()
                             }
-                            disabled={form.processing}
+                            disabled={
+                                mode === 'document'
+                                    ? form.processing
+                                    : structProcessing
+                            }
                             className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                         >
                             ↺ Clear
@@ -566,11 +670,19 @@ export default function Submit() {
                                     ? setShowSummary(true)
                                     : setShowStructuredSummary(true)
                             }
-                            disabled={form.processing}
+                            disabled={
+                                mode === 'document'
+                                    ? form.processing
+                                    : structProcessing
+                            }
                             className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                             style={{ background: '#1e3a5f' }}
                         >
-                            {form.processing
+                            {(
+                                mode === 'document'
+                                    ? form.processing
+                                    : structProcessing
+                            )
                                 ? 'Submitting…'
                                 : isEdit
                                   ? '➤ Review & Resubmit'
@@ -601,18 +713,10 @@ export default function Submit() {
                     items,
                     costRows,
                 }}
+                processing={structProcessing}
                 onClose={() => setShowStructuredSummary(false)}
-                onConfirm={handleStructuredConfirm}
+                onConfirm={doStructuredSubmit}
             />
-
-            {toast && (
-                <div
-                    className="fixed right-7 bottom-7 z-50 max-w-[calc(100vw-2rem)] rounded-xl px-5 py-3.5 text-sm font-medium text-white shadow-lg sm:max-w-sm"
-                    style={{ background: '#1e3a5f' }}
-                >
-                    {toast}
-                </div>
-            )}
         </AppLayout>
     );
 }

@@ -13,6 +13,7 @@ use App\Notifications\JlNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,20 @@ class JlController extends Controller
         ]);
     }
 
+    public function divisionHead(): Response
+    {
+        $user = auth()->user();
+        $query = JlEntry::latest();
+
+        // A Division Head only sees their own department's queue; admins acting
+        // through this view see everything, same as they do on every dashboard.
+        if (! $user->hasRole('admin')) {
+            $query->where('dept', $user->dept);
+        }
+
+        return Inertia::render('jl/DivisionHead', ['entries' => $query->get()]);
+    }
+
     public function reviewer(): Response
     {
         return Inertia::render('jl/Reviewer', [
@@ -42,9 +57,9 @@ class JlController extends Controller
         $entries = JlEntry::where(function ($q) {
             $q->whereIn('status', ['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Process'])
                 ->orWhere(function ($q2) {
-                    // On Hold entries held at Reviewer or VP stage (not Purchasing)
+                    // On Hold entries held at Reviewer or VP stage (not Division Head or Purchasing)
                     $q2->where('status', 'On Hold')
-                        ->where('held_at', '!=', 'Pending');
+                        ->whereNotIn('held_at', ['Pending', 'Endorsed']);
                 });
         })->latest()->get();
 
@@ -82,8 +97,15 @@ class JlController extends Controller
 
     public function store(StoreJlRequest $request): RedirectResponse
     {
-        $data = $request->safe()->except(['attachment']);
         $user = auth()->user();
+
+        $data = $request->input('entry_type') === 'structured'
+            ? $this->buildStructuredEntryFields($request)
+            : $this->buildDocumentEntryFields($request);
+
+        $data['company'] = $request->input('company');
+        $data['manager'] = $request->input('manager');
+        $data['dept'] = $request->input('dept');
 
         // Requestors can pick a different farm than their account's default, but
         // department stays locked to the account — the field is disabled client-side,
@@ -92,20 +114,9 @@ class JlController extends Controller
             $data['dept'] = $user->dept;
         }
 
-        $path = null;
-        $originalName = null;
-
-        if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
-            $originalName = $file->getClientOriginalName();
-            $path = $file->store('jl-attachments', 'local');
-        }
-
         $entry = JlEntry::create([
             ...$data,
             'user_id' => $user->id,
-            'attachment' => $path,
-            'attachment_name' => $originalName,
             'status' => 'Pending',
             'submitted_at' => now()->toDateString(),
         ]);
@@ -116,7 +127,7 @@ class JlController extends Controller
             'actor' => null,
         ]);
 
-        $this->notifyRoles(['reviewer', 'admin'], $entry, 'submitted',
+        $this->notifyDivisionHead($entry, 'submitted',
             'New JL Form Submitted',
             "{$entry->reference} — {$entry->company} ({$entry->dept})"
         );
@@ -166,20 +177,18 @@ class JlController extends Controller
             return back()->with('error', 'Only cancelled requests can be resubmitted.');
         }
 
-        $data = $request->safe()->except(['attachment']);
         $user = auth()->user();
+
+        $data = $request->input('entry_type') === 'structured'
+            ? $this->buildStructuredEntryFields($request)
+            : $this->buildDocumentEntryFields($request, $entry);
+
+        $data['company'] = $request->input('company');
+        $data['manager'] = $request->input('manager');
+        $data['dept'] = $request->input('dept');
 
         if ($user->hasRole('requestor')) {
             $data['dept'] = $user->dept;
-        }
-
-        if ($request->hasFile('attachment')) {
-            if ($entry->attachment) {
-                Storage::disk('local')->delete($entry->attachment);
-            }
-            $file = $request->file('attachment');
-            $data['attachment'] = $file->store('jl-attachments', 'local');
-            $data['attachment_name'] = $file->getClientOriginalName();
         }
 
         $entry->update([
@@ -194,7 +203,7 @@ class JlController extends Controller
             'actor' => null,
         ]);
 
-        $this->notifyRoles(['reviewer', 'admin'], $entry, 'submitted',
+        $this->notifyDivisionHead($entry, 'submitted',
             'JL Form Resubmitted',
             "{$entry->reference} — {$entry->company} ({$entry->dept})"
         );
@@ -246,12 +255,146 @@ class JlController extends Controller
         );
     }
 
-    public function review(Request $request, JlEntry $entry): RedirectResponse
+    public function itemImage(JlEntry $entry, int $index): StreamedResponse
+    {
+        $item = $entry->items[$index] ?? null;
+
+        abort_if(! $item || empty($item['image']), 404);
+        abort_if(! Storage::disk('local')->exists($item['image']), 404);
+
+        return Storage::disk('local')->response(
+            $item['image'],
+            $item['image_name'] ?? null,
+        );
+    }
+
+    /** @return array<string, mixed> */
+    private function buildDocumentEntryFields(Request $request, ?JlEntry $existingEntry = null): array
+    {
+        $data = [
+            'entry_type' => 'document',
+            'title' => $request->input('title'),
+            'date' => $request->input('date'),
+            'amount' => $request->input('amount'),
+            // Reset structured-only fields in case this entry was originally
+            // submitted as structured and is being resubmitted as document.
+            'body' => null,
+            'justification' => null,
+            'items' => null,
+            'cost_breakdown' => null,
+        ];
+
+        if ($request->hasFile('attachment')) {
+            if ($existingEntry?->attachment) {
+                Storage::disk('local')->delete($existingEntry->attachment);
+            }
+
+            $file = $request->file('attachment');
+            $data['attachment'] = $file->store('jl-attachments', 'local');
+            $data['attachment_name'] = $file->getClientOriginalName();
+        }
+
+        return $data;
+    }
+
+    /** @return array<string, mixed> */
+    private function buildStructuredEntryFields(Request $request): array
+    {
+        $costBreakdown = collect((array) $request->input('cost_breakdown', []))
+            ->map(fn ($row) => [
+                'description' => $row['description'] ?? '',
+                'quantity' => $row['quantity'] ?? '',
+                'unit_cost' => $row['unit_cost'] ?? '',
+            ])
+            ->values()
+            ->all();
+
+        // The total is always derived server-side from the breakdown, never
+        // trusted from the client, so it can't drift from what's displayed.
+        $amount = collect($costBreakdown)->sum(
+            fn ($row) => (float) ($row['quantity'] ?: 0) * (float) ($row['unit_cost'] ?: 0)
+        );
+
+        $items = collect((array) $request->input('items', []))
+            ->values()
+            ->map(function ($row, $index) use ($request) {
+                $image = $request->file("items.{$index}.image");
+
+                // ->file() is typed to allow an array (for a plain `name[]` field),
+                // but a dot-notation single index like this always resolves to one
+                // file or none — narrow it explicitly rather than trust the union.
+                if (! $image instanceof UploadedFile) {
+                    $image = null;
+                }
+
+                return [
+                    'item_name' => $row['item_name'] ?? '',
+                    'quantity' => $row['quantity'] ?? '',
+                    'purpose' => $row['purpose'] ?? '',
+                    'image' => $image ? $image->store('jl-item-images', 'local') : null,
+                    'image_name' => $image ? $image->getClientOriginalName() : null,
+                ];
+            })
+            ->all();
+
+        return [
+            'entry_type' => 'structured',
+            'title' => $request->input('subject'),
+            'date' => $request->input('date_needed'),
+            'amount' => $amount,
+            'body' => $request->input('body') ?: null,
+            'justification' => $request->input('justification'),
+            'items' => $items,
+            'cost_breakdown' => $costBreakdown,
+            'attachment' => null,
+            'attachment_name' => null,
+        ];
+    }
+
+    public function endorse(Request $request, JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
 
         if ($effective !== 'Pending') {
-            return back()->with('error', 'This entry is no longer pending — it may have already been reviewed.');
+            return back()->with('error', 'This entry is no longer pending — it may have already been endorsed.');
+        }
+
+        $remarks = $request->input('endorse_remarks') ?: null;
+
+        $entry->update([
+            'status' => 'Endorsed',
+            'held_at' => null,
+            'hold_reason' => null,
+            'endorsed_at' => now()->toDateString(),
+            'endorse_remarks' => $remarks,
+        ]);
+
+        JlAuditLog::create([
+            'jl_entry_id' => $entry->id,
+            'event' => 'endorsed',
+            'actor' => auth()->user()->name,
+            'notes' => $remarks,
+        ]);
+
+        $this->notifyRoles(['reviewer', 'admin'], $entry, 'endorsed',
+            'JL Form Ready for Review',
+            "{$entry->reference} has been endorsed by the Division Head and is awaiting review"
+        );
+
+        $this->notifyOwner($entry, 'endorsed',
+            'Your JL Request Was Endorsed',
+            "{$entry->reference} has been endorsed by your Division Head and forwarded to the Reviewer"
+        );
+
+        return back();
+    }
+
+    public function review(Request $request, JlEntry $entry): RedirectResponse
+    {
+        $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
+
+        if ($effective !== 'Endorsed') {
+            return back()->with('error', 'This entry is no longer awaiting review — it may have already been reviewed.');
         }
 
         $remarks = $request->input('review_remarks') ?: null;
@@ -345,7 +488,7 @@ class JlController extends Controller
         // distinct from the normal Pending/Reviewed rejection every role above can do.
         $canRejectApproved = $user->hasAnyRole(['vp', 'admin']) && $entry->status === 'Approved';
 
-        if (! in_array($effective, ['Pending', 'Reviewed'], true) && ! $canRejectApproved) {
+        if (! in_array($effective, ['Pending', 'Endorsed', 'Reviewed'], true) && ! $canRejectApproved) {
             return back()->with('error', 'This entry can no longer be rejected — its status may have already changed.');
         }
 
@@ -384,6 +527,13 @@ class JlController extends Controller
                 'JL Form Rejected by VP',
                 "{$entry->reference} was rejected".($reason !== 'No reason provided.' ? ": {$reason}" : '')
             );
+        } elseif ($effective === 'Endorsed') {
+            // A Reviewer rejecting something the Division Head already endorsed —
+            // let them know their endorsement didn't make it past the next stage.
+            $this->notifyDivisionHead($entry, 'rejected',
+                'JL Form Rejected by Reviewer',
+                "{$entry->reference} was rejected".($reason !== 'No reason provided.' ? ": {$reason}" : '')
+            );
         }
 
         $this->notifyOwner($entry, $isVpReject ? 'vp_rejected' : 'rejected',
@@ -418,7 +568,12 @@ class JlController extends Controller
         // Which message fires is driven by the stage the entry was held at, not
         // the actor's role — a role check here would be ambiguous now that a
         // user can hold more than one role (e.g. requestor + purchasing).
-        if ($previousStatus === 'Reviewed') {
+        if ($previousStatus === 'Endorsed') {
+            $this->notifyDivisionHead($entry, 'on_hold',
+                'JL Form Put On Hold by Reviewer',
+                "{$entry->reference} has been put on hold"
+            );
+        } elseif ($previousStatus === 'Reviewed') {
             $this->notifyRoles(['reviewer', 'admin'], $entry, 'on_hold',
                 'JL Form Put On Hold by VP',
                 "{$entry->reference} has been put on hold"
@@ -489,6 +644,13 @@ class JlController extends Controller
 
         $query = JlEntry::whereIn('status', $statuses);
 
+        // Division Head is dept-scoped everywhere else — an unscoped export
+        // would leak other divisions' data through the CSV, so scope it here
+        // too, unless another one of the user's roles is meant to see everything.
+        if ($user->hasRole('division_head') && ! $user->hasAnyRole(['admin', 'reviewer', 'vp', 'purchasing', 'purchasing_viewer'])) {
+            $query->where('dept', $user->dept);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('submitted_at', '>=', $request->date_from);
         }
@@ -502,13 +664,14 @@ class JlController extends Controller
         return response()->streamDownload(function () use ($entries) {
             $out = fopen('php://output', 'w');
             fputcsv($out, [
-                'Reference', 'Title', 'Date Prepared', 'Company', 'Department',
+                'Reference', 'Entry Type', 'Title', 'Date Prepared', 'Company', 'Department',
                 'Manager', 'Est. Amount', 'Status', 'Held At', 'Serial No.',
-                'Submitted', 'Reviewed', 'Approved', 'Reject Reason', 'Review Remarks', 'Approval Remarks',
+                'Submitted', 'Endorsed', 'Reviewed', 'Approved', 'Reject Reason', 'Endorsement Remarks', 'Review Remarks', 'Approval Remarks',
             ]);
             foreach ($entries as $e) {
                 fputcsv($out, [
                     $e->reference,
+                    $e->entry_type,
                     $e->title,
                     $e->date,
                     $e->company,
@@ -519,9 +682,11 @@ class JlController extends Controller
                     $e->held_at ?? '',
                     $e->serial ?? '',
                     $e->submitted_at,
+                    $e->endorsed_at ?? '',
                     $e->reviewed_at ?? '',
                     $e->approved_at ?? '',
                     $e->reject_reason ?? '',
+                    $e->endorse_remarks ?? '',
                     $e->review_remarks ?? '',
                     $e->approve_remarks ?? '',
                 ]);
@@ -623,6 +788,27 @@ class JlController extends Controller
         $this->sendFcmToUserIds([$owner->id], $title, $body);
     }
 
+    /**
+     * Notify the Division Head(s) for this entry's department — unlike every
+     * other role, Division Head is scoped to a single dept, so a blanket
+     * notifyRoles(['division_head']) call would leak the notification to
+     * every division's head instead of just the one this entry belongs to.
+     */
+    private function notifyDivisionHead(JlEntry $entry, string $event, string $title, string $body): void
+    {
+        $divisionHeads = User::whereHas('roleRows', fn ($q) => $q->where('role', 'division_head'))
+            ->where('dept', $entry->dept)
+            ->get();
+        $admins = User::whereHas('roleRows', fn ($q) => $q->where('role', 'admin'))->get();
+        $users = $divisionHeads->merge($admins)->unique('id');
+
+        if ($users->isNotEmpty()) {
+            Notification::send($users, new JlNotification($entry, $event, $title, $body));
+        }
+
+        $this->sendFcmToUserIds($users->pluck('id')->all(), $title, $body);
+    }
+
     private function sendFcmToUserIds(array $userIds, string $title, string $body): void
     {
         $tokens = FcmToken::whereIn('user_id', $userIds)->pluck('token')->toArray();
@@ -683,11 +869,12 @@ class JlController extends Controller
     private function allowedExportStatuses(string $role): array
     {
         return match ($role) {
-            'reviewer' => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
+            'reviewer' => ['Pending', 'Endorsed', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
             'vp' => ['Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'],
             'purchasing' => ['Approved', 'On Process', 'On Hold'],
             'purchasing_viewer' => ['Approved', 'On Process', 'On Hold'],
-            'admin' => ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
+            'division_head' => ['Pending', 'Endorsed', 'Rejected', 'On Hold'],
+            'admin' => ['Pending', 'Endorsed', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
             default => [],
         };
     }

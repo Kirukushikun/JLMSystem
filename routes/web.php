@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/jl/{entry}/upload-attachment', [JlController::class, 'uploadAttachment'])->middleware('role:requestor,admin')->name('jl.uploadAttachment');
 
     // Dashboards
+    Route::get('/division-head', [JlController::class, 'divisionHead'])->middleware('role:division_head,admin')->name('jl.divisionHead');
     Route::get('/reviewer', [JlController::class, 'reviewer'])->middleware('role:reviewer,admin')->name('jl.reviewer');
     Route::get('/vp', [JlController::class, 'vp'])->middleware('role:vp,admin')->name('jl.vp');
     Route::get('/purchasing', [JlController::class, 'purchasing'])->middleware('role:purchasing,purchasing_viewer,admin')->name('jl.purchasing');
@@ -34,12 +35,14 @@ Route::middleware('auth')->group(function () {
 
     // Attachment download/view
     Route::get('/jl/{entry}/attachment', [JlController::class, 'attachment'])->name('jl.attachment');
+    Route::get('/jl/{entry}/item-image/{index}', [JlController::class, 'itemImage'])->name('jl.itemImage');
 
     // Workflow actions
+    Route::patch('/jl/{entry}/endorse', [JlController::class, 'endorse'])->middleware('role:division_head,admin')->name('jl.endorse');
     Route::patch('/jl/{entry}/review', [JlController::class, 'review'])->middleware('role:reviewer,admin')->name('jl.review');
     Route::patch('/jl/{entry}/approve', [JlController::class, 'approve'])->middleware('role:vp,admin')->name('jl.approve');
-    Route::patch('/jl/{entry}/reject', [JlController::class, 'reject'])->middleware('role:reviewer,vp,admin')->name('jl.reject');
-    Route::patch('/jl/{entry}/hold', [JlController::class, 'hold'])->middleware('role:reviewer,vp,purchasing,admin')->name('jl.hold');
+    Route::patch('/jl/{entry}/reject', [JlController::class, 'reject'])->middleware('role:division_head,reviewer,vp,admin')->name('jl.reject');
+    Route::patch('/jl/{entry}/hold', [JlController::class, 'hold'])->middleware('role:division_head,reviewer,vp,purchasing,admin')->name('jl.hold');
     Route::patch('/jl/{entry}/process', [JlController::class, 'process'])->middleware('role:purchasing,admin')->name('jl.process');
 
     // Admin: user management

@@ -30,6 +30,7 @@ const ROLE_LABELS: Record<string, string> = {
     vp: 'VP Approver',
     purchasing: 'Purchasing',
     purchasing_viewer: 'Purchasing (View Only)',
+    division_head: 'Division Head',
     admin: 'Admin',
     requestor: 'Requestor',
     '': 'No Access',
@@ -40,6 +41,7 @@ const BADGE: Record<string, string> = {
     vp: 'bg-purple-100 text-purple-700',
     purchasing: 'bg-amber-100 text-amber-700',
     purchasing_viewer: 'bg-amber-50 text-amber-600',
+    division_head: 'bg-indigo-100 text-indigo-700',
     admin: 'bg-red-100 text-red-700',
     requestor: 'bg-teal-100 text-teal-700',
     '': 'bg-gray-100 text-gray-400',
@@ -47,6 +49,7 @@ const BADGE: Record<string, string> = {
 
 const ASSIGNABLE_ROLES: UserRole[] = [
     'requestor',
+    'division_head',
     'reviewer',
     'vp',
     'purchasing',
@@ -87,10 +90,12 @@ function UserRow({
     }, [localRoles.join(','), localCompany, localDept]);
 
     const isRequestor = selected.includes('requestor');
+    const isDivisionHead = selected.includes('division_head');
+    const needsDept = isRequestor || isDivisionHead;
     const changed =
         !sameRoles(selected, localRoles) ||
-        (isRequestor &&
-            (company !== (localCompany ?? '') || dept !== (localDept ?? '')));
+        (isRequestor && company !== (localCompany ?? '')) ||
+        (needsDept && dept !== (localDept ?? ''));
     const hasAccess = localRoles.length > 0;
     const fullName = `${user.first_name} ${user.last_name}`;
 
@@ -115,7 +120,7 @@ function UserRow({
                 email: user.email,
                 roles: selected,
                 company: isRequestor ? company : null,
-                dept: isRequestor ? dept : null,
+                dept: needsDept ? dept : null,
             },
             {
                 preserveScroll: true,
@@ -182,34 +187,34 @@ function UserRow({
                         ))}
                     </div>
                     {isRequestor && (
-                        <>
-                            <select
-                                value={company}
-                                onChange={(e) => setCompany(e.target.value)}
-                                disabled={busy}
-                                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
-                            >
-                                <option value="">— Farm —</option>
-                                {companies.map((c) => (
-                                    <option key={c} value={c}>
-                                        {c}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={dept}
-                                onChange={(e) => setDept(e.target.value)}
-                                disabled={busy}
-                                className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
-                            >
-                                <option value="">— Department —</option>
-                                {departments.map((d) => (
-                                    <option key={d} value={d}>
-                                        {d}
-                                    </option>
-                                ))}
-                            </select>
-                        </>
+                        <select
+                            value={company}
+                            onChange={(e) => setCompany(e.target.value)}
+                            disabled={busy}
+                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
+                        >
+                            <option value="">— Farm —</option>
+                            {companies.map((c) => (
+                                <option key={c} value={c}>
+                                    {c}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                    {needsDept && (
+                        <select
+                            value={dept}
+                            onChange={(e) => setDept(e.target.value)}
+                            disabled={busy}
+                            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 disabled:opacity-50"
+                        >
+                            <option value="">— Department —</option>
+                            {departments.map((d) => (
+                                <option key={d} value={d}>
+                                    {d}
+                                </option>
+                            ))}
+                        </select>
                     )}
                 </div>
             </td>
@@ -219,7 +224,9 @@ function UserRow({
                         <button
                             onClick={save}
                             disabled={
-                                busy || (isRequestor && (!company || !dept))
+                                busy ||
+                                (isRequestor && !company) ||
+                                (needsDept && !dept)
                             }
                             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-50"
                             style={{ background: '#1e3a5f' }}
@@ -302,8 +309,15 @@ export default function Users({
                         automatically.
                     </li>
                     <li>
-                        <strong>Reviewer</strong> — can view all submitted
-                        forms, mark as Reviewed, reject, or put on hold.
+                        <strong>Division Head</strong> — the first approval
+                        step, one stage before Reviewer. Only sees and acts on
+                        requests from their own Department (Endorse, Reject, or
+                        put on Hold). Requires a Department.
+                    </li>
+                    <li>
+                        <strong>Reviewer</strong> — sees Division-Head-endorsed
+                        forms across every department, mark as Reviewed, reject,
+                        or put on hold.
                     </li>
                     <li>
                         <strong>VP Approver</strong> — sees Reviewed forms; can

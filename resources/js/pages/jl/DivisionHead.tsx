@@ -35,7 +35,7 @@ function StatCard({
     );
 }
 
-export default function Reviewer({ entries }: Props) {
+export default function DivisionHead({ entries }: Props) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [modal, setModal] = useState<JlEntry | null>(null);
@@ -83,12 +83,12 @@ export default function Reviewer({ entries }: Props) {
         }
 
         router.patch(
-            `/jl/${modal.id}/review`,
-            { review_remarks: checkRemarks },
+            `/jl/${modal.id}/endorse`,
+            { endorse_remarks: checkRemarks },
             {
                 preserveScroll: true,
                 onSuccess: onFlash(
-                    'Marked as Reviewed — forwarded to VP Approver.',
+                    'Endorsed — forwarded to the Reviewer.',
                     closeModal,
                 ),
             },
@@ -174,38 +174,28 @@ export default function Reviewer({ entries }: Props) {
     } = usePagination(filtered);
 
     const total = entries.length;
-    const awaitingDivisionHead = entries.filter(
-        (e) => e.status === 'Pending',
-    ).length;
-    const pending = entries.filter((e) => e.status === 'Endorsed').length;
-    const checked = entries.filter((e) => e.status === 'Reviewed').length;
-    const approved = entries.filter((e) => e.status === 'Approved').length;
-    const reviewerRejected = entries.filter(
-        (e) => e.status === 'Rejected',
-    ).length;
-    const vpRejected = entries.filter((e) => e.status === 'VP Rejected').length;
+    const pending = entries.filter((e) => e.status === 'Pending').length;
+    const endorsed = entries.filter((e) => e.status === 'Endorsed').length;
     const onHold = entries.filter((e) => e.status === 'On Hold').length;
 
     return (
         <AppLayout>
-            <Head title="Reviewer Dashboard" />
+            <Head title="Division Head Dashboard" />
 
-            <InfoPanel type="overview" title="Reviewer Dashboard">
+            <InfoPanel type="overview" title="Division Head Dashboard">
                 <p>
-                    This is your queue of all submitted JL forms. Forms must
-                    first be endorsed by the requestor's Division Head before
-                    they're actionable here, on their way to the VP Approver.
+                    This is your department's queue of submitted JL forms. You
+                    are the first approval step, before forms reach the
+                    Reviewer.
                 </p>
                 <ul className="mt-2 list-disc pl-4">
                     <li>
-                        Forms with status <strong>Endorsed</strong> require your
-                        action — use the kebab menu (⋮) to act. Forms still{' '}
-                        <strong>Pending</strong> are awaiting their Division
-                        Head and aren't actionable yet.
+                        Forms with status <strong>Pending</strong> require your
+                        action — use the kebab menu (⋮) to act.
                     </li>
                     <li>
-                        <strong>For Review</strong> — opens the form details for
-                        you to inspect and mark as Reviewed, with optional
+                        <strong>For Endorsement</strong> — opens the form
+                        details for you to inspect and endorse, with optional
                         remarks visible to every role.
                     </li>
                     <li>
@@ -219,59 +209,37 @@ export default function Reviewer({ entries }: Props) {
                         why it was held.
                     </li>
                     <li>
-                        Once marked as Reviewed, the form moves to the VP
-                        Approver's queue automatically.
+                        Once endorsed, the form moves to the Reviewer's queue
+                        automatically.
                     </li>
                 </ul>
             </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
-                    Reviewer Dashboard
+                    Division Head Dashboard
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">
-                    Review submitted JL forms, mark as checked or reject before
-                    forwarding to VP Approver.
+                    Endorse submitted JL forms from your department, or reject
+                    before forwarding to the Reviewer.
                 </p>
             </div>
 
-            <div className="mb-3 grid grid-cols-5 gap-4">
+            <div className="mb-7 grid grid-cols-4 gap-4">
                 <StatCard
                     label="Total Submissions"
                     value={total}
                     color="#1e3a5f"
                 />
                 <StatCard
-                    label="Awaiting Division Head"
-                    value={awaitingDivisionHead}
-                    color="#94a3b8"
-                />
-                <StatCard
-                    label="Pending Review"
+                    label="Awaiting My Endorsement"
                     value={pending}
                     color="#d97706"
                 />
                 <StatCard
-                    label="Reviewed / Forwarded"
-                    value={checked}
-                    color="#2563eb"
-                />
-                <StatCard
-                    label="VP Approved"
-                    value={approved}
-                    color="#16a34a"
-                />
-            </div>
-            <div className="mb-7 grid grid-cols-3 gap-4">
-                <StatCard
-                    label="Rejected by Reviewer"
-                    value={reviewerRejected}
-                    color="#dc2626"
-                />
-                <StatCard
-                    label="Rejected by VP"
-                    value={vpRejected}
-                    color="#dc2626"
+                    label="Endorsed / Forwarded"
+                    value={endorsed}
+                    color="#4f46e5"
                 />
                 <StatCard label="On Hold" value={onHold} color="#d97706" />
             </div>
@@ -291,13 +259,8 @@ export default function Reviewer({ entries }: Props) {
                     <option value="">All Statuses</option>
                     <option>Pending</option>
                     <option>Endorsed</option>
-                    <option>Reviewed</option>
-                    <option value="Rejected">Reviewer Rejected</option>
-                    <option>Approved</option>
-                    <option value="VP Rejected">VP Rejected</option>
+                    <option value="Rejected">Rejected</option>
                     <option value="On Hold">On Hold</option>
-                    <option value="On Process">On Process</option>
-                    <option value="Cancelled">Cancelled</option>
                 </select>
                 <button
                     onClick={() => setShowExport(true)}
@@ -313,7 +276,7 @@ export default function Reviewer({ entries }: Props) {
             >
                 <JlTable
                     entries={pageItems}
-                    context="reviewer"
+                    context="division_head"
                     onView={(e) => {
                         setModal(e);
                         setShowCheckBox(false);
@@ -338,7 +301,7 @@ export default function Reviewer({ entries }: Props) {
 
             <JlModal
                 entry={modal}
-                context="reviewer"
+                context="division_head"
                 onClose={closeModal}
                 onCheckClick={() => setShowCheckBox(true)}
                 showCheckBox={showCheckBox}
@@ -372,17 +335,7 @@ export default function Reviewer({ entries }: Props) {
             <ExportModal
                 open={showExport}
                 onClose={() => setShowExport(false)}
-                allowedStatuses={[
-                    'Pending',
-                    'Endorsed',
-                    'Reviewed',
-                    'Rejected',
-                    'Approved',
-                    'VP Rejected',
-                    'On Hold',
-                    'On Process',
-                    'Cancelled',
-                ]}
+                allowedStatuses={['Pending', 'Endorsed', 'Rejected', 'On Hold']}
             />
 
             {toast && (

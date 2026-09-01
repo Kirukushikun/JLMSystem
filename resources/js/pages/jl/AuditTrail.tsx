@@ -1,15 +1,16 @@
-import AppLayout from '@/layouts/AppLayout';
-import InfoPanel from '@/components/InfoPanel';
-import Pagination from '@/components/Pagination';
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import InfoPanel from '@/components/InfoPanel';
+import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import AppLayout from '@/layouts/AppLayout';
 
 interface AuditLog {
     id: number;
     jl_entry_id: number;
     event:
         | 'submitted'
+        | 'endorsed'
         | 'reviewed'
         | 'approved'
         | 'rejected'
@@ -38,6 +39,7 @@ const EVENT_META: Record<
     { label: string; bg: string; color: string }
 > = {
     submitted: { label: 'Submitted', bg: '#fef3c7', color: '#92400e' },
+    endorsed: { label: 'Endorsed', bg: '#e0e7ff', color: '#3730a3' },
     reviewed: { label: 'Reviewed', bg: '#dbeafe', color: '#1e40af' },
     approved: { label: 'Approved', bg: '#dcfce7', color: '#166534' },
     rejected: { label: 'Rejected', bg: '#fee2e2', color: '#991b1b' },
@@ -55,6 +57,7 @@ const EVENT_META: Record<
 
 function EventBadge({ event }: { event: AuditLog['event'] }) {
     const { label, bg, color } = EVENT_META[event];
+
     return (
         <span
             className="inline-block rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase"

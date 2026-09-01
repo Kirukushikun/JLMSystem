@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MaintenanceController extends Controller
 {
-    private const VALID_STATUSES = ['Pending', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'];
+    private const VALID_STATUSES = ['Pending', 'Endorsed', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process'];
 
     public function index(): Response
     {
@@ -201,9 +201,11 @@ class MaintenanceController extends Controller
                 $heldAt = trim($row['Held At'] ?? '') ?: null;
                 $serial = trim($row['Serial No.'] ?? '') ?: null;
                 $submitted = trim($row['Submitted'] ?? '');
+                $endorsed = trim($row['Endorsed'] ?? '') ?: null;
                 $reviewed = trim($row['Reviewed'] ?? '') ?: null;
                 $approved = trim($row['Approved'] ?? '') ?: null;
                 $rejectReason = trim($row['Reject Reason'] ?? '') ?: null;
+                $endorseRemarks = trim($row['Endorsement Remarks'] ?? '') ?: null;
 
                 if ($title === '' || $company === '' || $dept === '' || $manager === '' || $date === '' || $submitted === '') {
                     $errors[] = "Row {$line}: missing required field(s).";
@@ -245,11 +247,14 @@ class MaintenanceController extends Controller
                 }
 
                 // Historical rows are often missing per-stage timestamps. Default the
-                // review/approval dates to the submission date so this row is still
-                // picked up by generateSerial()'s whereYear('approved_at', ...) count
-                // when future entries are approved.
+                // endorsement/review/approval dates to the submission date so this row
+                // is still picked up by generateSerial()'s whereYear('approved_at', ...)
+                // count when future entries are approved.
+                $submittedDate = date('Y-m-d', strtotime($submitted));
+                if (in_array($status, ['Reviewed', 'Approved'], true)) {
+                    $endorsed = $endorsed ?: $submittedDate;
+                }
                 if ($status === 'Approved') {
-                    $submittedDate = date('Y-m-d', strtotime($submitted));
                     $reviewed = $reviewed ?: $submittedDate;
                     $approved = $approved ?: $submittedDate;
                 }
@@ -290,9 +295,11 @@ class MaintenanceController extends Controller
                         'held_at' => $heldAt,
                         'serial' => $serial,
                         'submitted_at' => $submitted,
+                        'endorsed_at' => $endorsed ?: null,
                         'reviewed_at' => $reviewed ?: null,
                         'approved_at' => $approved ?: null,
                         'reject_reason' => $rejectReason,
+                        'endorse_remarks' => $endorseRemarks,
                     ]);
 
                     $imported++;

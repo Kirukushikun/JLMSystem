@@ -126,6 +126,7 @@ export default function ItemsTable({ rows, onChange, disabled }: Props) {
                                             })
                                         }
                                         placeholder="e.g. Steel pipe"
+                                        maxLength={255}
                                         disabled={disabled}
                                     />
                                 </td>
@@ -154,6 +155,7 @@ export default function ItemsTable({ rows, onChange, disabled }: Props) {
                                             })
                                         }
                                         placeholder="What is this for?"
+                                        maxLength={255}
                                         disabled={disabled}
                                     />
                                 </td>

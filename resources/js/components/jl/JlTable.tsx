@@ -10,7 +10,7 @@ interface KebabState {
 
 interface Props {
     entries: JlEntry[];
-    context: 'reviewer' | 'vp' | 'purchasing' | 'viewer';
+    context: 'division_head' | 'reviewer' | 'vp' | 'purchasing' | 'viewer';
     onView: (entry: JlEntry) => void;
     onReject?: (entry: JlEntry) => void;
     onHold?: (entry: JlEntry) => void;
@@ -70,10 +70,16 @@ export default function JlTable({
         );
     }
 
-    function isReviewerActionable(e: JlEntry) {
+    function isDivisionHeadActionable(e: JlEntry) {
         return (
             e.status === 'Pending' ||
             (e.status === 'On Hold' && e.held_at === 'Pending')
+        );
+    }
+    function isReviewerActionable(e: JlEntry) {
+        return (
+            e.status === 'Endorsed' ||
+            (e.status === 'On Hold' && e.held_at === 'Endorsed')
         );
     }
     function isVpActionable(e: JlEntry) {
@@ -92,6 +98,10 @@ export default function JlTable({
     }
 
     function canAct(e: JlEntry) {
+        if (context === 'division_head') {
+            return isDivisionHeadActionable(e);
+        }
+
         if (context === 'reviewer') {
             return isReviewerActionable(e);
         }
@@ -122,6 +132,59 @@ export default function JlTable({
         }
 
         const alreadyOnHold = entry.status === 'On Hold';
+
+        if (context === 'division_head') {
+            return (
+                <>
+                    <KebabItem
+                        color="green"
+                        onClick={() => {
+                            onView(entry);
+                            setKebab(null);
+                        }}
+                    >
+                        <i class="fa-solid fa-check"></i> For Endorsement
+                    </KebabItem>
+                    <div className="mx-1 h-px bg-gray-100" />
+                    <KebabItem
+                        color="red"
+                        onClick={() => {
+                            onReject?.(entry);
+                            setKebab(null);
+                        }}
+                    >
+                        <i class="fa-solid fa-xmark"></i> Reject
+                    </KebabItem>
+                    {!alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem
+                                color="amber"
+                                onClick={() => {
+                                    onHold?.(entry);
+                                    setKebab(null);
+                                }}
+                            >
+                                <i class="fa-solid fa-pause"></i> On Hold
+                            </KebabItem>
+                        </>
+                    )}
+                    {alreadyOnHold && (
+                        <>
+                            <div className="mx-1 h-px bg-gray-100" />
+                            <KebabItem
+                                onClick={() => {
+                                    onView(entry);
+                                    setKebab(null);
+                                }}
+                            >
+                                <i class="fa-solid fa-eye"></i> View Details
+                            </KebabItem>
+                        </>
+                    )}
+                </>
+            );
+        }
 
         if (context === 'reviewer') {
             return (

@@ -17,23 +17,31 @@ use Illuminate\Support\Carbon;
  * @property string $dept
  * @property float $amount
  * @property string $status
+ * @property string $entry_type document | structured — which Submit-form mode created this entry
  * @property string|null $serial
  * @property Carbon $submitted_at
+ * @property Carbon|null $endorsed_at
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $approved_at
  * @property string|null $reject_reason
+ * @property string|null $endorse_remarks
  * @property string|null $review_remarks
  * @property string|null $approve_remarks
  * @property string|null $hold_reason
  * @property string|null $attachment
  * @property string|null $attachment_name
+ * @property string|null $body free-text narrative — structured entries only
+ * @property string|null $justification — structured entries only
+ * @property array<int, array{item_name: string, quantity: string, purpose: string, image: string|null, image_name: string|null}>|null $items — structured entries only
+ * @property array<int, array{description: string, quantity: string, unit_cost: string}>|null $cost_breakdown — structured entries only
  * @property-read string $reference
  * @property-read string|null $attachment_url
  */
 #[Fillable([
     'user_id', 'title', 'date', 'company', 'manager', 'dept', 'amount',
-    'status', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'reviewed_at', 'approved_at', 'reject_reason',
-    'review_remarks', 'approve_remarks', 'attachment', 'attachment_name',
+    'status', 'entry_type', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'reject_reason',
+    'endorse_remarks', 'review_remarks', 'approve_remarks', 'attachment', 'attachment_name',
+    'body', 'justification', 'items', 'cost_breakdown',
 ])]
 class JlEntry extends Model
 {
@@ -45,6 +53,7 @@ class JlEntry extends Model
             'amount' => 'float',
             'date' => 'date:Y-m-d',
             'submitted_at' => 'date:Y-m-d',
+            'endorsed_at' => 'date:Y-m-d',
             'reviewed_at' => 'date:Y-m-d',
             'approved_at' => 'date:Y-m-d',
         ];
@@ -63,6 +72,43 @@ class JlEntry extends Model
     {
         return Attribute::get(
             fn () => $this->attachment ? route('jl.attachment', $this->id) : null,
+        );
+    }
+
+    /**
+     * Handled as a manual JSON get/set rather than the `array` cast, so the
+     * get side can also inject each item's viewable image_url — combining a
+     * cast and an accessor on the same column is ambiguous about evaluation
+     * order, so this does the whole job itself.
+     */
+    /** @return Attribute<array<int, array<string, mixed>>, array<int, array<string, mixed>>|null> */
+    protected function items(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): array {
+                // json_decode's return type is genuinely unpredictable at this point
+                // (malformed JSON decodes to null, a scalar, etc.) — casting defends
+                // against that as much as it satisfies collect()'s generics below.
+                $items = $value ? (array) json_decode($value, true) : [];
+
+                return collect($items)->map(function (array $item, int $index) {
+                    $item['image_url'] = empty($item['image'])
+                        ? null
+                        : route('jl.itemImage', [$this->id, $index]);
+
+                    return $item;
+                })->all();
+            },
+            set: fn (?array $value) => json_encode($value ?? []),
+        );
+    }
+
+    /** @return Attribute<array<int, array<string, mixed>>, array<int, array<string, mixed>>|null> */
+    protected function costBreakdown(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value ? json_decode($value, true) : [],
+            set: fn (?array $value) => json_encode($value ?? []),
         );
     }
 

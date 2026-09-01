@@ -1,7 +1,8 @@
 export interface CostRow {
     id: string;
     description: string;
-    amount: string;
+    quantity: string;
+    unitCost: string;
 }
 
 interface Props {
@@ -14,11 +15,20 @@ const CELL_INPUT =
     'w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
 
 export function newCostRow(): CostRow {
-    return { id: crypto.randomUUID(), description: '', amount: '' };
+    return {
+        id: crypto.randomUUID(),
+        description: '',
+        quantity: '1',
+        unitCost: '',
+    };
+}
+
+export function costRowSubtotal(row: CostRow): number {
+    return (Number(row.quantity) || 0) * (Number(row.unitCost) || 0);
 }
 
 export function costRowsTotal(rows: CostRow[]): number {
-    return rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    return rows.reduce((sum, r) => sum + costRowSubtotal(r), 0);
 }
 
 function fmtAmt(n: number) {
@@ -45,11 +55,13 @@ export default function CostBreakdownTable({
     return (
         <div>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="w-full min-w-[420px] border-collapse text-sm">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
                     <thead>
                         <tr className="bg-gray-50 text-left text-xs font-semibold tracking-wide text-gray-400 uppercase">
                             <th className="px-3 py-2.5">Description</th>
-                            <th className="w-40 px-3 py-2.5">Amount</th>
+                            <th className="w-24 px-3 py-2.5">Quantity</th>
+                            <th className="w-32 px-3 py-2.5">Unit Cost</th>
+                            <th className="w-32 px-3 py-2.5">Subtotal</th>
                             <th className="w-10 px-3 py-2.5" />
                         </tr>
                     </thead>
@@ -69,6 +81,22 @@ export default function CostBreakdownTable({
                                             })
                                         }
                                         placeholder="e.g. Materials"
+                                        maxLength={255}
+                                        disabled={disabled}
+                                    />
+                                </td>
+                                <td className="px-3 py-2">
+                                    <input
+                                        className={CELL_INPUT}
+                                        type="number"
+                                        min="0"
+                                        value={row.quantity}
+                                        onChange={(e) =>
+                                            update(row.id, {
+                                                quantity: e.target.value,
+                                            })
+                                        }
+                                        placeholder="1"
                                         disabled={disabled}
                                     />
                                 </td>
@@ -78,15 +106,18 @@ export default function CostBreakdownTable({
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        value={row.amount}
+                                        value={row.unitCost}
                                         onChange={(e) =>
                                             update(row.id, {
-                                                amount: e.target.value,
+                                                unitCost: e.target.value,
                                             })
                                         }
                                         placeholder="0.00"
                                         disabled={disabled}
                                     />
+                                </td>
+                                <td className="px-3 py-2 font-medium text-gray-600">
+                                    {fmtAmt(costRowSubtotal(row))}
                                 </td>
                                 <td className="px-3 py-2 text-center">
                                     <button
@@ -104,7 +135,10 @@ export default function CostBreakdownTable({
                     </tbody>
                     <tfoot>
                         <tr className="border-t-2 border-gray-200 bg-gray-50">
-                            <td className="px-3 py-2.5 text-right text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                            <td
+                                colSpan={3}
+                                className="px-3 py-2.5 text-right text-xs font-semibold tracking-wide text-gray-500 uppercase"
+                            >
                                 Total Estimated Cost
                             </td>
                             <td

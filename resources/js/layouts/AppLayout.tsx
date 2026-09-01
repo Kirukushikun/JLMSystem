@@ -13,6 +13,11 @@ const NAV_ITEMS = [
         roles: ['requestor', 'admin'],
     },
     {
+        label: 'Division Head',
+        href: '/division-head',
+        roles: ['division_head', 'admin'],
+    },
+    {
         label: 'Reviewer Dashboard',
         href: '/reviewer',
         roles: ['reviewer', 'admin'],

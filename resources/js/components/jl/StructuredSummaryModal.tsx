@@ -18,6 +18,7 @@ interface StructuredData {
 interface Props {
     open: boolean;
     data: StructuredData;
+    processing: boolean;
     onClose: () => void;
     onConfirm: () => void;
 }
@@ -40,6 +41,7 @@ function Row({ label, value }: { label: string; value: string }) {
 export default function StructuredSummaryModal({
     open,
     data,
+    processing,
     onClose,
     onConfirm,
 }: Props) {
@@ -105,25 +107,21 @@ export default function StructuredSummaryModal({
                     <Row label="Reason for Justification" value={data.reason} />
                 </div>
 
-                <div className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                    ⚠ This structured-entry mode is a UI preview only —
-                    submissions here aren't saved yet. Backend support is coming
-                    in a follow-up update.
-                </div>
-
                 <div className="mt-6 flex justify-end gap-2">
                     <button
                         onClick={onClose}
-                        className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                        disabled={processing}
+                        className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                     >
                         ← Go Back &amp; Edit
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                        disabled={processing}
+                        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                         style={{ background: '#1e3a5f' }}
                     >
-                        ✓ Confirm & Submit
+                        {processing ? 'Submitting…' : '✓ Confirm & Submit'}
                     </button>
                 </div>
             </div>

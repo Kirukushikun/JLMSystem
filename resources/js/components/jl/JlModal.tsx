@@ -4,7 +4,13 @@ import StatusBadge from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
-    context: 'reviewer' | 'vp' | 'purchasing' | 'requestor' | 'viewer';
+    context:
+        | 'division_head'
+        | 'reviewer'
+        | 'vp'
+        | 'purchasing'
+        | 'requestor'
+        | 'viewer';
     onClose: () => void;
     onProcess?: (id: number) => void;
     onCheckClick?: () => void;
@@ -125,6 +131,16 @@ export default function JlModal({
     const s = entry.status;
     const effective = s === 'On Hold' ? (entry.held_at ?? 'Pending') : s;
 
+    const endorsedState: WfState = [
+        'Endorsed',
+        'Reviewed',
+        'Approved',
+        'Rejected',
+        'VP Rejected',
+        'On Process',
+    ].includes(effective)
+        ? 'done'
+        : 'active';
     const reviewedState: WfState = [
         'Reviewed',
         'Approved',
@@ -142,9 +158,16 @@ export default function JlModal({
           ? 'active'
           : 'idle';
 
+    const canEndorse =
+        context === 'division_head' &&
+        (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
     const canCheck =
         context === 'reviewer' &&
-        (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
+        (s === 'Endorsed' || (s === 'On Hold' && entry.held_at === 'Endorsed'));
+    // Both Division Head's "Endorse" and Reviewer's "Mark as Reviewed" share
+    // the same remarks-box UI below (open box → optional remarks → confirm),
+    // just at different stages — canMarkStage drives that shared UI.
+    const canMarkStage = canEndorse || canCheck;
     const canApprove =
         context === 'vp' &&
         (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
@@ -160,9 +183,9 @@ export default function JlModal({
                 (entry.held_at === 'Approved' ||
                     entry.held_at === 'On Process')));
 
-    const canReject = canCheck || canApprove || canRejectApproved;
+    const canReject = canMarkStage || canApprove || canRejectApproved;
     const canHold =
-        canCheck ||
+        canMarkStage ||
         canApprove ||
         canRejectApproved ||
         canReapprove ||
@@ -206,6 +229,8 @@ export default function JlModal({
                 <div className="mb-6 flex items-center rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100">
                     <WfStep label="Submitted" state="done" />
                     <div className="h-0.5 flex-1 bg-gray-200" />
+                    <WfStep label="Endorsed" state={endorsedState} />
+                    <div className="h-0.5 flex-1 bg-gray-200" />
                     <WfStep label="Reviewed" state={reviewedState} />
                     <div className="h-0.5 flex-1 bg-gray-200" />
                     <WfStep label="VP Approved" state={approvedState} />
@@ -213,8 +238,23 @@ export default function JlModal({
 
                 {/* Detail grid */}
                 <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                    <DetailItem label="JL Title" value={entry.title} full />
-                    <DetailItem label="Date Prepared" value={entry.date} />
+                    <DetailItem
+                        label={
+                            entry.entry_type === 'structured'
+                                ? 'Subject'
+                                : 'JL Title'
+                        }
+                        value={entry.title}
+                        full
+                    />
+                    <DetailItem
+                        label={
+                            entry.entry_type === 'structured'
+                                ? 'Date Needed'
+                                : 'Date Prepared'
+                        }
+                        value={entry.date}
+                    />
                     <DetailItem
                         label="Status"
                         value={<StatusBadge status={entry.status} />}
@@ -232,6 +272,10 @@ export default function JlModal({
                     <DetailItem
                         label="Submitted On"
                         value={entry.submitted_at || '—'}
+                    />
+                    <DetailItem
+                        label="Endorsed On"
+                        value={entry.endorsed_at || '—'}
                     />
                     <DetailItem
                         label="Reviewed On"
@@ -255,6 +299,177 @@ export default function JlModal({
                             )
                         }
                     />
+                    {entry.entry_type === 'structured' && (
+                        <>
+                            {entry.body && (
+                                <DetailItem
+                                    label="Body"
+                                    value={
+                                        <span className="whitespace-pre-wrap">
+                                            {entry.body}
+                                        </span>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.justification && (
+                                <DetailItem
+                                    label="Reason for Justification"
+                                    value={
+                                        <span className="whitespace-pre-wrap">
+                                            {entry.justification}
+                                        </span>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.items && entry.items.length > 0 && (
+                                <DetailItem
+                                    label="Items"
+                                    value={
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                            <table className="w-full min-w-[420px] border-collapse text-xs">
+                                                <thead>
+                                                    <tr className="bg-gray-50 text-left tracking-wide text-gray-400 uppercase">
+                                                        <th className="px-2.5 py-2">
+                                                            Item
+                                                        </th>
+                                                        <th className="px-2.5 py-2">
+                                                            Qty
+                                                        </th>
+                                                        <th className="px-2.5 py-2">
+                                                            Purpose
+                                                        </th>
+                                                        <th className="px-2.5 py-2">
+                                                            Image
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {entry.items.map(
+                                                        (item, i) => (
+                                                            <tr
+                                                                key={i}
+                                                                className="border-t border-gray-100"
+                                                            >
+                                                                <td className="px-2.5 py-2">
+                                                                    {
+                                                                        item.item_name
+                                                                    }
+                                                                </td>
+                                                                <td className="px-2.5 py-2">
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </td>
+                                                                <td className="px-2.5 py-2">
+                                                                    {
+                                                                        item.purpose
+                                                                    }
+                                                                </td>
+                                                                <td className="px-2.5 py-2">
+                                                                    {item.image_url ? (
+                                                                        <a
+                                                                            href={
+                                                                                item.image_url
+                                                                            }
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                        >
+                                                                            <img
+                                                                                src={
+                                                                                    item.image_url
+                                                                                }
+                                                                                alt=""
+                                                                                className="h-8 w-8 rounded object-cover"
+                                                                            />
+                                                                        </a>
+                                                                    ) : (
+                                                                        '—'
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ),
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.cost_breakdown &&
+                                entry.cost_breakdown.length > 0 && (
+                                    <DetailItem
+                                        label="Cost Breakdown"
+                                        value={
+                                            <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                                <table className="w-full min-w-[360px] border-collapse text-xs">
+                                                    <thead>
+                                                        <tr className="bg-gray-50 text-left tracking-wide text-gray-400 uppercase">
+                                                            <th className="px-2.5 py-2">
+                                                                Description
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Qty
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Unit Cost
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Subtotal
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {entry.cost_breakdown.map(
+                                                            (row, i) => (
+                                                                <tr
+                                                                    key={i}
+                                                                    className="border-t border-gray-100"
+                                                                >
+                                                                    <td className="px-2.5 py-2">
+                                                                        {
+                                                                            row.description
+                                                                        }
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2">
+                                                                        {
+                                                                            row.quantity
+                                                                        }
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2">
+                                                                        {fmtAmt(
+                                                                            Number(
+                                                                                row.unit_cost,
+                                                                            ) ||
+                                                                                0,
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2 font-medium">
+                                                                        {fmtAmt(
+                                                                            (Number(
+                                                                                row.quantity,
+                                                                            ) ||
+                                                                                0) *
+                                                                                (Number(
+                                                                                    row.unit_cost,
+                                                                                ) ||
+                                                                                    0),
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ),
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                        full
+                                    />
+                                )}
+                        </>
+                    )}
                     {entry.attachment_url && (
                         <DetailItem
                             label="Attachment"
@@ -289,6 +504,17 @@ export default function JlModal({
                             value={
                                 <span className="text-red-600">
                                     {entry.reject_reason}
+                                </span>
+                            }
+                            full
+                        />
+                    )}
+                    {entry.endorse_remarks && (
+                        <DetailItem
+                            label="Endorsement Remarks"
+                            value={
+                                <span className="text-indigo-700">
+                                    {entry.endorse_remarks}
                                 </span>
                             }
                             full
@@ -373,7 +599,11 @@ export default function JlModal({
                             onChange={(e) =>
                                 onCheckRemarksChange?.(e.target.value)
                             }
-                            placeholder="Add a comment about this review…"
+                            placeholder={
+                                canEndorse
+                                    ? 'Add a comment about this endorsement…'
+                                    : 'Add a comment about this review…'
+                            }
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
                     </div>
@@ -423,13 +653,15 @@ export default function JlModal({
                                     ✕ Reject
                                 </button>
                             )}
-                            {canCheck && (
+                            {canMarkStage && (
                                 <button
                                     onClick={onCheckClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    <i class="fa-solid fa-check"></i> Mark as
-                                    Reviewed
+                                    <i class="fa-solid fa-check"></i>{' '}
+                                    {canEndorse
+                                        ? 'Endorse'
+                                        : 'Mark as Reviewed'}
                                 </button>
                             )}
                             {(canApprove || canReapprove) && (
@@ -496,7 +728,10 @@ export default function JlModal({
                                 onClick={onConfirmCheck}
                                 className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
-                                <i class="fa-solid fa-check"></i> Confirm Review
+                                <i class="fa-solid fa-check"></i>{' '}
+                                {context === 'division_head'
+                                    ? 'Confirm Endorsement'
+                                    : 'Confirm Review'}
                             </button>
                         </>
                     ) : (
