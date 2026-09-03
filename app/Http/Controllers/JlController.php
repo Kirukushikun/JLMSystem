@@ -99,13 +99,19 @@ class JlController extends Controller
     {
         $user = auth()->user();
 
-        $data = $request->input('entry_type') === 'structured'
-            ? $this->buildStructuredEntryFields($request)
-            : $this->buildDocumentEntryFields($request);
+        $data = $this->buildStructuredEntryFields($request);
 
         $data['company'] = $request->input('company');
         $data['manager'] = $request->input('manager');
         $data['dept'] = $request->input('dept');
+
+        // Company/Farm and Department are locked to the account for
+        // requestors — disabled client-side, but that's UX only, so the
+        // account's value always wins here regardless of what was sent.
+        if ($user->hasRole('requestor')) {
+            $data['company'] = $user->company;
+            $data['dept'] = $user->dept;
+        }
 
         $entry = JlEntry::create([
             ...$data,
@@ -170,13 +176,18 @@ class JlController extends Controller
             return back()->with('error', 'Only cancelled requests can be resubmitted.');
         }
 
-        $data = $request->input('entry_type') === 'structured'
-            ? $this->buildStructuredEntryFields($request)
-            : $this->buildDocumentEntryFields($request, $entry);
+        $user = auth()->user();
+
+        $data = $this->buildStructuredEntryFields($request, $entry);
 
         $data['company'] = $request->input('company');
         $data['manager'] = $request->input('manager');
         $data['dept'] = $request->input('dept');
+
+        if ($user->hasRole('requestor')) {
+            $data['company'] = $user->company;
+            $data['dept'] = $user->dept;
+        }
 
         $entry->update([
             ...$data,
@@ -256,36 +267,7 @@ class JlController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function buildDocumentEntryFields(Request $request, ?JlEntry $existingEntry = null): array
-    {
-        $data = [
-            'entry_type' => 'document',
-            'title' => $request->input('title'),
-            'date' => $request->input('date'),
-            'amount' => $request->input('amount'),
-            // Reset structured-only fields in case this entry was originally
-            // submitted as structured and is being resubmitted as document.
-            'body' => null,
-            'justification' => null,
-            'items' => null,
-            'cost_breakdown' => null,
-        ];
-
-        if ($request->hasFile('attachment')) {
-            if ($existingEntry?->attachment) {
-                Storage::disk('local')->delete($existingEntry->attachment);
-            }
-
-            $file = $request->file('attachment');
-            $data['attachment'] = $file->store('jl-attachments', 'local');
-            $data['attachment_name'] = $file->getClientOriginalName();
-        }
-
-        return $data;
-    }
-
-    /** @return array<string, mixed> */
-    private function buildStructuredEntryFields(Request $request): array
+    private function buildStructuredEntryFields(Request $request, ?JlEntry $existingEntry = null): array
     {
         $costBreakdown = collect((array) $request->input('cost_breakdown', []))
             ->map(fn ($row) => [
@@ -324,7 +306,7 @@ class JlController extends Controller
             })
             ->all();
 
-        return [
+        $data = [
             'entry_type' => 'structured',
             'title' => $request->input('subject'),
             'date' => $request->input('date_needed'),
@@ -333,9 +315,19 @@ class JlController extends Controller
             'justification' => $request->input('justification'),
             'items' => $items,
             'cost_breakdown' => $costBreakdown,
-            'attachment' => null,
-            'attachment_name' => null,
         ];
+
+        if ($request->hasFile('attachment')) {
+            if ($existingEntry?->attachment) {
+                Storage::disk('local')->delete($existingEntry->attachment);
+            }
+
+            $file = $request->file('attachment');
+            $data['attachment'] = $file->store('jl-attachments', 'local');
+            $data['attachment_name'] = $file->getClientOriginalName();
+        }
+
+        return $data;
     }
 
     public function endorse(Request $request, JlEntry $entry): RedirectResponse

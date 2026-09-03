@@ -13,6 +13,7 @@ interface StructuredData {
     reason: string;
     items: JlItemRow[];
     costRows: CostRow[];
+    attachment: File | null;
 }
 
 interface Props {
@@ -105,6 +106,10 @@ export default function StructuredSummaryModal({
                         value={fmtAmt(costRowsTotal(data.costRows))}
                     />
                     <Row label="Reason for Justification" value={data.reason} />
+                    <Row
+                        label="Supporting Image"
+                        value={data.attachment?.name ?? 'None'}
+                    />
                 </div>
 
                 <div className="mt-6 flex justify-end gap-2">

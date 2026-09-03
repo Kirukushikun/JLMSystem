@@ -472,7 +472,11 @@ export default function JlModal({
                     )}
                     {entry.attachment_url && (
                         <DetailItem
-                            label="Attachment"
+                            label={
+                                entry.entry_type === 'structured'
+                                    ? 'Supporting Image'
+                                    : 'Attachment'
+                            }
                             value={
                                 <a
                                     href={entry.attachment_url}
