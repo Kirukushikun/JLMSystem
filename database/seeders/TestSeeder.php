@@ -29,8 +29,8 @@ class TestSeeder extends Seeder
         ['id' => 900003, 'name' => 'Test Purchasing', 'email' => 'purchasing@test.local', 'role' => 'purchasing'],
         ['id' => 900004, 'name' => 'Test Purchasing Viewer', 'email' => 'purchasing_viewer@test.local', 'role' => 'purchasing_viewer'],
         ['id' => 900005, 'name' => 'Test Reviewer', 'email' => 'reviewer@test.local', 'role' => 'reviewer'],
-        ['id' => 900006, 'name' => 'Test Division Head', 'email' => 'division_head@test.local', 'role' => 'division_head', 'dept' => 'Accounting'],
-        ['id' => 900007, 'name' => 'Test Requestor', 'email' => 'requestor@test.local', 'role' => 'requestor', 'company' => 'BFC', 'dept' => 'Accounting'],
+        ['id' => 900006, 'name' => 'Test Division Head', 'email' => 'division_head@test.local', 'role' => 'division_head', 'dept' => 'IT and Security Services'],
+        ['id' => 900007, 'name' => 'Test Requestor', 'email' => 'requestor@test.local', 'role' => 'requestor', 'company' => 'BFC', 'dept' => 'IT and Security Services'],
     ];
 
     public function run(): void
@@ -44,17 +44,22 @@ class TestSeeder extends Seeder
         }
 
         foreach (self::ACCOUNTS as $account) {
-            DB::table('users')->insertOrIgnore([
-                'id' => $account['id'],
-                'name' => $account['name'],
-                'email' => $account['email'],
-                'role' => $account['role'],
-                'company' => $account['company'] ?? null,
-                'dept' => $account['dept'] ?? null,
-                'password' => Hash::make(self::PASSWORD),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // updateOrInsert (not insertOrIgnore) so re-running this after
+            // editing ACCOUNTS — e.g. changing a dummy's dept — actually
+            // syncs existing rows instead of leaving them stale.
+            DB::table('users')->updateOrInsert(
+                ['id' => $account['id']],
+                [
+                    'name' => $account['name'],
+                    'email' => $account['email'],
+                    'role' => $account['role'],
+                    'company' => $account['company'] ?? null,
+                    'dept' => $account['dept'] ?? null,
+                    'password' => Hash::make(self::PASSWORD),
+                    'updated_at' => now(),
+                ]
+            );
+            DB::table('users')->where('id', $account['id'])->whereNull('created_at')->update(['created_at' => now()]);
 
             RoleUser::firstOrCreate(['user_id' => $account['id'], 'role' => $account['role']]);
         }

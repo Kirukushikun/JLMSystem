@@ -107,13 +107,6 @@ class JlController extends Controller
         $data['manager'] = $request->input('manager');
         $data['dept'] = $request->input('dept');
 
-        // Requestors can pick a different farm than their account's default, but
-        // department stays locked to the account — the field is disabled client-side,
-        // which isn't a security boundary, so the account's value always wins here.
-        if ($user->hasRole('requestor')) {
-            $data['dept'] = $user->dept;
-        }
-
         $entry = JlEntry::create([
             ...$data,
             'user_id' => $user->id,
@@ -177,8 +170,6 @@ class JlController extends Controller
             return back()->with('error', 'Only cancelled requests can be resubmitted.');
         }
 
-        $user = auth()->user();
-
         $data = $request->input('entry_type') === 'structured'
             ? $this->buildStructuredEntryFields($request)
             : $this->buildDocumentEntryFields($request, $entry);
@@ -186,10 +177,6 @@ class JlController extends Controller
         $data['company'] = $request->input('company');
         $data['manager'] = $request->input('manager');
         $data['dept'] = $request->input('dept');
-
-        if ($user->hasRole('requestor')) {
-            $data['dept'] = $user->dept;
-        }
 
         $entry->update([
             ...$data,

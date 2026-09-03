@@ -254,7 +254,7 @@ export default function Submit() {
                         <li>
                             <strong>Department</strong> —{' '}
                             {isRequestor
-                                ? 'pre-filled from your account and locked to prevent mistakes.'
+                                ? 'pre-filled from your account, but you can pick a different department if this request is for one.'
                                 : 'select from the available options.'}
                         </li>
                         <li>
@@ -444,31 +444,21 @@ export default function Submit() {
 
                         <div>
                             <Label>Department *</Label>
-                            {isRequestor ? (
-                                <input
-                                    className={INPUT}
-                                    value={form.data.dept}
-                                    disabled
-                                />
-                            ) : (
-                                <select
-                                    className={INPUT}
-                                    value={form.data.dept}
-                                    onChange={(e) =>
-                                        form.setData('dept', e.target.value)
-                                    }
-                                    disabled={form.processing}
-                                >
-                                    <option value="">
-                                        — Select department —
+                            <select
+                                className={INPUT}
+                                value={form.data.dept}
+                                onChange={(e) =>
+                                    form.setData('dept', e.target.value)
+                                }
+                                disabled={form.processing}
+                            >
+                                <option value="">— Select department —</option>
+                                {departments.map((d) => (
+                                    <option key={d.id} value={d.name}>
+                                        {d.name}
                                     </option>
-                                    {departments.map((d) => (
-                                        <option key={d.id} value={d.name}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
+                                ))}
+                            </select>
                         </div>
 
                         <div>
@@ -573,30 +563,18 @@ export default function Submit() {
 
                         <div>
                             <Label>Department *</Label>
-                            {isRequestor ? (
-                                <input
-                                    className={INPUT}
-                                    value={structDept}
-                                    disabled
-                                />
-                            ) : (
-                                <select
-                                    className={INPUT}
-                                    value={structDept}
-                                    onChange={(e) =>
-                                        setStructDept(e.target.value)
-                                    }
-                                >
-                                    <option value="">
-                                        — Select department —
+                            <select
+                                className={INPUT}
+                                value={structDept}
+                                onChange={(e) => setStructDept(e.target.value)}
+                            >
+                                <option value="">— Select department —</option>
+                                {departments.map((d) => (
+                                    <option key={d.id} value={d.name}>
+                                        {d.name}
                                     </option>
-                                    {departments.map((d) => (
-                                        <option key={d.id} value={d.name}>
-                                            {d.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
+                                ))}
+                            </select>
                         </div>
 
                         <div>
