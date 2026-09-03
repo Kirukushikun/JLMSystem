@@ -10,6 +10,7 @@ import type { JlItemRow } from '@/components/jl/ItemsTable';
 import StructuredSummaryModal from '@/components/jl/StructuredSummaryModal';
 import SubmitSummaryModal from '@/components/jl/SubmitSummaryModal';
 import AppLayout from '@/layouts/AppLayout';
+import { uid } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type { JlEntry } from '@/types/jl';
 
@@ -78,7 +79,7 @@ export default function Submit() {
             items:
                 editEntry?.items && editEntry.items.length > 0
                     ? editEntry.items.map((i) => ({
-                          id: crypto.randomUUID(),
+                          id: uid(),
                           itemName: i.item_name,
                           quantity: i.quantity,
                           purpose: i.purpose,
@@ -91,7 +92,7 @@ export default function Submit() {
             costRows:
                 editEntry?.cost_breakdown && editEntry.cost_breakdown.length > 0
                     ? editEntry.cost_breakdown.map((r) => ({
-                          id: crypto.randomUUID(),
+                          id: uid(),
                           description: r.description,
                           quantity: r.quantity,
                           unitCost: r.unit_cost,

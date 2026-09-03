@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { uid } from '@/lib/utils';
 import type { User } from '@/types/auth';
 
 interface JlNotification {
@@ -70,7 +71,7 @@ export default function NotificationBell({ user }: { user: User }) {
         ).notification((notif: any) => {
             // Broadcast arrives flat; normalize to match the DB format
             const normalized: JlNotification = {
-                id: notif.id ?? crypto.randomUUID(),
+                id: notif.id ?? uid(),
                 read_at: null,
                 created_at: notif.created_at ?? new Date().toISOString(),
                 data: {

@@ -1,3 +1,5 @@
+import { uid } from '@/lib/utils';
+
 export interface CostRow {
     id: string;
     description: string;
@@ -16,7 +18,7 @@ const CELL_INPUT =
 
 export function newCostRow(): CostRow {
     return {
-        id: crypto.randomUUID(),
+        id: uid(),
         description: '',
         quantity: '1',
         unitCost: '',

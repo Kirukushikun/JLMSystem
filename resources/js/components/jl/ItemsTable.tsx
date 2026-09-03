@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { uid } from '@/lib/utils';
 
 export interface JlItemRow {
     id: string;
@@ -19,7 +20,7 @@ const CELL_INPUT =
 
 export function newItemRow(): JlItemRow {
     return {
-        id: crypto.randomUUID(),
+        id: uid(),
         itemName: '',
         quantity: '',
         purpose: '',
