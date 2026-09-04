@@ -20,6 +20,9 @@ interface Props {
     open: boolean;
     data: StructuredData;
     processing: boolean;
+    /** 0–100 while uploading, or null when there's no upload in progress
+     * (e.g. no files attached, or Inertia hasn't reported a percentage yet). */
+    uploadProgress: number | null;
     onClose: () => void;
     onConfirm: () => void;
 }
@@ -43,38 +46,55 @@ export default function StructuredSummaryModal({
     open,
     data,
     processing,
+    uploadProgress,
     onClose,
     onConfirm,
 }: Props) {
+    // While a submit is in flight, the modal can't be dismissed — not by the
+    // close button (already disabled below), not by Escape, not by clicking
+    // the backdrop. Closing mid-upload wouldn't cancel the request anyway,
+    // it would just hide the one piece of feedback showing it's still going.
+    function handleClose() {
+        if (processing) {
+            return;
+        }
+
+        onClose();
+    }
+
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             if (e.key === 'Escape') {
-                onClose();
+                handleClose();
             }
         }
         document.addEventListener('keydown', onKey);
 
         return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [processing]);
 
     if (!open) {
         return null;
     }
 
     const filledItems = data.items.filter((i) => i.itemName.trim() !== '');
+    const hasFiles =
+        data.attachment !== null || data.items.some((i) => i.image !== null);
 
     return (
         <div
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center"
-            onClick={onClose}
+            onClick={handleClose}
         >
             <div
                 className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl sm:p-7"
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-200"
+                    onClick={handleClose}
+                    disabled={processing}
+                    className="absolute top-4 right-4 rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     ✕
                 </button>
@@ -112,18 +132,42 @@ export default function StructuredSummaryModal({
                     />
                 </div>
 
+                {processing && (
+                    <div className="mt-4">
+                        <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-gray-500">
+                            <span>
+                                {hasFiles
+                                    ? 'Uploading — please don’t close this window…'
+                                    : 'Submitting…'}
+                            </span>
+                            {uploadProgress !== null && (
+                                <span>{uploadProgress}%</span>
+                            )}
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                            <div
+                                className="h-full rounded-full transition-[width] duration-200"
+                                style={{
+                                    width: `${uploadProgress ?? (hasFiles ? 5 : 100)}%`,
+                                    background: '#1e3a5f',
+                                }}
+                            />
+                        </div>
+                    </div>
+                )}
+
                 <div className="mt-6 flex justify-end gap-2">
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         disabled={processing}
-                        className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
+                        className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         ← Go Back &amp; Edit
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={processing}
-                        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                        className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                         style={{ background: '#1e3a5f' }}
                     >
                         {processing ? 'Submitting…' : '✓ Confirm & Submit'}

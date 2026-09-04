@@ -95,6 +95,7 @@ export default function Submit() {
 
     const [showSummary, setShowSummary] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     function resetForm() {
@@ -144,8 +145,17 @@ export default function Submit() {
 
         router.post(url, data, {
             forceFormData: true,
-            onStart: () => setProcessing(true),
-            onFinish: () => setProcessing(false),
+            onStart: () => {
+                setProcessing(true);
+                setUploadProgress(0);
+            },
+            onProgress: (event) => {
+                setUploadProgress(event?.percentage ?? null);
+            },
+            onFinish: () => {
+                setProcessing(false);
+                setUploadProgress(null);
+            },
             onSuccess: () => {
                 setShowSummary(false);
                 setErrors({});
@@ -462,6 +472,7 @@ export default function Submit() {
                     attachment: image,
                 }}
                 processing={processing}
+                uploadProgress={uploadProgress}
                 onClose={() => setShowSummary(false)}
                 onConfirm={doSubmit}
             />
