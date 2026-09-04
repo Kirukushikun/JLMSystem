@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $review_remarks
  * @property string|null $approve_remarks
  * @property string|null $process_remarks
+ * @property string|null $held_by
  * @property string|null $hold_reason
  * @property string|null $attachment
  * @property string|null $attachment_name
@@ -41,7 +42,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'user_id', 'title', 'date', 'company', 'manager', 'dept', 'amount',
-    'status', 'entry_type', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'processed_at', 'reject_reason',
+    'status', 'entry_type', 'held_at', 'held_by', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'processed_at', 'reject_reason',
     'endorse_remarks', 'review_remarks', 'approve_remarks', 'process_remarks', 'attachment', 'attachment_name',
     'body', 'justification', 'items', 'cost_breakdown',
 ])]

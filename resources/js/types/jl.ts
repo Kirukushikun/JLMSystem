@@ -38,6 +38,7 @@ export interface JlEntry {
     status: JlStatus;
     entry_type: JlEntryType;
     held_at: string | null;
+    held_by: string | null;
     hold_reason: string | null;
     serial: string | null;
     submitted_at: string;

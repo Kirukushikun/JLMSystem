@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { JlStatus } from '@/types/jl';
+import type { JlEntry, JlStatus } from '@/types/jl';
 
 const STYLES: Record<JlStatus, string> = {
     Pending: 'bg-yellow-100 text-yellow-800',
@@ -25,7 +25,42 @@ const LABELS: Record<JlStatus, string> = {
     Cancelled: 'Cancelled',
 };
 
-export default function StatusBadge({ status }: { status: JlStatus }) {
+/** Stage an entry was held at -> the role that holds it, for rows saved before
+ *  `held_by` was recorded. 'Approved' can be either the VP or Purchasing; it
+ *  resolves to Purchasing here, matching what the hold notifications assume. */
+const HOLDER_BY_STAGE: Record<string, string> = {
+    Pending: 'Division Head',
+    Endorsed: 'Reviewer',
+    Reviewed: 'VP',
+    'VP Rejected': 'VP',
+    Approved: 'Purchasing',
+    'On Process': 'Purchasing',
+};
+
+/** Who currently holds this entry, or null if it isn't on hold. */
+export function holdHolder(
+    entry: Pick<JlEntry, 'status' | 'held_at' | 'held_by'>,
+): string | null {
+    if (entry.status !== 'On Hold') {
+        return null;
+    }
+
+    return entry.held_by ?? HOLDER_BY_STAGE[entry.held_at ?? ''] ?? null;
+}
+
+export default function StatusBadge({
+    status,
+    heldBy,
+}: {
+    status: JlStatus;
+    /** Role holding the entry, shown alongside an "On Hold" badge. */
+    heldBy?: string | null;
+}) {
+    const label =
+        status === 'On Hold' && heldBy
+            ? `${LABELS[status]} · ${heldBy}`
+            : LABELS[status];
+
     return (
         <span
             className={cn(
@@ -33,7 +68,7 @@ export default function StatusBadge({ status }: { status: JlStatus }) {
                 STYLES[status],
             )}
         >
-            {LABELS[status]}
+            {label}
         </span>
     );
 }

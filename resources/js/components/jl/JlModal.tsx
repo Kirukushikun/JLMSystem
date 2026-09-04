@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { JlEntry } from '@/types/jl';
-import StatusBadge from './StatusBadge';
+import StatusBadge, { holdHolder } from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
@@ -213,6 +213,72 @@ export default function JlModal({
     const rejectWindowClosed =
         context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
+    // The remarks trail, assembled in workflow order rather than in whatever
+    // order the columns happen to sit in — endorsement first, then review,
+    // approval and Purchasing, with the exception events (a rejection, or a
+    // hold that is still in force) last, since those are the most recent thing
+    // to have happened to the request.
+    const trail: {
+        stage: string;
+        by: string;
+        text: string;
+        tone: string;
+    }[] = [];
+
+    if (entry.endorse_remarks) {
+        trail.push({
+            stage: 'Endorsed',
+            by: 'Division Head',
+            text: entry.endorse_remarks,
+            tone: 'border-indigo-400 bg-indigo-50/60',
+        });
+    }
+
+    if (entry.review_remarks) {
+        trail.push({
+            stage: 'Reviewed',
+            by: 'Reviewer',
+            text: entry.review_remarks,
+            tone: 'border-blue-400 bg-blue-50/60',
+        });
+    }
+
+    if (entry.approve_remarks) {
+        trail.push({
+            stage: 'Approved',
+            by: 'VP',
+            text: entry.approve_remarks,
+            tone: 'border-green-400 bg-green-50/60',
+        });
+    }
+
+    if (entry.process_remarks) {
+        trail.push({
+            stage: 'On Process',
+            by: 'Purchasing',
+            text: entry.process_remarks,
+            tone: 'border-purple-400 bg-purple-50/60',
+        });
+    }
+
+    if (entry.reject_reason) {
+        trail.push({
+            stage: s === 'VP Rejected' ? 'VP Rejected' : 'Rejected',
+            by: s === 'VP Rejected' ? 'VP' : 'Reviewer',
+            text: entry.reject_reason,
+            tone: 'border-red-400 bg-red-50/60',
+        });
+    }
+
+    if (s === 'On Hold' && entry.hold_reason) {
+        trail.push({
+            stage: 'On Hold',
+            by: holdHolder(entry) ?? '—',
+            text: entry.hold_reason,
+            tone: 'border-amber-400 bg-amber-50/60',
+        });
+    }
+
     const showingBox =
         showRejectBox ||
         showHoldBox ||
@@ -277,7 +343,12 @@ export default function JlModal({
                     />
                     <DetailItem
                         label="Status"
-                        value={<StatusBadge status={entry.status} />}
+                        value={
+                            <StatusBadge
+                                status={entry.status}
+                                heldBy={holdHolder(entry)}
+                            />
+                        }
                     />
                     <DetailItem label="Company / Farm" value={entry.company} />
                     <DetailItem
@@ -515,73 +586,38 @@ export default function JlModal({
                             full
                         />
                     )}
-                    {entry.status === 'On Hold' && entry.hold_reason && (
-                        <DetailItem
-                            label="Hold Reason"
-                            value={
-                                <span className="text-amber-700">
-                                    {entry.hold_reason}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.reject_reason && (
-                        <DetailItem
-                            label="Rejection Reason"
-                            value={
-                                <span className="text-red-600">
-                                    {entry.reject_reason}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.endorse_remarks && (
-                        <DetailItem
-                            label="Endorsement Remarks"
-                            value={
-                                <span className="text-indigo-700">
-                                    {entry.endorse_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.review_remarks && (
-                        <DetailItem
-                            label="Review Remarks"
-                            value={
-                                <span className="text-blue-700">
-                                    {entry.review_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.approve_remarks && (
-                        <DetailItem
-                            label="Approval Remarks"
-                            value={
-                                <span className="text-green-700">
-                                    {entry.approve_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.process_remarks && (
-                        <DetailItem
-                            label="Purchasing Remarks"
-                            value={
-                                <span className="text-purple-700">
-                                    {entry.process_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
                 </div>
+
+                {/* Remarks & actions — one entry per stage, in the order the
+                    request actually moved through them, so the newest note is
+                    always at the bottom. */}
+                {trail.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                            Remarks &amp; Actions
+                        </p>
+                        <ol className="space-y-2">
+                            {trail.map((t) => (
+                                <li
+                                    key={t.stage}
+                                    className={`rounded-lg border-l-4 py-2 pr-3 pl-3 ${t.tone}`}
+                                >
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <span className="text-xs font-bold tracking-wide uppercase">
+                                            {t.stage}
+                                        </span>
+                                        <span className="shrink-0 text-[11px] font-medium text-gray-400">
+                                            {t.by}
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-sm text-gray-700">
+                                        {t.text}
+                                    </p>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
 
                 {rejectWindowClosed && (
                     <div className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-800">

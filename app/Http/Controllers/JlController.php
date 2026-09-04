@@ -343,6 +343,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'Endorsed',
             'held_at' => null,
+            'held_by' => null,
             'hold_reason' => null,
             'endorsed_at' => now()->toDateString(),
             'endorse_remarks' => $remarks,
@@ -381,6 +382,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'Reviewed',
             'held_at' => null,
+            'held_by' => null,
             'hold_reason' => null,
             'reviewed_at' => now()->toDateString(),
             'review_remarks' => $remarks,
@@ -424,6 +426,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'Approved',
             'held_at' => null,
+            'held_by' => null,
             'hold_reason' => null,
             'reject_reason' => null,
             'approved_at' => now()->toDateString(),
@@ -477,6 +480,7 @@ class JlController extends Controller
         $updateData = [
             'status' => $isVpReject ? 'VP Rejected' : 'Rejected',
             'held_at' => null,
+            'held_by' => null,
             'hold_reason' => null,
             'reviewed_at' => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $reason,
@@ -534,6 +538,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'On Hold',
             'held_at' => $previousStatus,
+            'held_by' => $this->holderRoleFor($previousStatus),
             'hold_reason' => $request->input('reason') ?: null,
         ]);
 
@@ -585,6 +590,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'On Process',
             'held_at' => null,
+            'held_by' => null,
             'hold_reason' => null,
             'processed_at' => now()->toDateString(),
             // Unlike the earlier stages, this action can legitimately fire twice
@@ -864,6 +870,28 @@ class JlController extends Controller
             'division_head' => ['Pending', 'Endorsed', 'Rejected', 'On Hold'],
             'admin' => ['Pending', 'Endorsed', 'Reviewed', 'Rejected', 'Approved', 'VP Rejected', 'On Hold', 'On Process', 'Cancelled'],
             default => [],
+        };
+    }
+
+    /**
+     * Which role is holding an entry that was put on hold at $stage.
+     *
+     * The stage identifies the holder on its own everywhere except 'Approved',
+     * which both the VP (walking back their own approval) and Purchasing can
+     * hold. That one case is settled by the actor's own roles — Purchasing
+     * first, since an approved entry is Purchasing's to act on by then.
+     */
+    private function holderRoleFor(string $stage): ?string
+    {
+        $user = auth()->user();
+
+        return match ($stage) {
+            'Pending' => 'Division Head',
+            'Endorsed' => 'Reviewer',
+            'Reviewed', 'VP Rejected' => 'VP',
+            'On Process' => 'Purchasing',
+            'Approved' => $user->hasRole('purchasing') ? 'Purchasing' : 'VP',
+            default => null,
         };
     }
 

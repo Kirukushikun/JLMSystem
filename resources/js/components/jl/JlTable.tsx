@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { JlEntry } from '@/types/jl';
-import StatusBadge from './StatusBadge';
+import StatusBadge, { holdHolder } from './StatusBadge';
 
 interface KebabState {
     entry: JlEntry;
@@ -408,7 +408,10 @@ export default function JlTable({
                                     {e.title}
                                 </td>
                                 <td className="px-3.5 py-3 whitespace-nowrap">
-                                    <StatusBadge status={e.status} />
+                                    <StatusBadge
+                                        status={e.status}
+                                        heldBy={holdHolder(e)}
+                                    />
                                 </td>
                                 <td className="px-3.5 py-3 whitespace-nowrap">
                                     {e.company}
