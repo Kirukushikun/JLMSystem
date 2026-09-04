@@ -572,7 +572,7 @@ class JlController extends Controller
         return back();
     }
 
-    public function process(JlEntry $entry): RedirectResponse
+    public function process(Request $request, JlEntry $entry): RedirectResponse
     {
         $effective = $entry->status === 'On Hold' ? $entry->held_at : $entry->status;
 
@@ -580,16 +580,25 @@ class JlController extends Controller
             return back()->with('error', 'This entry cannot be marked as On Process — its status may have already changed.');
         }
 
+        $remarks = $request->input('process_remarks') ?: null;
+
         $entry->update([
             'status' => 'On Process',
             'held_at' => null,
             'hold_reason' => null,
+            'processed_at' => now()->toDateString(),
+            // Unlike the earlier stages, this action can legitimately fire twice
+            // (Approved -> On Process, then again after a hold at that stage), so
+            // an empty remarks box on the second pass keeps what was already noted
+            // rather than silently erasing it.
+            'process_remarks' => $remarks ?? $entry->process_remarks,
         ]);
 
         JlAuditLog::create([
             'jl_entry_id' => $entry->id,
             'event' => 'on_process',
             'actor' => auth()->user()->name,
+            'notes' => $remarks,
         ]);
 
         $this->notifyRoles(['reviewer', 'vp', 'admin'], $entry, 'on_process',

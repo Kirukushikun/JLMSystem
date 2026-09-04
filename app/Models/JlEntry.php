@@ -23,10 +23,12 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $endorsed_at
  * @property Carbon|null $reviewed_at
  * @property Carbon|null $approved_at
+ * @property Carbon|null $processed_at
  * @property string|null $reject_reason
  * @property string|null $endorse_remarks
  * @property string|null $review_remarks
  * @property string|null $approve_remarks
+ * @property string|null $process_remarks
  * @property string|null $hold_reason
  * @property string|null $attachment
  * @property string|null $attachment_name
@@ -39,8 +41,8 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'user_id', 'title', 'date', 'company', 'manager', 'dept', 'amount',
-    'status', 'entry_type', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'reject_reason',
-    'endorse_remarks', 'review_remarks', 'approve_remarks', 'attachment', 'attachment_name',
+    'status', 'entry_type', 'held_at', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'processed_at', 'reject_reason',
+    'endorse_remarks', 'review_remarks', 'approve_remarks', 'process_remarks', 'attachment', 'attachment_name',
     'body', 'justification', 'items', 'cost_breakdown',
 ])]
 class JlEntry extends Model
@@ -56,6 +58,7 @@ class JlEntry extends Model
             'endorsed_at' => 'date:Y-m-d',
             'reviewed_at' => 'date:Y-m-d',
             'approved_at' => 'date:Y-m-d',
+            'processed_at' => 'date:Y-m-d',
         ];
     }
 

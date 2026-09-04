@@ -5,6 +5,7 @@ import ExportModal from '@/components/jl/ExportModal';
 import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
+import ProcessModal from '@/components/jl/ProcessModal';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import AppLayout from '@/layouts/AppLayout';
@@ -54,6 +55,9 @@ export default function Purchasing({ entries }: Props) {
     const [toast, setToast] = useState('');
     const [showHoldBox, setShowHoldBox] = useState(false);
     const [holdReasonModal, setHoldReasonModal] = useState('');
+    const [processEntry, setProcessEntry] = useState<JlEntry | null>(null);
+    const [showProcessBox, setShowProcessBox] = useState(false);
+    const [processRemarksModal, setProcessRemarksModal] = useState('');
 
     function showToast(msg: string) {
         setToast(msg);
@@ -76,17 +80,27 @@ export default function Purchasing({ entries }: Props) {
         setViewEntry(null);
         setShowHoldBox(false);
         setHoldReasonModal('');
+        setShowProcessBox(false);
+        setProcessRemarksModal('');
     }
 
-    function handleProcess(id: number) {
+    function handleProcess(id: number, remarks: string, after?: () => void) {
         router.patch(
             `/jl/${id}/process`,
-            {},
+            { process_remarks: remarks },
             {
                 preserveScroll: true,
-                onSuccess: onFlash('Marked as On Process.'),
+                onSuccess: onFlash('Marked as On Process.', after),
             },
         );
+    }
+
+    function handleConfirmProcessModal() {
+        if (!viewEntry) {
+            return;
+        }
+
+        handleProcess(viewEntry.id, processRemarksModal, closeModal);
     }
 
     function handleDirectHold(id: number, reason: string) {
@@ -265,11 +279,7 @@ export default function Purchasing({ entries }: Props) {
                         setHoldReasonModal('');
                     }}
                     onHold={isViewer ? undefined : setHoldEntry}
-                    onProcess={
-                        isViewer
-                            ? undefined
-                            : (entry) => handleProcess(entry.id)
-                    }
+                    onProcess={isViewer ? undefined : setProcessEntry}
                 />
                 <Pagination
                     page={page}
@@ -285,7 +295,13 @@ export default function Purchasing({ entries }: Props) {
                 entry={viewEntry}
                 context={isViewer ? 'viewer' : 'purchasing'}
                 onClose={closeModal}
-                onProcess={isViewer ? undefined : handleProcess}
+                onProcessClick={
+                    isViewer ? undefined : () => setShowProcessBox(true)
+                }
+                showProcessBox={showProcessBox}
+                processRemarks={processRemarksModal}
+                onProcessRemarksChange={setProcessRemarksModal}
+                onConfirmProcess={handleConfirmProcessModal}
                 onHoldClick={isViewer ? undefined : () => setShowHoldBox(true)}
                 showHoldBox={showHoldBox}
                 holdReason={holdReasonModal}
@@ -297,6 +313,15 @@ export default function Purchasing({ entries }: Props) {
                 entry={holdEntry}
                 onClose={() => setHoldEntry(null)}
                 onConfirm={handleDirectHold}
+            />
+
+            <ProcessModal
+                key={processEntry?.id}
+                entry={processEntry}
+                onClose={() => setProcessEntry(null)}
+                onConfirm={(id, remarks) =>
+                    handleProcess(id, remarks, () => setProcessEntry(null))
+                }
             />
 
             <ExportModal

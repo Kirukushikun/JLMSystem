@@ -12,7 +12,11 @@ interface Props {
         | 'requestor'
         | 'viewer';
     onClose: () => void;
-    onProcess?: (id: number) => void;
+    onProcessClick?: () => void;
+    showProcessBox?: boolean;
+    processRemarks?: string;
+    onProcessRemarksChange?: (v: string) => void;
+    onConfirmProcess?: () => void;
     onCheckClick?: () => void;
     showCheckBox?: boolean;
     checkRemarks?: string;
@@ -91,7 +95,11 @@ export default function JlModal({
     entry,
     context,
     onClose,
-    onProcess,
+    onProcessClick,
+    showProcessBox,
+    processRemarks,
+    onProcessRemarksChange,
+    onConfirmProcess,
     onCheckClick,
     showCheckBox,
     checkRemarks,
@@ -157,6 +165,12 @@ export default function JlModal({
         : effective === 'Reviewed'
           ? 'active'
           : 'idle';
+    const processedState: WfState =
+        effective === 'On Process'
+            ? 'done'
+            : effective === 'Approved'
+              ? 'active'
+              : 'idle';
 
     const canEndorse =
         context === 'division_head' &&
@@ -200,7 +214,11 @@ export default function JlModal({
         context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
     const showingBox =
-        showRejectBox || showHoldBox || showApproveBox || showCheckBox;
+        showRejectBox ||
+        showHoldBox ||
+        showApproveBox ||
+        showCheckBox ||
+        showProcessBox;
 
     return (
         <div
@@ -234,6 +252,8 @@ export default function JlModal({
                     <WfStep label="Reviewed" state={reviewedState} />
                     <div className="h-0.5 flex-1 bg-gray-200" />
                     <WfStep label="VP Approved" state={approvedState} />
+                    <div className="h-0.5 flex-1 bg-gray-200" />
+                    <WfStep label="Purchasing" state={processedState} />
                 </div>
 
                 {/* Detail grid */}
@@ -284,6 +304,10 @@ export default function JlModal({
                     <DetailItem
                         label="Approved On"
                         value={entry.approved_at || '—'}
+                    />
+                    <DetailItem
+                        label="Processed On"
+                        value={entry.processed_at || '—'}
                     />
                     <DetailItem
                         label="Serial Number"
@@ -546,6 +570,17 @@ export default function JlModal({
                             full
                         />
                     )}
+                    {entry.process_remarks && (
+                        <DetailItem
+                            label="Purchasing Remarks"
+                            value={
+                                <span className="text-purple-700">
+                                    {entry.process_remarks}
+                                </span>
+                            }
+                            full
+                        />
+                    )}
                 </div>
 
                 {rejectWindowClosed && (
@@ -609,6 +644,24 @@ export default function JlModal({
                                     : 'Add a comment about this review…'
                             }
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        />
+                    </div>
+                )}
+
+                {/* Purchasing (On Process) remarks textarea */}
+                {showProcessBox && (
+                    <div className="mt-4">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                            Remarks (optional)
+                        </label>
+                        <textarea
+                            rows={3}
+                            value={processRemarks}
+                            onChange={(e) =>
+                                onProcessRemarksChange?.(e.target.value)
+                            }
+                            placeholder="Add a note for everyone following this request…"
+                            className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
                         />
                     </div>
                 )}
@@ -679,10 +732,7 @@ export default function JlModal({
                             )}
                             {canProcess && (
                                 <button
-                                    onClick={() => {
-                                        onProcess?.(entry.id);
-                                        onClose();
-                                    }}
+                                    onClick={onProcessClick}
                                     className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
                                     <i class="fa-solid fa-play"></i> On Process
@@ -718,6 +768,22 @@ export default function JlModal({
                             >
                                 <i class="fa-solid fa-check"></i> Confirm
                                 Approval
+                            </button>
+                        </>
+                    ) : showProcessBox ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmProcess}
+                                className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                <i className="fa-solid fa-play"></i> Confirm On
+                                Process
                             </button>
                         </>
                     ) : showCheckBox ? (

@@ -44,10 +44,12 @@ export interface JlEntry {
     endorsed_at: string | null;
     reviewed_at: string | null;
     approved_at: string | null;
+    processed_at: string | null;
     reject_reason?: string | null;
     endorse_remarks?: string | null;
     review_remarks?: string | null;
     approve_remarks?: string | null;
+    process_remarks?: string | null;
     attachment: string | null;
     attachment_name: string | null;
     attachment_url: string | null;
