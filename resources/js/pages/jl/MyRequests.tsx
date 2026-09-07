@@ -4,7 +4,7 @@ import AttachmentUploadModal from '@/components/jl/AttachmentUploadModal';
 import CancelModal from '@/components/jl/CancelModal';
 import JlModal from '@/components/jl/JlModal';
 import Pagination from '@/components/Pagination';
-import StatusBadge, { holdHolder } from '@/components/jl/StatusBadge';
+import StatusBadge from '@/components/jl/StatusBadge';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { usePagination } from '@/hooks/usePagination';
@@ -165,10 +165,7 @@ export default function MyRequests({ entries }: Props) {
                                         {e.title}
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap">
-                                        <StatusBadge
-                                            status={e.status}
-                                            heldBy={holdHolder(e)}
-                                        />
+                                        <StatusBadge entry={e} />
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap">
                                         {e.company}

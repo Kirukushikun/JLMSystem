@@ -13,29 +13,47 @@ const STYLES: Record<JlStatus, string> = {
     Cancelled: 'bg-gray-200 text-gray-600',
 };
 
-const LABELS: Record<JlStatus, string> = {
+/** The status word on its own, before any "- ROLE" suffix is appended. */
+const BASE_LABELS: Record<JlStatus, string> = {
     Pending: 'Pending',
     Endorsed: 'Endorsed',
     Reviewed: 'Reviewed',
-    Rejected: 'Reviewer Rejected',
+    Rejected: 'Rejected',
     Approved: 'Approved',
-    'VP Rejected': 'VP Rejected',
+    'VP Rejected': 'Rejected',
     'On Hold': 'On Hold',
     'On Process': 'On Process',
     Cancelled: 'Cancelled',
 };
 
-/** Stage an entry was held at -> the role that holds it, for rows saved before
- *  `held_by` was recorded. 'Approved' can be either the VP or Purchasing; it
- *  resolves to Purchasing here, matching what the hold notifications assume. */
-const HOLDER_BY_STAGE: Record<string, string> = {
+/** Statuses where exactly one role can ever be responsible — the suffix is
+ *  fixed and doesn't need to be read off the entry. 'Pending', 'Endorsed' and
+ *  'Cancelled' are left bare (no single approver/reviewer to name, or not
+ *  part of this pattern). 'Rejected' and 'On Hold' are the two ambiguous
+ *  ones and are resolved dynamically below instead. */
+const FIXED_ROLE: Partial<Record<JlStatus, string>> = {
+    Reviewed: 'FOC Head',
+    Approved: 'VP',
+    'On Process': 'Purchasing',
+    'VP Rejected': 'VP',
+};
+
+/** Stage an entry was held at / rejected from -> the role responsible, for
+ *  rows saved before `held_by`/`rejected_by` were recorded. */
+const ROLE_BY_STAGE: Record<string, string> = {
     Pending: 'Division Head',
-    Endorsed: 'Reviewer',
+    Endorsed: 'FOC Head',
     Reviewed: 'VP',
     'VP Rejected': 'VP',
     Approved: 'Purchasing',
     'On Process': 'Purchasing',
 };
+
+/** A handful of rows may still carry the pre-rename 'Reviewer' string in
+ *  `held_by`/`rejected_by` — normalize it to the current wording. */
+function normalizeRole(role: string): string {
+    return role === 'Reviewer' ? 'FOC Head' : role;
+}
 
 /** Who currently holds this entry, or null if it isn't on hold. */
 export function holdHolder(
@@ -45,21 +63,59 @@ export function holdHolder(
         return null;
     }
 
-    return entry.held_by ?? HOLDER_BY_STAGE[entry.held_at ?? ''] ?? null;
+    if (entry.held_by) {
+        return normalizeRole(entry.held_by);
+    }
+
+    return ROLE_BY_STAGE[entry.held_at ?? ''] ?? null;
 }
 
-export default function StatusBadge({
-    status,
-    heldBy,
-}: {
-    status: JlStatus;
-    /** Role holding the entry, shown alongside an "On Hold" badge. */
-    heldBy?: string | null;
-}) {
-    const label =
-        status === 'On Hold' && heldBy
-            ? `${LABELS[status]} · ${heldBy}`
-            : LABELS[status];
+/** Who rejected this entry, or null if it wasn't. */
+export function rejectHolder(
+    entry: Pick<JlEntry, 'status' | 'rejected_by' | 'endorsed_at'>,
+): string | null {
+    if (entry.status !== 'Rejected' && entry.status !== 'VP Rejected') {
+        return null;
+    }
+
+    if (entry.rejected_by) {
+        return normalizeRole(entry.rejected_by);
+    }
+
+    if (entry.status === 'VP Rejected') {
+        return 'VP';
+    }
+
+    // Rows saved before `rejected_by` was recorded: reject() never sets
+    // `endorsed_at` itself, only endorse() does — so its presence means the
+    // request made it to Endorsed (and so was rejected by the FOC Head), and
+    // its absence means it was rejected straight from Pending (Division Head).
+    return entry.endorsed_at ? 'FOC Head' : 'Division Head';
+}
+
+/** "FOC Head" reads as "FOC" in the compact badge; every other role's badge
+ *  text is identical to its trail text. */
+function badgeRole(role: string): string {
+    return role === 'FOC Head' ? 'FOC' : role;
+}
+
+interface Props {
+    entry: Pick<
+        JlEntry,
+        'status' | 'held_at' | 'held_by' | 'rejected_by' | 'endorsed_at'
+    >;
+}
+
+export default function StatusBadge({ entry }: Props) {
+    const { status } = entry;
+    const role =
+        status === 'On Hold'
+            ? holdHolder(entry)
+            : (FIXED_ROLE[status] ?? rejectHolder(entry));
+
+    const label = role
+        ? `${BASE_LABELS[status]} - ${badgeRole(role)}`
+        : BASE_LABELS[status];
 
     return (
         <span

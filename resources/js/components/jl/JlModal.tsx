@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { JlEntry } from '@/types/jl';
-import StatusBadge, { holdHolder } from './StatusBadge';
+import StatusBadge, { holdHolder, rejectHolder } from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
@@ -237,7 +237,7 @@ export default function JlModal({
     if (entry.review_remarks) {
         trail.push({
             stage: 'Reviewed',
-            by: 'Reviewer',
+            by: 'FOC Head',
             text: entry.review_remarks,
             tone: 'border-blue-400 bg-blue-50/60',
         });
@@ -263,8 +263,8 @@ export default function JlModal({
 
     if (entry.reject_reason) {
         trail.push({
-            stage: s === 'VP Rejected' ? 'VP Rejected' : 'Rejected',
-            by: s === 'VP Rejected' ? 'VP' : 'Reviewer',
+            stage: 'Rejected',
+            by: rejectHolder(entry) ?? '—',
             text: entry.reject_reason,
             tone: 'border-red-400 bg-red-50/60',
         });
@@ -343,12 +343,7 @@ export default function JlModal({
                     />
                     <DetailItem
                         label="Status"
-                        value={
-                            <StatusBadge
-                                status={entry.status}
-                                heldBy={holdHolder(entry)}
-                            />
-                        }
+                        value={<StatusBadge entry={entry} />}
                     />
                     <DetailItem label="Company / Farm" value={entry.company} />
                     <DetailItem

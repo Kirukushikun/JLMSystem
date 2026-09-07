@@ -47,6 +47,7 @@ export interface JlEntry {
     approved_at: string | null;
     processed_at: string | null;
     reject_reason?: string | null;
+    rejected_by?: string | null;
     endorse_remarks?: string | null;
     review_remarks?: string | null;
     approve_remarks?: string | null;

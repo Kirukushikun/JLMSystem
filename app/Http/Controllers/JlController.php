@@ -477,6 +477,11 @@ class JlController extends Controller
         $isVpReject = $canRejectApproved || $effective === 'Reviewed';
         $reason = $request->input('reject_reason') ?: 'No reason provided.';
 
+        // canRejectApproved's $effective is 'Approved', which roleAtStage() can't
+        // resolve on its own (it's ambiguous between VP and Purchasing there) —
+        // but this path is gated to VP/admin already, so the role is known.
+        $rejectedBy = $canRejectApproved ? 'VP' : $this->roleAtStage($effective);
+
         $updateData = [
             'status' => $isVpReject ? 'VP Rejected' : 'Rejected',
             'held_at' => null,
@@ -484,6 +489,7 @@ class JlController extends Controller
             'hold_reason' => null,
             'reviewed_at' => $entry->reviewed_at ?? now()->toDateString(),
             'reject_reason' => $reason,
+            'rejected_by' => $rejectedBy,
         ];
 
         if ($canRejectApproved) {
@@ -538,7 +544,7 @@ class JlController extends Controller
         $entry->update([
             'status' => 'On Hold',
             'held_at' => $previousStatus,
-            'held_by' => $this->holderRoleFor($previousStatus),
+            'held_by' => $this->roleAtStage($previousStatus),
             'hold_reason' => $request->input('reason') ?: null,
         ]);
 
@@ -874,20 +880,21 @@ class JlController extends Controller
     }
 
     /**
-     * Which role is holding an entry that was put on hold at $stage.
+     * Which role owns an entry sitting at (or held from) $stage — used both for
+     * who is currently holding an entry, and who acted when it was rejected.
      *
-     * The stage identifies the holder on its own everywhere except 'Approved',
+     * The stage identifies the role on its own everywhere except 'Approved',
      * which both the VP (walking back their own approval) and Purchasing can
      * hold. That one case is settled by the actor's own roles — Purchasing
      * first, since an approved entry is Purchasing's to act on by then.
      */
-    private function holderRoleFor(string $stage): ?string
+    private function roleAtStage(string $stage): ?string
     {
         $user = auth()->user();
 
         return match ($stage) {
             'Pending' => 'Division Head',
-            'Endorsed' => 'Reviewer',
+            'Endorsed' => 'FOC Head',
             'Reviewed', 'VP Rejected' => 'VP',
             'On Process' => 'Purchasing',
             'Approved' => $user->hasRole('purchasing') ? 'Purchasing' : 'VP',
