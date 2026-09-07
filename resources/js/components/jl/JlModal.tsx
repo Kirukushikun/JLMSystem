@@ -1,12 +1,22 @@
 import { useEffect } from 'react';
 import type { JlEntry } from '@/types/jl';
-import StatusBadge from './StatusBadge';
+import StatusBadge, { holdHolder, rejectHolder } from './StatusBadge';
 
 interface Props {
     entry: JlEntry | null;
-    context: 'reviewer' | 'vp' | 'purchasing' | 'requestor' | 'viewer';
+    context:
+        | 'division_head'
+        | 'reviewer'
+        | 'vp'
+        | 'purchasing'
+        | 'requestor'
+        | 'viewer';
     onClose: () => void;
-    onProcess?: (id: number) => void;
+    onProcessClick?: () => void;
+    showProcessBox?: boolean;
+    processRemarks?: string;
+    onProcessRemarksChange?: (v: string) => void;
+    onConfirmProcess?: () => void;
     onCheckClick?: () => void;
     showCheckBox?: boolean;
     checkRemarks?: string;
@@ -85,7 +95,11 @@ export default function JlModal({
     entry,
     context,
     onClose,
-    onProcess,
+    onProcessClick,
+    showProcessBox,
+    processRemarks,
+    onProcessRemarksChange,
+    onConfirmProcess,
     onCheckClick,
     showCheckBox,
     checkRemarks,
@@ -125,6 +139,16 @@ export default function JlModal({
     const s = entry.status;
     const effective = s === 'On Hold' ? (entry.held_at ?? 'Pending') : s;
 
+    const endorsedState: WfState = [
+        'Endorsed',
+        'Reviewed',
+        'Approved',
+        'Rejected',
+        'VP Rejected',
+        'On Process',
+    ].includes(effective)
+        ? 'done'
+        : 'active';
     const reviewedState: WfState = [
         'Reviewed',
         'Approved',
@@ -141,10 +165,23 @@ export default function JlModal({
         : effective === 'Reviewed'
           ? 'active'
           : 'idle';
+    const processedState: WfState =
+        effective === 'On Process'
+            ? 'done'
+            : effective === 'Approved'
+              ? 'active'
+              : 'idle';
 
+    const canEndorse =
+        context === 'division_head' &&
+        (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
     const canCheck =
         context === 'reviewer' &&
-        (s === 'Pending' || (s === 'On Hold' && entry.held_at === 'Pending'));
+        (s === 'Endorsed' || (s === 'On Hold' && entry.held_at === 'Endorsed'));
+    // Both Division Head's "Endorse" and Reviewer's "Mark as Reviewed" share
+    // the same remarks-box UI below (open box → optional remarks → confirm),
+    // just at different stages — canMarkStage drives that shared UI.
+    const canMarkStage = canEndorse || canCheck;
     const canApprove =
         context === 'vp' &&
         (s === 'Reviewed' || (s === 'On Hold' && entry.held_at === 'Reviewed'));
@@ -160,9 +197,9 @@ export default function JlModal({
                 (entry.held_at === 'Approved' ||
                     entry.held_at === 'On Process')));
 
-    const canReject = canCheck || canApprove || canRejectApproved;
+    const canReject = canMarkStage || canApprove || canRejectApproved;
     const canHold =
-        canCheck ||
+        canMarkStage ||
         canApprove ||
         canRejectApproved ||
         canReapprove ||
@@ -176,8 +213,78 @@ export default function JlModal({
     const rejectWindowClosed =
         context === 'vp' && wasApprovedTrack && s !== 'Approved';
 
+    // The remarks trail, assembled in workflow order rather than in whatever
+    // order the columns happen to sit in — endorsement first, then review,
+    // approval and Purchasing, with the exception events (a rejection, or a
+    // hold that is still in force) last, since those are the most recent thing
+    // to have happened to the request.
+    const trail: {
+        stage: string;
+        by: string;
+        text: string;
+        tone: string;
+    }[] = [];
+
+    if (entry.endorse_remarks) {
+        trail.push({
+            stage: 'Endorsed',
+            by: 'Division Head',
+            text: entry.endorse_remarks,
+            tone: 'border-indigo-400 bg-indigo-50/60',
+        });
+    }
+
+    if (entry.review_remarks) {
+        trail.push({
+            stage: 'Reviewed',
+            by: 'FOC Head',
+            text: entry.review_remarks,
+            tone: 'border-blue-400 bg-blue-50/60',
+        });
+    }
+
+    if (entry.approve_remarks) {
+        trail.push({
+            stage: 'Approved',
+            by: 'VP',
+            text: entry.approve_remarks,
+            tone: 'border-green-400 bg-green-50/60',
+        });
+    }
+
+    if (entry.process_remarks) {
+        trail.push({
+            stage: 'On Process',
+            by: 'Purchasing',
+            text: entry.process_remarks,
+            tone: 'border-purple-400 bg-purple-50/60',
+        });
+    }
+
+    if (entry.reject_reason) {
+        trail.push({
+            stage: 'Rejected',
+            by: rejectHolder(entry) ?? '—',
+            text: entry.reject_reason,
+            tone: 'border-red-400 bg-red-50/60',
+        });
+    }
+
+    if (s === 'On Hold' && entry.hold_reason) {
+        trail.push({
+            stage: 'On Hold',
+            by: holdHolder(entry) ?? '—',
+            text: entry.hold_reason,
+            tone: 'border-amber-400 bg-amber-50/60',
+        });
+    }
+
     const showingBox =
-        showRejectBox || showHoldBox || showApproveBox || showCheckBox;
+        showRejectBox ||
+        showHoldBox ||
+        showApproveBox ||
+        showCheckBox ||
+        showProcessBox;
 
     return (
         <div
@@ -206,18 +313,37 @@ export default function JlModal({
                 <div className="mb-6 flex items-center rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100">
                     <WfStep label="Submitted" state="done" />
                     <div className="h-0.5 flex-1 bg-gray-200" />
+                    <WfStep label="Endorsed" state={endorsedState} />
+                    <div className="h-0.5 flex-1 bg-gray-200" />
                     <WfStep label="Reviewed" state={reviewedState} />
                     <div className="h-0.5 flex-1 bg-gray-200" />
                     <WfStep label="VP Approved" state={approvedState} />
+                    <div className="h-0.5 flex-1 bg-gray-200" />
+                    <WfStep label="Purchasing" state={processedState} />
                 </div>
 
                 {/* Detail grid */}
                 <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-                    <DetailItem label="JL Title" value={entry.title} full />
-                    <DetailItem label="Date Prepared" value={entry.date} />
+                    <DetailItem
+                        label={
+                            entry.entry_type === 'structured'
+                                ? 'Subject'
+                                : 'JL Title'
+                        }
+                        value={entry.title}
+                        full
+                    />
+                    <DetailItem
+                        label={
+                            entry.entry_type === 'structured'
+                                ? 'Date Needed'
+                                : 'Date Prepared'
+                        }
+                        value={entry.date}
+                    />
                     <DetailItem
                         label="Status"
-                        value={<StatusBadge status={entry.status} />}
+                        value={<StatusBadge entry={entry} />}
                     />
                     <DetailItem label="Company / Farm" value={entry.company} />
                     <DetailItem
@@ -234,12 +360,20 @@ export default function JlModal({
                         value={entry.submitted_at || '—'}
                     />
                     <DetailItem
+                        label="Endorsed On"
+                        value={entry.endorsed_at || '—'}
+                    />
+                    <DetailItem
                         label="Reviewed On"
                         value={entry.reviewed_at || '—'}
                     />
                     <DetailItem
                         label="Approved On"
                         value={entry.approved_at || '—'}
+                    />
+                    <DetailItem
+                        label="Processed On"
+                        value={entry.processed_at || '—'}
                     />
                     <DetailItem
                         label="Serial Number"
@@ -255,9 +389,176 @@ export default function JlModal({
                             )
                         }
                     />
+                    {entry.entry_type === 'structured' && (
+                        <>
+                            {entry.body && (
+                                <DetailItem
+                                    label="Body"
+                                    value={
+                                        <span className="whitespace-pre-wrap">
+                                            {entry.body}
+                                        </span>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.justification && (
+                                <DetailItem
+                                    label="Reason for Justification"
+                                    value={
+                                        <span className="whitespace-pre-wrap">
+                                            {entry.justification}
+                                        </span>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.items && entry.items.length > 0 && (
+                                <DetailItem
+                                    label="Items"
+                                    value={
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                            <table className="w-full min-w-[420px] border-collapse text-xs">
+                                                <thead>
+                                                    <tr className="bg-gray-50 text-left tracking-wide text-gray-400 uppercase">
+                                                        <th className="px-2.5 py-2">
+                                                            Item
+                                                        </th>
+                                                        <th className="px-2.5 py-2">
+                                                            Purpose
+                                                        </th>
+                                                        <th className="px-2.5 py-2">
+                                                            Image
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {entry.items.map(
+                                                        (item, i) => (
+                                                            <tr
+                                                                key={i}
+                                                                className="border-t border-gray-100"
+                                                            >
+                                                                <td className="px-2.5 py-2">
+                                                                    {
+                                                                        item.item_name
+                                                                    }
+                                                                </td>
+                                                                <td className="px-2.5 py-2">
+                                                                    {
+                                                                        item.purpose
+                                                                    }
+                                                                </td>
+                                                                <td className="px-2.5 py-2">
+                                                                    {item.image_url ? (
+                                                                        <a
+                                                                            href={
+                                                                                item.image_url
+                                                                            }
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                        >
+                                                                            <img
+                                                                                src={
+                                                                                    item.image_url
+                                                                                }
+                                                                                alt=""
+                                                                                className="h-8 w-8 rounded object-cover"
+                                                                            />
+                                                                        </a>
+                                                                    ) : (
+                                                                        '—'
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ),
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    full
+                                />
+                            )}
+                            {entry.cost_breakdown &&
+                                entry.cost_breakdown.length > 0 && (
+                                    <DetailItem
+                                        label="Cost Breakdown"
+                                        value={
+                                            <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                                <table className="w-full min-w-[360px] border-collapse text-xs">
+                                                    <thead>
+                                                        <tr className="bg-gray-50 text-left tracking-wide text-gray-400 uppercase">
+                                                            <th className="px-2.5 py-2">
+                                                                Description
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Qty
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Unit Cost
+                                                            </th>
+                                                            <th className="px-2.5 py-2">
+                                                                Subtotal
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {entry.cost_breakdown.map(
+                                                            (row, i) => (
+                                                                <tr
+                                                                    key={i}
+                                                                    className="border-t border-gray-100"
+                                                                >
+                                                                    <td className="px-2.5 py-2">
+                                                                        {
+                                                                            row.description
+                                                                        }
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2">
+                                                                        {
+                                                                            row.quantity
+                                                                        }
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2">
+                                                                        {fmtAmt(
+                                                                            Number(
+                                                                                row.unit_cost,
+                                                                            ) ||
+                                                                                0,
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-2.5 py-2 font-medium">
+                                                                        {fmtAmt(
+                                                                            (Number(
+                                                                                row.quantity,
+                                                                            ) ||
+                                                                                0) *
+                                                                                (Number(
+                                                                                    row.unit_cost,
+                                                                                ) ||
+                                                                                    0),
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            ),
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                        full
+                                    />
+                                )}
+                        </>
+                    )}
                     {entry.attachment_url && (
                         <DetailItem
-                            label="Attachment"
+                            label={
+                                entry.entry_type === 'structured'
+                                    ? 'Supporting Image'
+                                    : 'Attachment'
+                            }
                             value={
                                 <a
                                     href={entry.attachment_url}
@@ -272,51 +573,38 @@ export default function JlModal({
                             full
                         />
                     )}
-                    {entry.status === 'On Hold' && entry.hold_reason && (
-                        <DetailItem
-                            label="Hold Reason"
-                            value={
-                                <span className="text-amber-700">
-                                    {entry.hold_reason}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.reject_reason && (
-                        <DetailItem
-                            label="Rejection Reason"
-                            value={
-                                <span className="text-red-600">
-                                    {entry.reject_reason}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.review_remarks && (
-                        <DetailItem
-                            label="Review Remarks"
-                            value={
-                                <span className="text-blue-700">
-                                    {entry.review_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
-                    {entry.approve_remarks && (
-                        <DetailItem
-                            label="Approval Remarks"
-                            value={
-                                <span className="text-green-700">
-                                    {entry.approve_remarks}
-                                </span>
-                            }
-                            full
-                        />
-                    )}
                 </div>
+
+                {/* Remarks & actions — one entry per stage, in the order the
+                    request actually moved through them, so the newest note is
+                    always at the bottom. */}
+                {trail.length > 0 && (
+                    <div className="mt-5">
+                        <p className="mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                            Remarks &amp; Actions
+                        </p>
+                        <ol className="space-y-2">
+                            {trail.map((t) => (
+                                <li
+                                    key={t.stage}
+                                    className={`rounded-lg border-l-4 py-2 pr-3 pl-3 ${t.tone}`}
+                                >
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <span className="text-xs font-bold tracking-wide uppercase">
+                                            {t.stage}
+                                        </span>
+                                        <span className="shrink-0 text-[11px] font-medium text-gray-400">
+                                            {t.by}
+                                        </span>
+                                    </div>
+                                    <p className="mt-0.5 text-sm text-gray-700">
+                                        {t.text}
+                                    </p>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
 
                 {rejectWindowClosed && (
                     <div className="mt-4 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -373,8 +661,30 @@ export default function JlModal({
                             onChange={(e) =>
                                 onCheckRemarksChange?.(e.target.value)
                             }
-                            placeholder="Add a comment about this review…"
+                            placeholder={
+                                canEndorse
+                                    ? 'Add a comment about this endorsement…'
+                                    : 'Add a comment about this review…'
+                            }
                             className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                        />
+                    </div>
+                )}
+
+                {/* Purchasing (On Process) remarks textarea */}
+                {showProcessBox && (
+                    <div className="mt-4">
+                        <label className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                            Remarks (optional)
+                        </label>
+                        <textarea
+                            rows={3}
+                            value={processRemarks}
+                            onChange={(e) =>
+                                onProcessRemarksChange?.(e.target.value)
+                            }
+                            placeholder="Add a note for everyone following this request…"
+                            className="mt-1.5 w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100"
                         />
                     </div>
                 )}
@@ -423,13 +733,15 @@ export default function JlModal({
                                     ✕ Reject
                                 </button>
                             )}
-                            {canCheck && (
+                            {canMarkStage && (
                                 <button
                                     onClick={onCheckClick}
                                     className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
-                                    <i class="fa-solid fa-check"></i> Mark as
-                                    Reviewed
+                                    <i class="fa-solid fa-check"></i>{' '}
+                                    {canEndorse
+                                        ? 'Endorse'
+                                        : 'Mark as Reviewed'}
                                 </button>
                             )}
                             {(canApprove || canReapprove) && (
@@ -443,10 +755,7 @@ export default function JlModal({
                             )}
                             {canProcess && (
                                 <button
-                                    onClick={() => {
-                                        onProcess?.(entry.id);
-                                        onClose();
-                                    }}
+                                    onClick={onProcessClick}
                                     className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                                 >
                                     <i class="fa-solid fa-play"></i> On Process
@@ -484,6 +793,22 @@ export default function JlModal({
                                 Approval
                             </button>
                         </>
+                    ) : showProcessBox ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onConfirmProcess}
+                                className="rounded-lg bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
+                            >
+                                <i className="fa-solid fa-play"></i> Confirm On
+                                Process
+                            </button>
+                        </>
                     ) : showCheckBox ? (
                         <>
                             <button
@@ -496,7 +821,10 @@ export default function JlModal({
                                 onClick={onConfirmCheck}
                                 className="rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:opacity-90"
                             >
-                                <i class="fa-solid fa-check"></i> Confirm Review
+                                <i class="fa-solid fa-check"></i>{' '}
+                                {context === 'division_head'
+                                    ? 'Confirm Endorsement'
+                                    : 'Confirm Review'}
                             </button>
                         </>
                     ) : (

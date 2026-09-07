@@ -17,7 +17,19 @@ class JlNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        $channels = ['database'];
+
+        // Broadcasting over Reverb needs a real key/secret to even attempt a
+        // connection — without one (Reverb not installed/configured yet,
+        // e.g. on a fresh staging box) this would throw synchronously inside
+        // whatever request triggered the notification. Skip it cleanly
+        // instead; the in-app bell still works via the 'database' channel,
+        // just without the live push until Reverb is actually set up.
+        if (config('broadcasting.connections.reverb.key')) {
+            $channels[] = 'broadcast';
+        }
+
+        return $channels;
     }
 
     public function toDatabase(object $notifiable): array

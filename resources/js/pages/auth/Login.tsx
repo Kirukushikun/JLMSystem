@@ -4,20 +4,50 @@ import { useEffect, useRef, useState } from 'react';
 const INPUT =
     'w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:opacity-60';
 
+interface TestAccount {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    company?: string;
+    dept?: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+    admin: 'Admin',
+    vp: 'VP Approver',
+    purchasing: 'Purchasing',
+    purchasing_viewer: 'Purchasing (View Only)',
+    reviewer: 'Reviewer',
+    division_head: 'Division Head',
+    requestor: 'Requestor',
+};
+
 interface PageProps {
     turnstileSiteKey: string;
+    testingMode: boolean;
+    testingAccounts: TestAccount[];
+    testingPassword: string;
     [key: string]: unknown;
 }
 
 export default function Login() {
-    const { turnstileSiteKey } = usePage<PageProps>().props;
+    const { turnstileSiteKey, testingMode, testingAccounts, testingPassword } =
+        usePage<PageProps>().props;
     const [showPassword, setShowPassword] = useState(false);
     const turnstileRef = useRef<HTMLDivElement>(null);
     const turnstileTokenRef = useRef('');
 
     useEffect(() => {
+        // No site key means no widget to render — and in testing mode the
+        // backend never checks a turnstile_token anyway.
+        if (testingMode) {
+            return;
+        }
+
         (window as any).onTurnstileReady = () => {
             const ts = (window as any).turnstile;
+
             if (ts && turnstileRef.current) {
                 ts.render(turnstileRef.current, {
                     sitekey: turnstileSiteKey,
@@ -35,12 +65,15 @@ export default function Login() {
             'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit';
         script.async = true;
         document.head.appendChild(script);
+
         return () => {
             delete (window as any).onTurnstileReady;
-            if (document.head.contains(script))
+
+            if (document.head.contains(script)) {
                 document.head.removeChild(script);
+            }
         };
-    }, []);
+    }, [testingMode, turnstileSiteKey]);
 
     const form = useForm({
         email: '',
@@ -57,6 +90,11 @@ export default function Login() {
         form.post('/login');
     }
 
+    function fillTestAccount(account: TestAccount) {
+        form.setData('email', account.email);
+        form.setData('password', testingPassword);
+    }
+
     return (
         <>
             <Head title="Login" />
@@ -65,7 +103,12 @@ export default function Login() {
                 className="flex min-h-screen items-center justify-center px-4"
                 style={{ background: '#f0f4f8' }}
             >
-                <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+                <div
+                    className={
+                        'w-full rounded-2xl bg-white p-8 shadow-lg ' +
+                        (testingMode ? 'max-w-md' : 'max-w-sm')
+                    }
+                >
                     {/* Brand */}
                     <div className="mb-8 text-center">
                         <div
@@ -84,6 +127,32 @@ export default function Login() {
                             Sign in to your account
                         </p>
                     </div>
+
+                    {testingMode && (
+                        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                            <p className="mb-1 text-xs font-semibold tracking-wide text-amber-800 uppercase">
+                                🧪 Testing Mode
+                            </p>
+                            <p className="mb-3 text-xs text-amber-700">
+                                No Turnstile key is configured, so real
+                                authentication is off. Pick a role to fill in
+                                its dummy login.
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                                {testingAccounts.map((account) => (
+                                    <button
+                                        key={account.email}
+                                        type="button"
+                                        onClick={() => fillTestAccount(account)}
+                                        className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                    >
+                                        {ROLE_LABELS[account.role] ??
+                                            account.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Error */}
                     {form.errors.email && (
@@ -175,14 +244,16 @@ export default function Login() {
                             </div>
                         </div>
 
-                        <div class="flex flex-col items-center justify-center">
-                            <div ref={turnstileRef} />
-                            {form.errors.turnstile_token && (
-                                <p className="mt-1 text-xs text-red-500">
-                                    {form.errors.turnstile_token}
-                                </p>
-                            )}
-                        </div>
+                        {!testingMode && (
+                            <div class="flex flex-col items-center justify-center">
+                                <div ref={turnstileRef} />
+                                {form.errors.turnstile_token && (
+                                    <p className="mt-1 text-xs text-red-500">
+                                        {form.errors.turnstile_token}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <button
                             type="submit"

@@ -1,15 +1,14 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import InfoPanel from '@/components/InfoPanel';
 import ExportModal from '@/components/jl/ExportModal';
 import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
-import ProcessModal from '@/components/jl/ProcessModal';
+import RejectModal from '@/components/jl/RejectModal';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
 import AppLayout from '@/layouts/AppLayout';
-import type { User } from '@/types/auth';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -36,28 +35,20 @@ function StatCard({
     );
 }
 
-export default function Purchasing({ entries }: Props) {
-    const { props: pageProps } = usePage<{
-        auth: { user: User | null };
-        [key: string]: unknown;
-    }>();
-    const userRoles = pageProps.auth?.user?.roles ?? [];
-    const isViewer =
-        userRoles.includes('purchasing_viewer') &&
-        !userRoles.includes('purchasing') &&
-        !userRoles.includes('admin');
-
+export default function DivisionHead({ entries }: Props) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-    const [viewEntry, setViewEntry] = useState<JlEntry | null>(null);
+    const [modal, setModal] = useState<JlEntry | null>(null);
+    const [showCheckBox, setShowCheckBox] = useState(false);
+    const [checkRemarks, setCheckRemarks] = useState('');
+    const [showRejectBox, setShowRejectBox] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [rejectEntry, setRejectEntry] = useState<JlEntry | null>(null);
     const [holdEntry, setHoldEntry] = useState<JlEntry | null>(null);
-    const [showExport, setShowExport] = useState(false);
-    const [toast, setToast] = useState('');
     const [showHoldBox, setShowHoldBox] = useState(false);
     const [holdReasonModal, setHoldReasonModal] = useState('');
-    const [processEntry, setProcessEntry] = useState<JlEntry | null>(null);
-    const [showProcessBox, setShowProcessBox] = useState(false);
-    const [processRemarksModal, setProcessRemarksModal] = useState('');
+    const [showExport, setShowExport] = useState(false);
+    const [toast, setToast] = useState('');
 
     function showToast(msg: string) {
         setToast(msg);
@@ -77,30 +68,74 @@ export default function Purchasing({ entries }: Props) {
     }
 
     function closeModal() {
-        setViewEntry(null);
+        setModal(null);
+        setShowCheckBox(false);
+        setCheckRemarks('');
+        setShowRejectBox(false);
+        setRejectReason('');
         setShowHoldBox(false);
         setHoldReasonModal('');
-        setShowProcessBox(false);
-        setProcessRemarksModal('');
     }
 
-    function handleProcess(id: number, remarks: string, after?: () => void) {
+    function handleConfirmCheck() {
+        if (!modal) {
+            return;
+        }
+
         router.patch(
-            `/jl/${id}/process`,
-            { process_remarks: remarks },
+            `/jl/${modal.id}/endorse`,
+            { endorse_remarks: checkRemarks },
             {
                 preserveScroll: true,
-                onSuccess: onFlash('Marked as On Process.', after),
+                onSuccess: onFlash(
+                    'Endorsed — forwarded to the Reviewer.',
+                    closeModal,
+                ),
             },
         );
     }
 
-    function handleConfirmProcessModal() {
-        if (!viewEntry) {
+    function handleConfirmReject() {
+        if (!modal) {
             return;
         }
 
-        handleProcess(viewEntry.id, processRemarksModal, closeModal);
+        router.patch(
+            `/jl/${modal.id}/reject`,
+            { reject_reason: rejectReason },
+            {
+                preserveScroll: true,
+                onSuccess: onFlash('Form rejected.', closeModal),
+            },
+        );
+    }
+
+    function handleConfirmHoldModal() {
+        if (!modal) {
+            return;
+        }
+
+        router.patch(
+            `/jl/${modal.id}/hold`,
+            { reason: holdReasonModal },
+            {
+                preserveScroll: true,
+                onSuccess: onFlash('Entry put on hold.', closeModal),
+            },
+        );
+    }
+
+    function handleDirectReject(id: number, reason: string) {
+        router.patch(
+            `/jl/${id}/reject`,
+            { reject_reason: reason },
+            {
+                preserveScroll: true,
+                onSuccess: onFlash('Form rejected.', () =>
+                    setRejectEntry(null),
+                ),
+            },
+        );
     }
 
     function handleDirectHold(id: number, reason: string) {
@@ -112,21 +147,6 @@ export default function Purchasing({ entries }: Props) {
                 onSuccess: onFlash('Entry put on hold.', () =>
                     setHoldEntry(null),
                 ),
-            },
-        );
-    }
-
-    function handleConfirmHoldModal() {
-        if (!viewEntry) {
-            return;
-        }
-
-        router.patch(
-            `/jl/${viewEntry.id}/hold`,
-            { reason: holdReasonModal },
-            {
-                preserveScroll: true,
-                onSuccess: onFlash('Entry put on hold.', closeModal),
             },
         );
     }
@@ -153,90 +173,73 @@ export default function Purchasing({ entries }: Props) {
         totalPages,
     } = usePagination(filtered);
 
-    const approved = entries.filter((e) => e.status === 'Approved').length;
-    const onProcess = entries.filter((e) => e.status === 'On Process').length;
+    const total = entries.length;
+    const pending = entries.filter((e) => e.status === 'Pending').length;
+    const endorsed = entries.filter((e) => e.status === 'Endorsed').length;
     const onHold = entries.filter((e) => e.status === 'On Hold').length;
 
     return (
         <AppLayout>
-            <Head title="Purchasing" />
+            <Head title="Division Head Dashboard" />
 
-            <InfoPanel type="overview" title="Purchasing Dashboard">
-                {isViewer ? (
-                    <>
-                        <p>
-                            This is a read-only view of VP-approved JL forms.
-                            You can inspect every request but cannot change its
-                            status.
-                        </p>
-                        <ul className="mt-2 list-disc pl-4">
-                            <li>
-                                Use <strong>View Details</strong> to inspect the
-                                full form, attachments, and serial number.
-                            </li>
-                            <li>
-                                <strong>On Process</strong> and{' '}
-                                <strong>On Hold</strong> actions are only
-                                available to the Purchasing role, not this
-                                view-only access.
-                            </li>
-                        </ul>
-                    </>
-                ) : (
-                    <>
-                        <p>
-                            This is your queue of VP-approved JL forms ready for
-                            purchasing action.
-                        </p>
-                        <ul className="mt-2 list-disc pl-4">
-                            <li>
-                                Forms with status <strong>Approved</strong> are
-                                ready for you to act on — use the kebab menu
-                                (⋮).
-                            </li>
-                            <li>
-                                <strong>On Process</strong> — marks the form as
-                                actively being processed by purchasing.
-                            </li>
-                            <li>
-                                <strong>On Hold</strong> — pauses the form with
-                                an optional reason; you can resume it anytime.
-                            </li>
-                            <li>
-                                Use <strong>View Details</strong> to inspect the
-                                full form, attachments, and serial number.
-                            </li>
-                        </ul>
-                    </>
-                )}
+            <InfoPanel type="overview" title="Division Head Dashboard">
+                <p>
+                    This is your department's queue of submitted JL forms. You
+                    are the first approval step, before forms reach the
+                    Reviewer.
+                </p>
+                <ul className="mt-2 list-disc pl-4">
+                    <li>
+                        Forms with status <strong>Pending</strong> require your
+                        action — use the kebab menu (⋮) to act.
+                    </li>
+                    <li>
+                        <strong>For Endorsement</strong> — opens the form
+                        details for you to inspect and endorse, with optional
+                        remarks visible to every role.
+                    </li>
+                    <li>
+                        <strong>Reject</strong> — opens a quick confirmation
+                        where you can enter an optional rejection reason.
+                    </li>
+                    <li>
+                        <strong>On Hold</strong> — pauses the form with an
+                        optional reason so you can come back to it later. Use{' '}
+                        <strong>View Details</strong> on any held entry to see
+                        why it was held.
+                    </li>
+                    <li>
+                        Once endorsed, the form moves to the Reviewer's queue
+                        automatically.
+                    </li>
+                </ul>
             </InfoPanel>
 
             <div className="mb-7">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
-                    Purchasing Dashboard{' '}
-                    {isViewer && (
-                        <span className="ml-2 align-middle text-xs font-semibold tracking-wide text-amber-600 uppercase">
-                            View Only
-                        </span>
-                    )}
+                    Division Head Dashboard
                 </h1>
                 <p className="mt-1 text-sm text-gray-500">
-                    {isViewer
-                        ? 'Browse VP-approved JL forms and their processing status.'
-                        : 'Manage VP-approved JL forms — mark them as On Process or put them On Hold.'}
+                    Endorse submitted JL forms from your department, or reject
+                    before forwarding to the Reviewer.
                 </p>
             </div>
 
-            <div className="mb-7 grid grid-cols-3 gap-4">
+            <div className="mb-7 grid grid-cols-4 gap-4">
                 <StatCard
-                    label="Approved (Queued)"
-                    value={approved}
-                    color="#16a34a"
+                    label="Total Submissions"
+                    value={total}
+                    color="#1e3a5f"
                 />
                 <StatCard
-                    label="On Process"
-                    value={onProcess}
-                    color="#7c3aed"
+                    label="Awaiting My Endorsement"
+                    value={pending}
+                    color="#d97706"
+                />
+                <StatCard
+                    label="Endorsed / Forwarded"
+                    value={endorsed}
+                    color="#4f46e5"
                 />
                 <StatCard label="On Hold" value={onHold} color="#d97706" />
             </div>
@@ -254,8 +257,9 @@ export default function Purchasing({ entries }: Props) {
                     onChange={(e) => setStatusFilter(e.target.value)}
                 >
                     <option value="">All Statuses</option>
-                    <option value="Approved">Approved</option>
-                    <option value="On Process">On Process</option>
+                    <option>Pending</option>
+                    <option>Endorsed</option>
+                    <option value="Rejected">Rejected</option>
                     <option value="On Hold">On Hold</option>
                 </select>
                 <button
@@ -272,14 +276,18 @@ export default function Purchasing({ entries }: Props) {
             >
                 <JlTable
                     entries={pageItems}
-                    context={isViewer ? 'viewer' : 'purchasing'}
+                    context="division_head"
                     onView={(e) => {
-                        setViewEntry(e);
+                        setModal(e);
+                        setShowCheckBox(false);
+                        setCheckRemarks('');
+                        setShowRejectBox(false);
+                        setRejectReason('');
                         setShowHoldBox(false);
                         setHoldReasonModal('');
                     }}
-                    onHold={isViewer ? undefined : setHoldEntry}
-                    onProcess={isViewer ? undefined : setProcessEntry}
+                    onReject={setRejectEntry}
+                    onHold={setHoldEntry}
                 />
                 <Pagination
                     page={page}
@@ -292,21 +300,30 @@ export default function Purchasing({ entries }: Props) {
             </div>
 
             <JlModal
-                entry={viewEntry}
-                context={isViewer ? 'viewer' : 'purchasing'}
+                entry={modal}
+                context="division_head"
                 onClose={closeModal}
-                onProcessClick={
-                    isViewer ? undefined : () => setShowProcessBox(true)
-                }
-                showProcessBox={showProcessBox}
-                processRemarks={processRemarksModal}
-                onProcessRemarksChange={setProcessRemarksModal}
-                onConfirmProcess={handleConfirmProcessModal}
-                onHoldClick={isViewer ? undefined : () => setShowHoldBox(true)}
+                onCheckClick={() => setShowCheckBox(true)}
+                showCheckBox={showCheckBox}
+                checkRemarks={checkRemarks}
+                onCheckRemarksChange={setCheckRemarks}
+                onConfirmCheck={handleConfirmCheck}
+                onRejectClick={() => setShowRejectBox(true)}
+                showRejectBox={showRejectBox}
+                rejectReason={rejectReason}
+                onRejectReasonChange={setRejectReason}
+                onConfirmReject={handleConfirmReject}
+                onHoldClick={() => setShowHoldBox(true)}
                 showHoldBox={showHoldBox}
                 holdReason={holdReasonModal}
                 onHoldReasonChange={setHoldReasonModal}
                 onConfirmHold={handleConfirmHoldModal}
+            />
+
+            <RejectModal
+                entry={rejectEntry}
+                onClose={() => setRejectEntry(null)}
+                onConfirm={handleDirectReject}
             />
 
             <HoldModal
@@ -315,19 +332,10 @@ export default function Purchasing({ entries }: Props) {
                 onConfirm={handleDirectHold}
             />
 
-            <ProcessModal
-                key={processEntry?.id}
-                entry={processEntry}
-                onClose={() => setProcessEntry(null)}
-                onConfirm={(id, remarks) =>
-                    handleProcess(id, remarks, () => setProcessEntry(null))
-                }
-            />
-
             <ExportModal
                 open={showExport}
                 onClose={() => setShowExport(false)}
-                allowedStatuses={['Approved', 'On Process', 'On Hold']}
+                allowedStatuses={['Pending', 'Endorsed', 'Rejected', 'On Hold']}
             />
 
             {toast && (

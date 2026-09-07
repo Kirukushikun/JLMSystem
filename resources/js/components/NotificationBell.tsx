@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { uid } from '@/lib/utils';
 import type { User } from '@/types/auth';
 
 interface JlNotification {
@@ -16,6 +17,7 @@ interface JlNotification {
 
 const EVENT_ICON: Record<string, string> = {
     submitted: '📋',
+    endorsed: '📝',
     reviewed: '✅',
     approved: '🎉',
     rejected: '❌',
@@ -26,9 +28,19 @@ const EVENT_ICON: Record<string, string> = {
 
 function timeAgo(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+
+    if (diff < 60) {
+        return 'just now';
+    }
+
+    if (diff < 3600) {
+        return `${Math.floor(diff / 60)}m ago`;
+    }
+
+    if (diff < 86400) {
+        return `${Math.floor(diff / 3600)}h ago`;
+    }
+
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
@@ -59,7 +71,7 @@ export default function NotificationBell({ user }: { user: User }) {
         ).notification((notif: any) => {
             // Broadcast arrives flat; normalize to match the DB format
             const normalized: JlNotification = {
-                id: notif.id ?? crypto.randomUUID(),
+                id: notif.id ?? uid(),
                 read_at: null,
                 created_at: notif.created_at ?? new Date().toISOString(),
                 data: {
@@ -90,6 +102,7 @@ export default function NotificationBell({ user }: { user: User }) {
             }
         }
         document.addEventListener('mousedown', handleClick);
+
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 

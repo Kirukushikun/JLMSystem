@@ -1,8 +1,15 @@
-import AppLayout from '@/layouts/AppLayout';
-import InfoPanel from '@/components/InfoPanel';
-import SubmitSummaryModal from '@/components/jl/SubmitSummaryModal';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import InfoPanel from '@/components/InfoPanel';
+import CostBreakdownTable, {
+    newCostRow,
+} from '@/components/jl/CostBreakdownTable';
+import type { CostRow } from '@/components/jl/CostBreakdownTable';
+import ItemsTable, { newItemRow } from '@/components/jl/ItemsTable';
+import type { JlItemRow } from '@/components/jl/ItemsTable';
+import StructuredSummaryModal from '@/components/jl/StructuredSummaryModal';
+import AppLayout from '@/layouts/AppLayout';
+import { uid } from '@/lib/utils';
 import type { Auth } from '@/types/auth';
 import type { JlEntry } from '@/types/jl';
 
@@ -29,45 +36,137 @@ interface PageProps {
 export default function Submit() {
     const { flash, companies, departments, auth, editEntry } =
         usePage<PageProps>().props;
-    const [fileKey, setFileKey] = useState(0);
-    const [showSummary, setShowSummary] = useState(false);
 
     const isRequestor = auth.user.roles.includes('requestor');
     const isEdit = !!editEntry;
 
-    const form = useForm({
-        title: editEntry?.title ?? '',
-        date: editEntry?.date ?? new Date().toISOString().slice(0, 10),
-        company:
-            editEntry?.company ??
-            (isRequestor ? (auth.user.company ?? '') : ''),
-        manager: editEntry?.manager ?? '',
-        dept: editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
-        amount: editEntry ? String(editEntry.amount) : '',
-        attachment: null as File | null,
-    });
+    // Company/Farm and Department are locked to the requestor's own account —
+    // pre-filled, not editable — for anyone else (e.g. admin submitting on
+    // someone's behalf) they're a free choice.
+    function defaultState() {
+        return {
+            subject: editEntry?.title ?? '',
+            company:
+                editEntry?.company ??
+                (isRequestor ? (auth.user.company ?? '') : ''),
+            dept:
+                editEntry?.dept ?? (isRequestor ? (auth.user.dept ?? '') : ''),
+            manager: editEntry?.manager ?? '',
+            dateNeeded: editEntry?.date ?? '',
+            body: editEntry?.body ?? '',
+            reason: editEntry?.justification ?? '',
+            items:
+                editEntry?.items && editEntry.items.length > 0
+                    ? editEntry.items.map((i) => ({
+                          id: uid(),
+                          itemName: i.item_name,
+                          purpose: i.purpose,
+                          // Existing images stay on the server unless a new
+                          // one is picked — a File can't be rehydrated from
+                          // a stored URL, so this starts blank on edit.
+                          image: null as File | null,
+                      }))
+                    : [newItemRow()],
+            costRows:
+                editEntry?.cost_breakdown && editEntry.cost_breakdown.length > 0
+                    ? editEntry.cost_breakdown.map((r) => ({
+                          id: uid(),
+                          description: r.description,
+                          quantity: r.quantity,
+                          unitCost: r.unit_cost,
+                      }))
+                    : [newCostRow()],
+        };
+    }
+
+    const defaults = defaultState();
+    const [subject, setSubject] = useState(defaults.subject);
+    const [company, setCompany] = useState(defaults.company);
+    const [dept, setDept] = useState(defaults.dept);
+    const [manager, setManager] = useState(defaults.manager);
+    const [dateNeeded, setDateNeeded] = useState(defaults.dateNeeded);
+    const [body, setBody] = useState(defaults.body);
+    const [reason, setReason] = useState(defaults.reason);
+    const [items, setItems] = useState<JlItemRow[]>(defaults.items);
+    const [costRows, setCostRows] = useState<CostRow[]>(defaults.costRows);
+    const [image, setImage] = useState<File | null>(null);
+    const [fileKey, setFileKey] = useState(0);
+
+    const [showSummary, setShowSummary] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    function resetForm() {
+        const d = defaultState();
+        setSubject(d.subject);
+        setCompany(d.company);
+        setDept(d.dept);
+        setManager(d.manager);
+        setDateNeeded(d.dateNeeded);
+        setBody(d.body);
+        setReason(d.reason);
+        setItems(d.items);
+        setCostRows(d.costRows);
+        setImage(null);
+        setFileKey((k) => k + 1);
+    }
 
     function doSubmit() {
-        if (isEdit) {
-            // PHP never parses multipart/form-data bodies on PATCH/PUT/DELETE — only
-            // on POST. So this must go out as a real POST with a _method override
-            // field; Laravel then routes it to the PATCH handler while still parsing
-            // the file upload correctly.
-            form.transform((data) => ({ ...data, _method: 'patch' }));
-            form.post(`/jl/${editEntry!.id}/resubmit`, {
-                forceFormData: true,
-                onSuccess: () => setShowSummary(false),
-            });
-        } else {
-            form.post('/jl', {
-                forceFormData: true,
-                onSuccess: () => {
-                    form.reset();
-                    setFileKey((k) => k + 1);
-                    setShowSummary(false);
-                },
-            });
-        }
+        const payload = {
+            subject,
+            company,
+            dept,
+            manager,
+            date_needed: dateNeeded,
+            body,
+            justification: reason,
+            items: items
+                .filter((i) => i.itemName.trim() !== '')
+                .map((i) => ({
+                    item_name: i.itemName,
+                    purpose: i.purpose,
+                    image: i.image,
+                })),
+            cost_breakdown: costRows
+                .filter((r) => r.description.trim() !== '')
+                .map((r) => ({
+                    description: r.description,
+                    quantity: r.quantity,
+                    unit_cost: r.unitCost,
+                })),
+            attachment: image,
+        };
+
+        const url = isEdit ? `/jl/${editEntry!.id}/resubmit` : '/jl';
+        const data = isEdit ? { ...payload, _method: 'patch' } : payload;
+
+        router.post(url, data, {
+            forceFormData: true,
+            onStart: () => {
+                setProcessing(true);
+                setUploadProgress(0);
+            },
+            onProgress: (event) => {
+                setUploadProgress(event?.percentage ?? null);
+            },
+            onFinish: () => {
+                setProcessing(false);
+                setUploadProgress(null);
+            },
+            onSuccess: () => {
+                setShowSummary(false);
+                setErrors({});
+
+                if (!isEdit) {
+                    resetForm();
+                }
+            },
+            onError: (errs) => {
+                setErrors(errs as Record<string, string>);
+                setShowSummary(false);
+            },
+        });
     }
 
     return (
@@ -91,43 +190,41 @@ export default function Submit() {
                     </p>
                 ) : (
                     <p>
-                        Fill in all required fields and click{' '}
+                        Fill in the details below and click{' '}
                         <strong>Submit Form</strong> when ready. Your entry will
-                        be queued for reviewer approval.
+                        be queued for review.
                     </p>
                 )}
                 <ul className="mt-2 list-disc pl-4">
                     <li>
-                        <strong>Title</strong> — brief description of the job
-                        labor cost.
-                    </li>
-                    <li>
-                        <strong>Date Prepared</strong> — the date the cost was
-                        incurred.
+                        <strong>Subject</strong> — brief description of the
+                        request.
                     </li>
                     <li>
                         <strong>Company / Farm</strong> —{' '}
                         {isRequestor
-                            ? 'pre-filled from your account, but you can pick a different farm if this request is for one.'
+                            ? 'pre-filled from your account.'
                             : 'select from the available options.'}
                     </li>
                     <li>
                         <strong>Department</strong> —{' '}
                         {isRequestor
-                            ? 'pre-filled from your account and locked to prevent mistakes.'
+                            ? 'pre-filled from your account.'
                             : 'select from the available options.'}
                     </li>
                     <li>
-                        <strong>Manager / Supervisor</strong> — name of the
-                        person responsible.
+                        <strong>Items</strong> — add a row per item, with
+                        purpose and an optional photo.
                     </li>
                     <li>
-                        <strong>Estimated Amount</strong> — must be greater than
-                        zero.
+                        <strong>Estimated Cost Breakdown</strong> — add a row
+                        per cost item, with quantity and unit cost; the total is
+                        calculated for you and used as the request's estimated
+                        amount.
                     </li>
                     <li>
-                        <strong>Attachment</strong> — optional supporting
-                        document (PDF, image, or Office file, max 10 MB).
+                        <strong>Supporting Image</strong> — optional, images
+                        only (no PDFs or other file types).
                     </li>
                     <li>
                         Before submitting you'll see a quick summary to review —
@@ -142,7 +239,7 @@ export default function Submit() {
                 )}
             </InfoPanel>
 
-            <div className="mb-7">
+            <div className="mb-5">
                 <h1 className="text-2xl font-bold" style={{ color: '#1e3a5f' }}>
                     {isEdit
                         ? `Edit & Resubmit — ${editEntry!.reference}`
@@ -168,9 +265,9 @@ export default function Submit() {
             )}
 
             <div className="rounded-xl bg-white p-4 shadow-sm sm:p-7">
-                {Object.keys(form.errors).length > 0 && (
+                {Object.keys(errors).length > 0 && (
                     <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-                        {Object.values(form.errors).map((e) => (
+                        {Object.values(errors).map((e) => (
                             <p key={e}>{e}</p>
                         ))}
                     </div>
@@ -178,79 +275,60 @@ export default function Submit() {
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                        <Label>JL Title *</Label>
+                        <Label>Subject *</Label>
                         <input
                             className={INPUT}
-                            value={form.data.title}
-                            onChange={(e) =>
-                                form.setData('title', e.target.value)
-                            }
-                            placeholder="e.g. Farm Operation Labor Monitoring — Q2 2026"
-                            disabled={form.processing}
-                        />
-                    </div>
-
-                    <div>
-                        <Label>Date Prepared *</Label>
-                        <input
-                            className={INPUT}
-                            type="date"
-                            value={form.data.date}
-                            onChange={(e) =>
-                                form.setData('date', e.target.value)
-                            }
-                            disabled={form.processing}
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            placeholder="e.g. Purchase of Farm Tools for Q2 Maintenance"
+                            maxLength={255}
+                            disabled={processing}
                         />
                     </div>
 
                     <div>
                         <Label>Company / Farm *</Label>
-                        <select
-                            className={INPUT}
-                            value={form.data.company}
-                            onChange={(e) =>
-                                form.setData('company', e.target.value)
-                            }
-                            disabled={form.processing}
-                        >
-                            <option value="">— Select company —</option>
-                            {companies.map((c) => (
-                                <option key={c.id} value={c.name}>
-                                    {c.name}
-                                </option>
-                            ))}
-                        </select>
+                        {isRequestor ? (
+                            <input className={INPUT} value={company} disabled />
+                        ) : (
+                            <select
+                                className={INPUT}
+                                value={company}
+                                onChange={(e) => setCompany(e.target.value)}
+                                disabled={processing}
+                            >
+                                <option value="">— Select company —</option>
+                                {companies.map((c) => (
+                                    <option key={c.id} value={c.name}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
                     <div>
                         <Label>Farm Manager / Supervisor *</Label>
                         <input
                             className={INPUT}
-                            value={form.data.manager}
-                            onChange={(e) =>
-                                form.setData('manager', e.target.value)
-                            }
+                            value={manager}
+                            onChange={(e) => setManager(e.target.value)}
                             placeholder="Full name"
-                            disabled={form.processing}
+                            maxLength={255}
+                            disabled={processing}
                         />
                     </div>
 
                     <div>
                         <Label>Department *</Label>
                         {isRequestor ? (
-                            <input
-                                className={INPUT}
-                                value={form.data.dept}
-                                disabled
-                            />
+                            <input className={INPUT} value={dept} disabled />
                         ) : (
                             <select
                                 className={INPUT}
-                                value={form.data.dept}
-                                onChange={(e) =>
-                                    form.setData('dept', e.target.value)
-                                }
-                                disabled={form.processing}
+                                value={dept}
+                                onChange={(e) => setDept(e.target.value)}
+                                disabled={processing}
                             >
                                 <option value="">— Select department —</option>
                                 {departments.map((d) => (
@@ -263,32 +341,69 @@ export default function Submit() {
                     </div>
 
                     <div>
-                        <Label>Estimated Amount (JL) *</Label>
+                        <Label>Date Needed *</Label>
                         <input
                             className={INPUT}
-                            type="number"
-                            value={form.data.amount}
-                            onChange={(e) =>
-                                form.setData('amount', e.target.value)
-                            }
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            disabled={form.processing}
+                            type="date"
+                            value={dateNeeded}
+                            onChange={(e) => setDateNeeded(e.target.value)}
+                            disabled={processing}
                         />
                     </div>
 
                     <div className="sm:col-span-2">
-                        <Label>
-                            Supporting Document {isEdit ? '' : '(optional)'}
-                        </Label>
+                        <Label>Body</Label>
+                        <textarea
+                            className={INPUT}
+                            rows={4}
+                            value={body}
+                            onChange={(e) => setBody(e.target.value)}
+                            placeholder="Describe the request in detail…"
+                            maxLength={2000}
+                            disabled={processing}
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <Label>Items</Label>
+                        <ItemsTable
+                            rows={items}
+                            onChange={setItems}
+                            disabled={processing}
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <Label>Reason for Justification *</Label>
+                        <textarea
+                            className={INPUT}
+                            rows={3}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="Why is this needed?"
+                            maxLength={2000}
+                            disabled={processing}
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <Label>Estimated Cost Breakdown</Label>
+                        <CostBreakdownTable
+                            rows={costRows}
+                            onChange={setCostRows}
+                            disabled={processing}
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <Label>Supporting Image (optional)</Label>
                         {isEdit && editEntry!.attachment_name && (
                             <p className="mb-1.5 text-xs text-gray-400">
                                 Current:{' '}
                                 <span className="font-medium text-gray-600">
                                     {editEntry!.attachment_name}
                                 </span>{' '}
-                                — choose a new file below to replace it, or
+                                — choose a new image below to replace it, or
                                 leave blank to keep it.
                             </p>
                         )}
@@ -299,21 +414,18 @@ export default function Submit() {
                                 ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'
                             }
                             type="file"
-                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                            accept="image/*"
                             onChange={(e) =>
-                                form.setData(
-                                    'attachment',
-                                    e.target.files?.[0] ?? null,
-                                )
+                                setImage(e.target.files?.[0] ?? null)
                             }
-                            disabled={form.processing}
+                            disabled={processing}
                         />
                         <p className="mt-1 text-xs text-gray-400">
-                            PDF, image, or Office document — max 10 MB
+                            Images only (JPG, PNG, etc.) — max 5 MB
                         </p>
-                        {form.errors.attachment && (
+                        {errors.attachment && (
                             <p className="mt-1 text-xs text-red-500">
-                                {form.errors.attachment}
+                                {errors.attachment}
                             </p>
                         )}
                     </div>
@@ -322,19 +434,19 @@ export default function Submit() {
                 <div className="mt-7 flex justify-end gap-4">
                     <div className="flex gap-3">
                         <button
-                            onClick={() => form.reset()}
-                            disabled={form.processing}
+                            onClick={resetForm}
+                            disabled={processing}
                             className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 disabled:opacity-60"
                         >
                             ↺ Clear
                         </button>
                         <button
                             onClick={() => setShowSummary(true)}
-                            disabled={form.processing}
+                            disabled={processing}
                             className="rounded-lg px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                             style={{ background: '#1e3a5f' }}
                         >
-                            {form.processing
+                            {processing
                                 ? 'Submitting…'
                                 : isEdit
                                   ? '➤ Review & Resubmit'
@@ -344,10 +456,22 @@ export default function Submit() {
                 </div>
             </div>
 
-            <SubmitSummaryModal
+            <StructuredSummaryModal
                 open={showSummary}
-                data={form.data}
-                processing={form.processing}
+                data={{
+                    subject,
+                    company,
+                    dept,
+                    manager,
+                    dateNeeded,
+                    body,
+                    reason,
+                    items,
+                    costRows,
+                    attachment: image,
+                }}
+                processing={processing}
+                uploadProgress={uploadProgress}
                 onClose={() => setShowSummary(false)}
                 onConfirm={doSubmit}
             />

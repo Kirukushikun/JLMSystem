@@ -17,9 +17,9 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $name
  * @property string $email
- * @property string $role reviewer | vp | purchasing | purchasing_viewer | requestor | admin — the primary/legacy role, kept for the default post-login landing page and CSV export defaults. Use hasRole()/hasAnyRole() for access checks, not this column directly, since a user may hold more than one role.
+ * @property string $role reviewer | vp | purchasing | purchasing_viewer | division_head | requestor | admin — the primary/legacy role, kept for the default post-login landing page and CSV export defaults. Use hasRole()/hasAnyRole() for access checks, not this column directly, since a user may hold more than one role.
  * @property string|null $company
- * @property string|null $dept
+ * @property string|null $dept — used by both Requestor (their submit-form department) and Division Head (which department's queue they act on)
  * @property string $password
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -36,7 +36,7 @@ class User extends Authenticatable
      * Roles are assigned/checked from here — the `role` column is only a
      * legacy "primary role" pointer, not the source of truth for access.
      */
-    public const ALL_ROLES = ['admin', 'vp', 'purchasing', 'purchasing_viewer', 'reviewer', 'requestor'];
+    public const ALL_ROLES = ['admin', 'vp', 'purchasing', 'purchasing_viewer', 'reviewer', 'division_head', 'requestor'];
 
     protected function casts(): array
     {

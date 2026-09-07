@@ -4,6 +4,7 @@ export type UserRole =
     | 'admin'
     | 'purchasing'
     | 'purchasing_viewer'
+    | 'division_head'
     | 'requestor';
 
 export type User = {

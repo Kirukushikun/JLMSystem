@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\AccessLog;
 use App\Models\User;
+use Database\Seeders\TestSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,14 +22,23 @@ class LoginController extends Controller
 
     public function showLogin(): Response
     {
+        $testingMode = $this->testingModeEnabled();
+
         return Inertia::render('auth/Login', [
             'turnstileSiteKey' => config('services.turnstile.site_key'),
+            'testingMode' => $testingMode,
+            'testingAccounts' => $testingMode ? TestSeeder::ACCOUNTS : [],
+            'testingPassword' => $testingMode ? TestSeeder::PASSWORD : '',
         ]);
     }
 
     public function postLogin(Request $request): RedirectResponse
     {
         $email = $request->input('email');
+
+        if ($this->testingModeEnabled()) {
+            return $this->postTestingLogin($request, $email);
+        }
 
         if (config('services.turnstile.verify')) {
             $verify = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
@@ -117,15 +128,7 @@ class LoginController extends Controller
             $this->logAccess($email, true, $request);
             Auth::loginUsingId($user->id);
 
-            // A user can hold more than one role now — land them on whichever
-            // is highest-priority per User::ALL_ROLES rather than assuming one.
-            return match ($user->primaryRole()) {
-                'admin', 'reviewer' => redirect()->route('jl.reviewer'),
-                'vp' => redirect()->route('jl.vp'),
-                'purchasing', 'purchasing_viewer' => redirect()->route('jl.purchasing'),
-                'requestor' => redirect()->route('jl.submit'),
-                default => back()->withErrors(['email' => 'You are not authorized to access this system.'])->withInput(),
-            };
+            return $this->redirectForRole($user);
 
         } catch (\Exception $e) {
             $this->incrementAttempts($email);
@@ -146,7 +149,64 @@ class LoginController extends Controller
         return redirect()->route('login');
     }
 
+    // ── Testing mode ─────────────────────────────────────────────────────────
+
+    /**
+     * With no Turnstile site key configured, this is presumed to be a local
+     * or otherwise non-production environment — the external Auth API is
+     * skipped entirely in favor of local password checks against whichever
+     * dummy accounts TestSeeder has created, one per role.
+     */
+    private function testingModeEnabled(): bool
+    {
+        return empty(config('services.turnstile.site_key'));
+    }
+
+    private function postTestingLogin(Request $request, string $email): RedirectResponse
+    {
+        if ($this->isLocked($email)) {
+            return back()->withErrors([
+                'email' => 'Account temporarily locked due to multiple failed attempts. Please try again in 15 minutes.',
+            ])->withInput();
+        }
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user || ! Hash::check($request->input('password', ''), $user->password)) {
+            $this->incrementAttempts($email);
+            $this->logAccess($email, false, $request);
+
+            $left = self::MAX_ATTEMPTS - $this->getAttempts($email);
+            $message = 'Incorrect email or password.';
+            if ($left > 0) {
+                $message .= " {$left} attempt(s) remaining.";
+            }
+
+            return back()->withErrors(['email' => $message])->withInput();
+        }
+
+        $this->clearAttempts($email);
+        $this->logAccess($email, true, $request);
+        Auth::loginUsingId($user->id);
+
+        return $this->redirectForRole($user);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function redirectForRole(User $user): RedirectResponse
+    {
+        // A user can hold more than one role — land them on whichever is
+        // highest-priority per User::ALL_ROLES rather than assuming one.
+        return match ($user->primaryRole()) {
+            'admin', 'reviewer' => redirect()->route('jl.reviewer'),
+            'vp' => redirect()->route('jl.vp'),
+            'purchasing', 'purchasing_viewer' => redirect()->route('jl.purchasing'),
+            'division_head' => redirect()->route('jl.divisionHead'),
+            'requestor' => redirect()->route('jl.submit'),
+            default => back()->withErrors(['email' => 'You are not authorized to access this system.'])->withInput(),
+        };
+    }
 
     private function isLocked(string $email): bool
     {

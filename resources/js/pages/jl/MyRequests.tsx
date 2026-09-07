@@ -165,7 +165,7 @@ export default function MyRequests({ entries }: Props) {
                                         {e.title}
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap">
-                                        <StatusBadge status={e.status} />
+                                        <StatusBadge entry={e} />
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap">
                                         {e.company}

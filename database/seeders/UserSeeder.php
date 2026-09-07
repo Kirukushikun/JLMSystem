@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\RoleUser;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +27,11 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // insertOrIgnore doesn't touch the role_user pivot, so a fresh
+            // environment (migrate:fresh --seed) would otherwise leave these
+            // accounts with no role hasRole()/hasAnyRole() can actually see.
+            RoleUser::firstOrCreate(['user_id' => $user['id'], 'role' => $user['role']]);
         }
     }
 }

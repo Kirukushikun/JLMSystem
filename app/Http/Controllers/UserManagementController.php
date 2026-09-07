@@ -43,21 +43,28 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'roles' => 'required|array|min:1',
-            'roles.*' => 'in:reviewer,vp,purchasing,purchasing_viewer,admin,requestor',
+            'roles.*' => 'in:reviewer,vp,purchasing,purchasing_viewer,division_head,admin,requestor',
             'company' => ['nullable', 'string', Rule::exists('companies', 'name')],
             'dept' => ['nullable', 'string', Rule::exists('departments', 'name')],
         ]);
 
         $roles = array_values(array_unique($data['roles']));
         $isRequestor = in_array('requestor', $roles, true);
+        $isDivisionHead = in_array('division_head', $roles, true);
 
         if ($isRequestor && (empty($data['company']) || empty($data['dept']))) {
             return back()->withErrors(['company' => 'Farm and department are required for the Requestor role.'])->withInput();
         }
 
-        // Company/department only apply to requestors — clear them if that role isn't assigned.
+        if ($isDivisionHead && empty($data['dept'])) {
+            return back()->withErrors(['dept' => 'Department is required for the Division Head role.'])->withInput();
+        }
+
+        // Company only applies to requestors; department applies to requestors
+        // and division heads (which department's queue they act on) — clear
+        // whichever doesn't apply to the roles being assigned.
         $company = $isRequestor ? $data['company'] : null;
-        $dept = $isRequestor ? $data['dept'] : null;
+        $dept = ($isRequestor || $isDivisionHead) ? $data['dept'] : null;
 
         // `role` stays as a single legacy column — the highest-priority role
         // held, per User::ALL_ROLES — used for the post-login landing page
@@ -91,6 +98,7 @@ class UserManagementController extends Controller
             'vp' => 'VP Approver',
             'purchasing' => 'Purchasing',
             'purchasing_viewer' => 'Purchasing (View Only)',
+            'division_head' => 'Division Head',
             'admin' => 'Admin',
             'requestor' => 'Requestor',
             default => 'Reviewer',

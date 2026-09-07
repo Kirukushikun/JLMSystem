@@ -1,14 +1,14 @@
-import AppLayout from '@/layouts/AppLayout';
+import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import InfoPanel from '@/components/InfoPanel';
 import ExportModal from '@/components/jl/ExportModal';
 import HoldModal from '@/components/jl/HoldModal';
 import JlModal from '@/components/jl/JlModal';
 import JlTable from '@/components/jl/JlTable';
-import Pagination from '@/components/Pagination';
 import RejectModal from '@/components/jl/RejectModal';
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import AppLayout from '@/layouts/AppLayout';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -78,7 +78,10 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function handleConfirmCheck() {
-        if (!modal) return;
+        if (!modal) {
+            return;
+        }
+
         router.patch(
             `/jl/${modal.id}/review`,
             { review_remarks: checkRemarks },
@@ -93,7 +96,10 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function handleConfirmReject() {
-        if (!modal) return;
+        if (!modal) {
+            return;
+        }
+
         router.patch(
             `/jl/${modal.id}/reject`,
             { reject_reason: rejectReason },
@@ -105,7 +111,10 @@ export default function Reviewer({ entries }: Props) {
     }
 
     function handleConfirmHoldModal() {
-        if (!modal) return;
+        if (!modal) {
+            return;
+        }
+
         router.patch(
             `/jl/${modal.id}/hold`,
             { reason: holdReasonModal },
@@ -144,6 +153,7 @@ export default function Reviewer({ entries }: Props) {
 
     const filtered = entries.filter((e) => {
         const q = search.toLowerCase();
+
         return (
             (!q ||
                 `${e.title} ${e.company} ${e.manager}`
@@ -164,7 +174,10 @@ export default function Reviewer({ entries }: Props) {
     } = usePagination(filtered);
 
     const total = entries.length;
-    const pending = entries.filter((e) => e.status === 'Pending').length;
+    const awaitingDivisionHead = entries.filter(
+        (e) => e.status === 'Pending',
+    ).length;
+    const pending = entries.filter((e) => e.status === 'Endorsed').length;
     const checked = entries.filter((e) => e.status === 'Reviewed').length;
     const approved = entries.filter((e) => e.status === 'Approved').length;
     const reviewerRejected = entries.filter(
@@ -179,13 +192,16 @@ export default function Reviewer({ entries }: Props) {
 
             <InfoPanel type="overview" title="Reviewer Dashboard">
                 <p>
-                    This is your queue of all submitted JL forms. You are the
-                    first approval step before forms reach the VP Approver.
+                    This is your queue of all submitted JL forms. Forms must
+                    first be endorsed by the requestor's Division Head before
+                    they're actionable here, on their way to the VP Approver.
                 </p>
                 <ul className="mt-2 list-disc pl-4">
                     <li>
-                        Forms with status <strong>Pending</strong> require your
-                        action — use the kebab menu (⋮) to act.
+                        Forms with status <strong>Endorsed</strong> require your
+                        action — use the kebab menu (⋮) to act. Forms still{' '}
+                        <strong>Pending</strong> are awaiting their Division
+                        Head and aren't actionable yet.
                     </li>
                     <li>
                         <strong>For Review</strong> — opens the form details for
@@ -219,11 +235,16 @@ export default function Reviewer({ entries }: Props) {
                 </p>
             </div>
 
-            <div className="mb-3 grid grid-cols-4 gap-4">
+            <div className="mb-3 grid grid-cols-5 gap-4">
                 <StatCard
                     label="Total Submissions"
                     value={total}
                     color="#1e3a5f"
+                />
+                <StatCard
+                    label="Awaiting Division Head"
+                    value={awaitingDivisionHead}
+                    color="#94a3b8"
                 />
                 <StatCard
                     label="Pending Review"
@@ -269,6 +290,7 @@ export default function Reviewer({ entries }: Props) {
                 >
                     <option value="">All Statuses</option>
                     <option>Pending</option>
+                    <option>Endorsed</option>
                     <option>Reviewed</option>
                     <option value="Rejected">Reviewer Rejected</option>
                     <option>Approved</option>
@@ -352,6 +374,7 @@ export default function Reviewer({ entries }: Props) {
                 onClose={() => setShowExport(false)}
                 allowedStatuses={[
                     'Pending',
+                    'Endorsed',
                     'Reviewed',
                     'Rejected',
                     'Approved',
