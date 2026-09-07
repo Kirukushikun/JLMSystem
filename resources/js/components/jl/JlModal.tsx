@@ -425,9 +425,6 @@ export default function JlModal({
                                                             Item
                                                         </th>
                                                         <th className="px-2.5 py-2">
-                                                            Qty
-                                                        </th>
-                                                        <th className="px-2.5 py-2">
                                                             Purpose
                                                         </th>
                                                         <th className="px-2.5 py-2">
@@ -445,11 +442,6 @@ export default function JlModal({
                                                                 <td className="px-2.5 py-2">
                                                                     {
                                                                         item.item_name
-                                                                    }
-                                                                </td>
-                                                                <td className="px-2.5 py-2">
-                                                                    {
-                                                                        item.quantity
                                                                     }
                                                                 </td>
                                                                 <td className="px-2.5 py-2">

@@ -25,7 +25,6 @@ class StoreJlRequest extends FormRequest
             'justification' => ['required', 'string', 'max:2000'],
             'items' => ['nullable', 'array'],
             'items.*.item_name' => ['required_with:items.*', 'string', 'max:255'],
-            'items.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'items.*.purpose' => ['nullable', 'string', 'max:255'],
             'items.*.image' => ['nullable', 'file', 'image', 'max:5120'],
             'cost_breakdown' => ['required', 'array', 'min:1'],

@@ -298,7 +298,6 @@ class JlController extends Controller
 
                 return [
                     'item_name' => $row['item_name'] ?? '',
-                    'quantity' => $row['quantity'] ?? '',
                     'purpose' => $row['purpose'] ?? '',
                     'image' => $image ? $image->store('jl-item-images', 'local') : null,
                     'image_name' => $image ? $image->getClientOriginalName() : null,

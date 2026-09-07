@@ -4,7 +4,6 @@ import { uid } from '@/lib/utils';
 export interface JlItemRow {
     id: string;
     itemName: string;
-    quantity: string;
     purpose: string;
     image: File | null;
 }
@@ -22,7 +21,6 @@ export function newItemRow(): JlItemRow {
     return {
         id: uid(),
         itemName: '',
-        quantity: '',
         purpose: '',
         image: null,
     };
@@ -99,11 +97,10 @@ export default function ItemsTable({ rows, onChange, disabled }: Props) {
     return (
         <div>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="w-full min-w-[640px] border-collapse text-sm">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
                     <thead>
                         <tr className="bg-gray-50 text-left text-xs font-semibold tracking-wide text-gray-400 uppercase">
                             <th className="px-3 py-2.5">Item Name</th>
-                            <th className="w-24 px-3 py-2.5">Quantity</th>
                             <th className="px-3 py-2.5">Purpose</th>
                             <th className="w-40 px-3 py-2.5">
                                 Image (optional)
@@ -128,21 +125,6 @@ export default function ItemsTable({ rows, onChange, disabled }: Props) {
                                         }
                                         placeholder="e.g. Steel pipe"
                                         maxLength={255}
-                                        disabled={disabled}
-                                    />
-                                </td>
-                                <td className="px-3 py-2">
-                                    <input
-                                        className={CELL_INPUT}
-                                        type="number"
-                                        min="0"
-                                        value={row.quantity}
-                                        onChange={(e) =>
-                                            update(row.id, {
-                                                quantity: e.target.value,
-                                            })
-                                        }
-                                        placeholder="0"
                                         disabled={disabled}
                                     />
                                 </td>

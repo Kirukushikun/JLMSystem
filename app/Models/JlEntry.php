@@ -36,7 +36,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $attachment_name
  * @property string|null $body free-text narrative — structured entries only
  * @property string|null $justification — structured entries only
- * @property array<int, array{item_name: string, quantity: string, purpose: string, image: string|null, image_name: string|null}>|null $items — structured entries only
+ * @property array<int, array{item_name: string, purpose: string, image: string|null, image_name: string|null}>|null $items — structured entries only
  * @property array<int, array{description: string, quantity: string, unit_cost: string}>|null $cost_breakdown — structured entries only
  * @property-read string $reference
  * @property-read string|null $attachment_url

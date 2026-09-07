@@ -60,7 +60,6 @@ export default function Submit() {
                     ? editEntry.items.map((i) => ({
                           id: uid(),
                           itemName: i.item_name,
-                          quantity: i.quantity,
                           purpose: i.purpose,
                           // Existing images stay on the server unless a new
                           // one is picked — a File can't be rehydrated from
@@ -126,7 +125,6 @@ export default function Submit() {
                 .filter((i) => i.itemName.trim() !== '')
                 .map((i) => ({
                     item_name: i.itemName,
-                    quantity: i.quantity,
                     purpose: i.purpose,
                     image: i.image,
                 })),
@@ -216,12 +214,13 @@ export default function Submit() {
                     </li>
                     <li>
                         <strong>Items</strong> — add a row per item, with
-                        quantity, purpose, and an optional photo.
+                        purpose and an optional photo.
                     </li>
                     <li>
                         <strong>Estimated Cost Breakdown</strong> — add a row
-                        per cost item; the total is calculated for you and used
-                        as the request's estimated amount.
+                        per cost item, with quantity and unit cost; the total is
+                        calculated for you and used as the request's estimated
+                        amount.
                     </li>
                     <li>
                         <strong>Supporting Image</strong> — optional, images

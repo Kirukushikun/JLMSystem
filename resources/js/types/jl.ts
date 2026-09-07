@@ -13,7 +13,6 @@ export type JlEntryType = 'document' | 'structured';
 
 export interface JlServerItem {
     item_name: string;
-    quantity: string;
     purpose: string;
     image: string | null;
     image_name: string | null;
