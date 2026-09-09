@@ -393,7 +393,7 @@ export default function JlModal({
                         <>
                             {entry.body && (
                                 <DetailItem
-                                    label="Body"
+                                    label="Details"
                                     value={
                                         <span className="whitespace-pre-wrap">
                                             {entry.body}
