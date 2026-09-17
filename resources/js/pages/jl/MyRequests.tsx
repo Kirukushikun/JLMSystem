@@ -1,13 +1,16 @@
-import AppLayout from '@/layouts/AppLayout';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import ColumnResizeHandle from '@/components/ColumnResizeHandle';
 import InfoPanel from '@/components/InfoPanel';
 import AttachmentUploadModal from '@/components/jl/AttachmentUploadModal';
 import CancelModal from '@/components/jl/CancelModal';
 import JlModal from '@/components/jl/JlModal';
-import Pagination from '@/components/Pagination';
 import StatusBadge from '@/components/jl/StatusBadge';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { useResizableColumn } from '@/hooks/useResizableColumn';
+import AppLayout from '@/layouts/AppLayout';
+import { cn } from '@/lib/utils';
 import type { JlEntry } from '@/types/jl';
 
 interface Props {
@@ -24,6 +27,7 @@ export default function MyRequests({ entries }: Props) {
         [key: string]: unknown;
     }>();
     const [modal, setModal] = useState<JlEntry | null>(null);
+    const titleCol = useResizableColumn('my-requests:title-col-width', 260);
     const [cancelEntry, setCancelEntry] = useState<JlEntry | null>(null);
     const [attachEntry, setAttachEntry] = useState<JlEntry | null>(null);
     const {
@@ -124,9 +128,19 @@ export default function MyRequests({ entries }: Props) {
                                 ].map((h) => (
                                     <th
                                         key={h}
-                                        className="px-3.5 py-2.5 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-400 uppercase"
+                                        className={cn(
+                                            'px-3.5 py-2.5 text-left text-xs font-semibold tracking-wide whitespace-nowrap text-gray-400 uppercase',
+                                            h === 'JL Title' && 'relative',
+                                        )}
                                     >
                                         {h}
+                                        {h === 'JL Title' && (
+                                            <ColumnResizeHandle
+                                                onPointerDown={
+                                                    titleCol.onResizeStart
+                                                }
+                                            />
+                                        )}
                                     </th>
                                 ))}
                             </tr>
@@ -161,7 +175,10 @@ export default function MyRequests({ entries }: Props) {
                                             </span>
                                         )}
                                     </td>
-                                    <td className="max-w-xs truncate px-3.5 py-3 font-medium whitespace-nowrap">
+                                    <td
+                                        className="truncate px-3.5 py-3 font-medium whitespace-nowrap"
+                                        style={{ maxWidth: titleCol.width }}
+                                    >
                                         {e.title}
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap">

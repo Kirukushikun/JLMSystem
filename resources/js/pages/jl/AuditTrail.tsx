@@ -1,9 +1,12 @@
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
+import ColumnResizeHandle from '@/components/ColumnResizeHandle';
 import InfoPanel from '@/components/InfoPanel';
 import Pagination from '@/components/Pagination';
 import { usePagination } from '@/hooks/usePagination';
+import { useResizableColumn } from '@/hooks/useResizableColumn';
 import AppLayout from '@/layouts/AppLayout';
+import { cn } from '@/lib/utils';
 
 interface AuditLog {
     id: number;
@@ -84,6 +87,7 @@ const TH =
 export default function AuditTrail({ logs }: Props) {
     const [search, setSearch] = useState('');
     const [eventFilter, setEventFilter] = useState('');
+    const titleCol = useResizableColumn('audit-trail:title-col-width', 200);
 
     const filtered = logs.filter((log) => {
         const q = search.toLowerCase();
@@ -289,7 +293,12 @@ export default function AuditTrail({ logs }: Props) {
                             <tr className="border-b-2 border-gray-200">
                                 <th className={TH}>Timestamp</th>
                                 <th className={TH}>Reference</th>
-                                <th className={TH}>JL Title</th>
+                                <th className={cn(TH, 'relative')}>
+                                    JL Title
+                                    <ColumnResizeHandle
+                                        onPointerDown={titleCol.onResizeStart}
+                                    />
+                                </th>
                                 <th className={TH}>Company</th>
                                 <th className={TH}>Event</th>
                                 <th className={TH}>Actor</th>
@@ -323,7 +332,10 @@ export default function AuditTrail({ logs }: Props) {
                                             {log.entry?.reference ?? '—'}
                                         </span>
                                     </td>
-                                    <td className="max-w-[200px] truncate px-3.5 py-3 font-medium text-gray-800">
+                                    <td
+                                        className="truncate px-3.5 py-3 font-medium text-gray-800"
+                                        style={{ maxWidth: titleCol.width }}
+                                    >
                                         {log.entry?.title ?? '—'}
                                     </td>
                                     <td className="px-3.5 py-3 whitespace-nowrap text-gray-600">

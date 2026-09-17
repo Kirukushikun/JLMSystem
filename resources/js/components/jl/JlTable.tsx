@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import ColumnResizeHandle from '@/components/ColumnResizeHandle';
+import { useResizableColumn } from '@/hooks/useResizableColumn';
 import { cn } from '@/lib/utils';
 import type { JlEntry } from '@/types/jl';
 import StatusBadge from './StatusBadge';
@@ -45,6 +47,7 @@ export default function JlTable({
     onProcess,
 }: Props) {
     const [kebab, setKebab] = useState<KebabState | null>(null);
+    const titleCol = useResizableColumn('jl-table:title-col-width', 260);
 
     useEffect(() => {
         function close() {
@@ -359,9 +362,17 @@ export default function JlTable({
                                             'sticky left-0 z-[3] [box-shadow:2px_0_5px_rgba(0,0,0,.06)]',
                                         i === HEADERS.length - 1 &&
                                             'sticky right-0 z-[3] [box-shadow:-2px_0_5px_rgba(0,0,0,.06)]',
+                                        h === 'JL Title' && 'relative',
                                     )}
                                 >
                                     {h}
+                                    {h === 'JL Title' && (
+                                        <ColumnResizeHandle
+                                            onPointerDown={
+                                                titleCol.onResizeStart
+                                            }
+                                        />
+                                    )}
                                 </th>
                             ))}
                         </tr>
@@ -404,7 +415,10 @@ export default function JlTable({
                                     )}
                                 </td>
 
-                                <td className="max-w-xs truncate px-3.5 py-3 font-medium whitespace-nowrap">
+                                <td
+                                    className="truncate px-3.5 py-3 font-medium whitespace-nowrap"
+                                    style={{ maxWidth: titleCol.width }}
+                                >
                                     {e.title}
                                 </td>
                                 <td className="px-3.5 py-3 whitespace-nowrap">
