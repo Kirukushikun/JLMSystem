@@ -218,8 +218,16 @@ class JlController extends Controller
     {
         abort_if($entry->user_id !== auth()->id(), 403);
 
-        if ($entry->attachment) {
-            return back()->with('error', 'This request already has an attachment.');
+        // Up to two attachments are allowed — fill whichever slot is still
+        // open rather than requiring the caller to know which one that is.
+        $slot = match (true) {
+            ! $entry->attachment => 1,
+            ! $entry->attachment_2 => 2,
+            default => null,
+        };
+
+        if ($slot === null) {
+            return back()->with('error', 'This request already has 2 attachments — the maximum allowed.');
         }
 
         $request->validate([
@@ -227,10 +235,12 @@ class JlController extends Controller
         ]);
 
         $file = $request->file('attachment');
+        $field = $slot === 1 ? 'attachment' : 'attachment_2';
+        $nameField = $slot === 1 ? 'attachment_name' : 'attachment_2_name';
 
         $entry->update([
-            'attachment' => $file->store('jl-attachments', 'local'),
-            'attachment_name' => $file->getClientOriginalName(),
+            $field => $file->store('jl-attachments', 'local'),
+            $nameField => $file->getClientOriginalName(),
         ]);
 
         JlAuditLog::create([
@@ -250,6 +260,17 @@ class JlController extends Controller
         return Storage::disk('local')->response(
             $entry->attachment,
             $entry->attachment_name,
+        );
+    }
+
+    public function attachment2(JlEntry $entry): StreamedResponse
+    {
+        abort_if(! $entry->attachment_2, 404);
+        abort_if(! Storage::disk('local')->exists($entry->attachment_2), 404);
+
+        return Storage::disk('local')->response(
+            $entry->attachment_2,
+            $entry->attachment_2_name,
         );
     }
 
@@ -324,6 +345,16 @@ class JlController extends Controller
             $file = $request->file('attachment');
             $data['attachment'] = $file->store('jl-attachments', 'local');
             $data['attachment_name'] = $file->getClientOriginalName();
+        }
+
+        if ($request->hasFile('attachment_2')) {
+            if ($existingEntry?->attachment_2) {
+                Storage::disk('local')->delete($existingEntry->attachment_2);
+            }
+
+            $file2 = $request->file('attachment_2');
+            $data['attachment_2'] = $file2->store('jl-attachments', 'local');
+            $data['attachment_2_name'] = $file2->getClientOriginalName();
         }
 
         return $data;

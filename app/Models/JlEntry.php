@@ -34,22 +34,25 @@ use Illuminate\Support\Carbon;
  * @property string|null $hold_reason
  * @property string|null $attachment
  * @property string|null $attachment_name
+ * @property string|null $attachment_2
+ * @property string|null $attachment_2_name
  * @property string|null $body free-text narrative — structured entries only
  * @property string|null $justification — structured entries only
  * @property array<int, array{item_name: string, purpose: string, image: string|null, image_name: string|null}>|null $items — structured entries only
  * @property array<int, array{description: string, quantity: string, unit_cost: string}>|null $cost_breakdown — structured entries only
  * @property-read string $reference
  * @property-read string|null $attachment_url
+ * @property-read string|null $second_attachment_url
  */
 #[Fillable([
     'user_id', 'title', 'date', 'company', 'manager', 'dept', 'amount',
     'status', 'entry_type', 'held_at', 'held_by', 'hold_reason', 'serial', 'submitted_at', 'endorsed_at', 'reviewed_at', 'approved_at', 'processed_at', 'reject_reason', 'rejected_by',
-    'endorse_remarks', 'review_remarks', 'approve_remarks', 'process_remarks', 'attachment', 'attachment_name',
+    'endorse_remarks', 'review_remarks', 'approve_remarks', 'process_remarks', 'attachment', 'attachment_name', 'attachment_2', 'attachment_2_name',
     'body', 'justification', 'items', 'cost_breakdown',
 ])]
 class JlEntry extends Model
 {
-    protected $appends = ['reference', 'attachment_url'];
+    protected $appends = ['reference', 'attachment_url', 'second_attachment_url'];
 
     protected function casts(): array
     {
@@ -77,6 +80,21 @@ class JlEntry extends Model
     {
         return Attribute::get(
             fn () => $this->attachment ? route('jl.attachment', $this->id) : null,
+        );
+    }
+
+    // Named without a digit touching a word boundary, unlike the sibling
+    // columns (attachment_2, attachment_2_name) — Str::camel() and Str::snake()
+    // aren't true inverses across a bare digit ('attachment2Url' snakes to
+    // 'attachment2_url', not 'attachment_2_url'), and Eloquent's attribute
+    // mutator uses both directions: Str::camel() to resolve a property read,
+    // Str::snake() to register the method for array/JSON serialization. A
+    // name like 'attachment_2_url' satisfies one direction and silently
+    // breaks the other, so this accessor's own key avoids the digit entirely.
+    protected function secondAttachmentUrl(): Attribute
+    {
+        return Attribute::get(
+            fn () => $this->attachment_2 ? route('jl.attachment2', $this->id) : null,
         );
     }
 

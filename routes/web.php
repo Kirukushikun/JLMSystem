@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function () {
 
     // Attachment download/view
     Route::get('/jl/{entry}/attachment', [JlController::class, 'attachment'])->name('jl.attachment');
+    Route::get('/jl/{entry}/attachment-2', [JlController::class, 'attachment2'])->name('jl.attachment2');
     Route::get('/jl/{entry}/item-image/{index}', [JlController::class, 'itemImage'])->name('jl.itemImage');
 
     // Workflow actions

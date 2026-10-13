@@ -57,8 +57,13 @@ export default function AttachmentUploadModal({ entry, onClose }: Props) {
                 >
                     Add Attachment
                 </h2>
-                <p className="mb-5 text-sm text-gray-400">
+                <p className="mb-1 text-sm text-gray-400">
                     {entry.reference} — {entry.title}
+                </p>
+                <p className="mb-5 text-xs text-gray-400">
+                    {entry.attachment
+                        ? 'This will be the 2nd and final attachment.'
+                        : 'Up to 2 attachments are allowed on a request.'}
                 </p>
 
                 <label className="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase">

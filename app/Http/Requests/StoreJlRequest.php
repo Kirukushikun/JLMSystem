@@ -31,7 +31,10 @@ class StoreJlRequest extends FormRequest
             'cost_breakdown.*.description' => ['required', 'string', 'max:255'],
             'cost_breakdown.*.quantity' => ['nullable', 'numeric', 'min:0'],
             'cost_breakdown.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
-            'attachment' => ['nullable', 'file', 'image', 'max:5120'],
+            // Up to two supporting files — images or PDF. Matches the max size
+            // already allowed on the post-submission "Add Attachment" upload.
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,gif,webp,pdf'],
+            'attachment_2' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,gif,webp,pdf'],
         ];
     }
 }

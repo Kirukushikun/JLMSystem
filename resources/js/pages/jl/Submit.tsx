@@ -90,6 +90,7 @@ export default function Submit() {
     const [items, setItems] = useState<JlItemRow[]>(defaults.items);
     const [costRows, setCostRows] = useState<CostRow[]>(defaults.costRows);
     const [image, setImage] = useState<File | null>(null);
+    const [image2, setImage2] = useState<File | null>(null);
     const [fileKey, setFileKey] = useState(0);
 
     const [showSummary, setShowSummary] = useState(false);
@@ -109,6 +110,7 @@ export default function Submit() {
         setItems(d.items);
         setCostRows(d.costRows);
         setImage(null);
+        setImage2(null);
         setFileKey((k) => k + 1);
     }
 
@@ -136,6 +138,7 @@ export default function Submit() {
                     unit_cost: r.unitCost,
                 })),
             attachment: image,
+            attachment_2: image2,
         };
 
         const url = isEdit ? `/jl/${editEntry!.id}/resubmit` : '/jl';
@@ -223,8 +226,8 @@ export default function Submit() {
                         amount.
                     </li>
                     <li>
-                        <strong>Supporting Image</strong> — optional, images
-                        only (no PDFs or other file types).
+                        <strong>Supporting Documents</strong> — optional, up to
+                        two files, images or PDF.
                     </li>
                     <li>
                         Before submitting you'll see a quick summary to review —
@@ -396,38 +399,70 @@ export default function Submit() {
                     </div>
 
                     <div className="sm:col-span-2">
-                        <Label>Supporting Image (optional)</Label>
+                        <Label>Supporting Documents (optional, up to 2)</Label>
+
                         {isEdit && editEntry!.attachment_name && (
                             <p className="mb-1.5 text-xs text-gray-400">
                                 Current:{' '}
                                 <span className="font-medium text-gray-600">
                                     {editEntry!.attachment_name}
                                 </span>{' '}
-                                — choose a new image below to replace it, or
+                                — choose a new file below to replace it, or
                                 leave blank to keep it.
                             </p>
                         )}
                         <input
-                            key={fileKey}
+                            key={`att1-${fileKey}`}
                             className={
                                 INPUT +
                                 ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'
                             }
                             type="file"
-                            accept="image/*"
+                            accept="image/*,.pdf"
                             onChange={(e) =>
                                 setImage(e.target.files?.[0] ?? null)
                             }
                             disabled={processing}
                         />
-                        <p className="mt-1 text-xs text-gray-400">
-                            Images only (JPG, PNG, etc.) — max 5 MB
-                        </p>
                         {errors.attachment && (
                             <p className="mt-1 text-xs text-red-500">
                                 {errors.attachment}
                             </p>
                         )}
+
+                        {isEdit && editEntry!.attachment_2_name && (
+                            <p className="mt-3 mb-1.5 text-xs text-gray-400">
+                                Current:{' '}
+                                <span className="font-medium text-gray-600">
+                                    {editEntry!.attachment_2_name}
+                                </span>{' '}
+                                — choose a new file below to replace it, or
+                                leave blank to keep it.
+                            </p>
+                        )}
+                        <input
+                            key={`att2-${fileKey}`}
+                            className={
+                                'mt-3 ' +
+                                INPUT +
+                                ' file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200'
+                            }
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={(e) =>
+                                setImage2(e.target.files?.[0] ?? null)
+                            }
+                            disabled={processing}
+                        />
+                        {errors.attachment_2 && (
+                            <p className="mt-1 text-xs text-red-500">
+                                {errors.attachment_2}
+                            </p>
+                        )}
+
+                        <p className="mt-1 text-xs text-gray-400">
+                            Images or PDF — max 10 MB each
+                        </p>
                     </div>
                 </div>
 
@@ -469,6 +504,7 @@ export default function Submit() {
                     items,
                     costRows,
                     attachment: image,
+                    attachment2: image2,
                 }}
                 processing={processing}
                 uploadProgress={uploadProgress}

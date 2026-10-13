@@ -14,6 +14,7 @@ interface StructuredData {
     items: JlItemRow[];
     costRows: CostRow[];
     attachment: File | null;
+    attachment2: File | null;
 }
 
 interface Props {
@@ -80,7 +81,12 @@ export default function StructuredSummaryModal({
 
     const filledItems = data.items.filter((i) => i.itemName.trim() !== '');
     const hasFiles =
-        data.attachment !== null || data.items.some((i) => i.image !== null);
+        data.attachment !== null ||
+        data.attachment2 !== null ||
+        data.items.some((i) => i.image !== null);
+    const attachmentNames = [data.attachment?.name, data.attachment2?.name]
+        .filter((n): n is string => !!n)
+        .join(', ');
 
     return (
         <div
@@ -127,8 +133,8 @@ export default function StructuredSummaryModal({
                     />
                     <Row label="Reason for Justification" value={data.reason} />
                     <Row
-                        label="Supporting Image"
-                        value={data.attachment?.name ?? 'None'}
+                        label="Supporting Documents"
+                        value={attachmentNames || 'None'}
                     />
                 </div>
 

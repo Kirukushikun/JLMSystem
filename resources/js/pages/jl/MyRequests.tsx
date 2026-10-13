@@ -77,8 +77,8 @@ export default function MyRequests({ entries }: Props) {
                     </li>
                     <li>
                         <strong>Add Attachment</strong> — available on any
-                        request that doesn't have a file yet, regardless of its
-                        status.
+                        request with fewer than 2 files attached, regardless of
+                        its status.
                     </li>
                     <li>
                         Statuses update automatically as your form moves through
@@ -219,7 +219,8 @@ export default function MyRequests({ entries }: Props) {
                                                     Edit &amp; Resubmit
                                                 </Link>
                                             )}
-                                            {!e.attachment && (
+                                            {(!e.attachment ||
+                                                !e.attachment_2) && (
                                                 <button
                                                     onClick={() =>
                                                         setAttachEntry(e)

@@ -552,23 +552,44 @@ export default function JlModal({
                                 )}
                         </>
                     )}
-                    {entry.attachment_url && (
+                    {(entry.attachment_url || entry.second_attachment_url) && (
                         <DetailItem
                             label={
-                                entry.entry_type === 'structured'
-                                    ? 'Supporting Image'
-                                    : 'Attachment'
+                                entry.entry_type === 'structured' &&
+                                entry.attachment_url &&
+                                entry.second_attachment_url
+                                    ? 'Supporting Documents'
+                                    : entry.entry_type === 'structured'
+                                      ? 'Supporting Document'
+                                      : 'Attachment'
                             }
                             value={
-                                <a
-                                    href={entry.attachment_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
-                                >
-                                    📎{' '}
-                                    {entry.attachment_name ?? 'View Attachment'}
-                                </a>
+                                <div className="flex flex-col gap-1">
+                                    {entry.attachment_url && (
+                                        <a
+                                            href={entry.attachment_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
+                                        >
+                                            📎{' '}
+                                            {entry.attachment_name ??
+                                                'View Attachment'}
+                                        </a>
+                                    )}
+                                    {entry.second_attachment_url && (
+                                        <a
+                                            href={entry.second_attachment_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:underline"
+                                        >
+                                            📎{' '}
+                                            {entry.attachment_2_name ??
+                                                'View Attachment'}
+                                        </a>
+                                    )}
+                                </div>
                             }
                             full
                         />

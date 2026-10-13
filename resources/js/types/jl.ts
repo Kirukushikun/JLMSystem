@@ -54,6 +54,9 @@ export interface JlEntry {
     attachment: string | null;
     attachment_name: string | null;
     attachment_url: string | null;
+    attachment_2: string | null;
+    attachment_2_name: string | null;
+    second_attachment_url: string | null;
     body: string | null;
     justification: string | null;
     items: JlServerItem[] | null;
